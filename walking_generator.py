@@ -9,7 +9,7 @@ class Generator(object):
     *
     *
     """
-    def __ini__(self, N=16, dt=5):
+    def __ini__(self, N=16, dt=0.1):
         self.N = N
         self.dt = dt
         self.h_com = 10.0

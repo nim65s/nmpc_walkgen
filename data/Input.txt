@@ -1,0 +1,27 @@
+Tests number 1
+
+second   consigne           detail
+
+0       [0.0 0.0 0.0]       stop
+1       [0.2 0.0 0.0]       walkForward
+2       [0.0 0.2 0.0]       walkSidewards
+5       [0.0 0.0 -10.0]     startTurningRightOnSpot
+7       [0.2 0.0 0.0]       walkForward
+9       [0.2 0.0 10.0]      startTurningLeftOnSpot
+11      [0.2 0.0 0.0]       walkForward
+13      [0.0 0.0 -10.0]     startTurningRightOnSpot
+15      [0.2 0.0 0.0]       walkForward
+17      [0.2 0.0 6.0832]    startTurningLeft
+19      [0.2 0.0 -6.0832]   startTurningRight
+21      [0.0 0.0 0.0]       stop
+22      [0.0 0.0 0.0]       stopOnLineWalking
+
+Test number 2
+
+second   consigne       detail
+
+0       [0.0 0.0 0.0]   stop
+1       [0.0 0.0 0.4]   startTurningLeft2
+2       [0.2 0.0 -0.2]  startTurningRight2
+3       [0.0 0.0 0.0]   stop
+4       [0.0 0.0 0.0]   stopOnLineWalking

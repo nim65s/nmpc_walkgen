@@ -1,7 +1,7 @@
 Tests number 1
 
-second   consigne           detail
-
+second  Velocity input    detail
+        (x,y,theta)
 0       [0.0 0.0 0.0]       stop
 1       [0.2 0.0 0.0]       walkForward
 2       [0.0 0.2 0.0]       walkSidewards

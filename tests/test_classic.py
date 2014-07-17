@@ -18,8 +18,49 @@ class TestClassecGenerator(TestCase):
     """
     Test classic pattern generator, also against results from LAAS
     """
+    def test_qp_setup_with_toy_example(self):
+        gen = ClassicGenerator()
 
-    def test_qp_setup_with_toy_examples_from_qpoases_manual(self):
+        # define input matrices
+        gen.pos_H[...] = numpy.eye(gen.pos_nv)
+        gen.pos_g[...] = numpy.ones((gen.pos_nv,))
+
+        gen.pos_lb[...] = -numpy.ones((gen.pos_nv,))*0.5
+        gen.pos_ub[...] =  numpy.ones((gen.pos_nv,))*0.5
+
+        gen.pos_A[...]   = numpy.eye(gen.pos_nc, gen.pos_nv) + numpy.eye(gen.pos_nc, gen.pos_nv, k=1)
+        gen.pos_lbA[...] = -numpy.ones((gen.pos_nc,))
+        gen.pos_ubA[...] =  numpy.ones((gen.pos_nc,))
+
+        # define input matrices
+        gen.ori_H[...] = numpy.eye(gen.ori_nv)
+        gen.ori_g[...] = numpy.ones((gen.ori_nv,))
+
+        gen.ori_lb[...] = -numpy.ones((gen.ori_nv,))*0.5
+        gen.ori_ub[...] =  numpy.ones((gen.ori_nv,))*0.5
+
+        gen.ori_A[...]   = numpy.eye(gen.ori_nc, gen.ori_nc) + numpy.eye(gen.ori_nc, gen.ori_nv, k=1)
+        gen.ori_lbA[...] = -numpy.ones((gen.ori_nc,))
+        gen.ori_ubA[...] =  numpy.ones((gen.ori_nc,))
+
+        # define solution
+        ori_x = -numpy.ones((gen.ori_nv,))*0.125
+        ori_x[gen.ori_nc] = 0.5
+        pos_x = -numpy.ones((gen.pos_nv,))*0.5
+        pos_f = -12.75
+        ori_f = -1.25
+
+        # test first qp solution
+        gen._solve_qp()
+        gen._postprocess_solution()
+
+        # get solution
+        assert_allclose(gen.ori_dofs, ori_x)
+        assert_allclose(gen.ori_qp.getObjVal(), ori_f)
+        assert_allclose(gen.pos_dofs, pos_x)
+        assert_allclose(gen.pos_qp.getObjVal(), pos_f)
+
+    def test_qp_setup_with_toy_example_hack_from_qpoases_manual(self):
         gen = ClassicGenerator()
 
         options = Options()

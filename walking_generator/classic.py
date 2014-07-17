@@ -48,12 +48,12 @@ class ClassicGenerator(BaseGenerator):
         self.nwsr = 1000    # # of working set recalculations
         self.options = Options()
         self.options.setToMPC()
-        self.options.printLevel = PrintLevel.LOW
+        #self.options.printLevel = PrintLevel.LOW
 
         # FOR ORIENTATIONS
         # define dimensions
         self.ori_nv = self.N + self.nf
-        self.ori_nc = 0
+        self.ori_nc = 1
 
         # setup problem
         self.ori_dofs = numpy.zeros(self.ori_nv)
@@ -85,10 +85,10 @@ class ClassicGenerator(BaseGenerator):
         self.pos_H   = numpy.zeros((self.pos_nv,self.pos_nv))
         self.pos_A   = numpy.zeros((self.pos_nc,self.pos_nv))
         self.pos_g   = numpy.zeros((self.pos_nv,))
-        self.pos_lb  = -numpy.ones((self.ori_nv,))*1e+08
-        self.pos_ub  =  numpy.ones((self.ori_nv,))*1e+08
-        self.pos_lbA = -numpy.ones((self.ori_nc,))*1e+08
-        self.pos_ubA =  numpy.ones((self.ori_nc,))*1e+08
+        self.pos_lb  = -numpy.ones((self.pos_nv,))*1e+08
+        self.pos_ub  =  numpy.ones((self.pos_nv,))*1e+08
+        self.pos_lbA = -numpy.ones((self.pos_nc,))*1e+08
+        self.pos_ubA =  numpy.ones((self.pos_nc,))*1e+08
 
         self._pos_qp_is_initialized = False
 

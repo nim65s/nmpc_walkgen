@@ -1,13 +1,13 @@
 import numpy
 
-class Generator(object):
+class _GeneratorBase(object):
     """
-    Prototype of Walking Pattern Generator, cf.
+    Base class of walking pattern generator for humanoids, cf.
+    LAAS-UHEI walking report.
 
-    TODO cite paper
-    *
-    *
-    *
+    BaseClass provides all matrices and timestepping methods that are
+    defined for the pattern generator family. In derived classes different
+    problems and their solvers can be realized.
     """
     # define some constants
     g = 9.81
@@ -37,46 +37,6 @@ class Generator(object):
         self.T = T
         self.nf = nf
         self.h_com = h_com
-
-        # qpOASES matrices
-        # H = ( Q_x   0 )
-        #     (   0 Q_y )
-        # g = ( p_x )
-        #     ( p_y )
-        # xi = ( dddC_kp1_x )
-        #      (        f_x )
-        #      ( dddC_kp1_y )
-        #      (        f_y )
-
-        # TODO for combined problem
-        self.NXI = 2*self.N + 2*self.nf
-        self.NC  = 0
-
-        self._QP = SQProblem(self.NXI, self.NC)
-
-        self._H = numpy.eye(self.NXI)
-        self._g = numpy.zeros(self.NXI)
-        self._A = numpy.zeros((self.NC, self.NXI))
-        self._c = numpy.zeros(self.NXI)
-
-        self._lbA  = numpy.zeros(self.NC)
-        self._ubA  = numpy.zeros(self.NC)
-
-        self._lb = numpy.zeros(self.NXI)
-        self._ub = numpy.zeros(self.NXI)
-
-        # flag for first initialization
-        self.qp_is_initialized = False
-
-        # number of recalculations of active set
-        self.nWSR = 1000
-
-        # maximum number of seconds for QP solving
-        self.maxtime = 2
-
-        self.Q = numpy.zeros((self.NXI, self.NXI), dtype=float)
-        self.p = numpy.zeros((self.NXI,), dtype=float)
-        self.x = numpy.zeros((self.NXI,), dtype=float)
 
         # center of mass initial values
 
@@ -137,6 +97,11 @@ class Generator(object):
         self.Pzs = numpy.zeros((N,3), dtype=float)
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
+        """
+        NOTE number of foot steps in prediction horizon changes between
+        nf and nf+1, because when robot takes first step nf steps are
+        planned on the prediction horizon, which makes a total of nf+1 steps.
+        """
         self.v_kp1 = numpy.zeros((N,), dtype=float)
         self.V_kp1 = numpy.zeros((N,nf), dtype=float)
 
@@ -154,10 +119,12 @@ class Generator(object):
         h_com = self.h_com
         g = self.g
 
-        for i in range(N):
-            # TODO initialize v_k, V_kp1
-            # according to state machine from MNaveau
+        """
+        # TODO initialize v_k, V_kp1
+        # according to state machine from MNaveau
+        """
 
+        for i in range(N):
             self.Pzs[i, :] = (1.,   i*T, (i**2*T**2)/2. + h_com/g)
             self.Pps[i, :] = (1.,   i*T,           (i**2*T**2)/2.)
             self.Pvs[i, :] = (0.,    1.,                      i*T)
@@ -192,39 +159,7 @@ class Generator(object):
 
     def solve(self):
         """
-        solves QP for given initial values and jerk constraints
+        Solve problem on given prediction horizon with implemented solver.
         """
-        self._prepare_optimization()
-
-
-    def _prepare_optimization(self):
-        """
-        build up QP matrices
-        Q = ( Q_x   0 ), p = ( p_x ), x = ( dddC_kp1_x )
-            (   0 Q_y )      ( p_y )      (        f_x )
-                                          ( dddC_kp1_y )
-                                          (        f_y )
-        """
-
-        Q_x = self.Q[:self.NXI, self.NXI]
-        p_x = self.p[:self.NXI]
-
-        # Q_x = ( x * ), <- x selects the entry
-        #       ( * * )
-        Q_x[:self.N,:self.N] = \
-                0.0
-
-        # Q_x = ( * x ), <- x selects the entry
-        #       ( * * )
-        Q_x[:self.N,self.N:self.NXI] = \
-                -self.weight[2] * self.Pzu.T * self.V_kp1
-
-        # Q_x = ( * * ), <- x selects the entry
-        #       ( x * )
-        Q_x[self.N:self.NXI,:self.N] = \
-                -self.weight[2] * self.Pzu.T * self.V_kp1
-
-        # Q_x = ( * * ), <- x selects the entry
-        #       ( * x )
-        Q_x[self.N:self.NXI,self.N:self.NXI] = \
-                -self.weight[2] * self.V_kp1.T * self.V_kp1
+        err_str = 'Please derive from this class to implement your problem and solver'
+        raise NotImplementedError(err_str)

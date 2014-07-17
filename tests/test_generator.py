@@ -2,11 +2,14 @@ import os
 import numpy
 from numpy.testing import *
 
-from walking_generator import Generator
+from walking_generator.base import BaseGenerator as Generator
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
-class TestPatternGenerator(TestCase):
+class TestBaseGenerator(TestCase):
+    """
+    Test if BaseGenerator is assembling everything correctly
+    """
     def test_fixed_model_matrices(self):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
@@ -37,9 +40,6 @@ class TestPatternGenerator(TestCase):
     def test_all_zero_when_idle(self):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
-
-        #gen.dddC_k_x[...] = 0.1
-        #print gen.dddC_k_x
 
         assert_allclose(gen.c_k_x, 0.0)
         assert_allclose(gen.c_k_y, 0.0)
@@ -74,59 +74,6 @@ class TestPatternGenerator(TestCase):
         assert_allclose(gen.dddC_k_x, 0.0)
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
-
-    def test_against_real_pattern_genererator_emergency_stop(self):
-        # get test data
-        print 'BASEDIR', BASEDIR
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "TestHerdt2010EmergencyStopTestFGPI.dat")
-        )
-
-        # 1 : NbOfIt*0.005
-        # 2 : finalCOMPosition.x[0]
-        # 3 : finalCOMPosition.y[0]
-        # 4 : finalCOMPosition.z[0]
-        # 5 : finalCOMPosition.yaw
-        # 6 : finalCOMPosition.x[1]
-        # 7 : finalCOMPosition.y[1]
-        # 8 : finalCOMPosition.z[1]
-        # 9 : ZMPTarget(0)
-        #10 : ZMPTarget(1)
-        #11 : LeftFootPosition.x
-        #12 : LeftFootPosition.y
-        #13 : LeftFootPosition.z
-        #14 : LeftFootPosition.dx
-        #15 : LeftFootPosition.dy
-        #16 : LeftFootPosition.dz
-        #17 : LeftFootPosition.ddx
-        #18 : LeftFootPosition.ddy
-        #19 : LeftFootPosition.ddz
-        #20 : LeftFootPosition.theta
-        #21 : LeftFootPosition.omega
-        #22 : LeftFootPosition.omega2
-        #23 : RightFootPosition.x
-        #24 : RightFootPosition.y
-        #25 : RightFootPosition.z
-        #26 : RightFootPosition.dx
-        #27 : RightFootPosition.dy
-        #28 : RightFootPosition.dz
-        #29 : RightFootPosition.ddx
-        #30 : RightFootPosition.ddy
-        #31 : RightFootPosition.ddz
-        #32 : RightFootPosition.theta
-        #33 : RightFootPosition.omega
-        #34 : RightFootPosition.omega2
-
-        gen = Generator()
-
-    def test_against_real_pattern_genererator_online_walking(self):
-        # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "TestHerdt2010OnLineTestFGPI.dat")
-        )
-        print data
-
-        gen = Generator()
 
 if __name__ == '__main__':
     try:

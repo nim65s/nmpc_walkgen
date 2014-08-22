@@ -12,7 +12,7 @@ class BaseGenerator(object):
     # define some constants
     g = 9.81
 
-    def __init__(self, N=15, T=0.1, nf=2, h_com=0.81):
+    def __init__(self, N=15, T=0.1, nf=2, h_com=0.81, time_step=0.8):
         """
         Initialize pattern generator, i.e.
         * allocate memory for matrices
@@ -32,11 +32,15 @@ class BaseGenerator(object):
 
         h_com: float
             Height of center of mass for the LIPM (default: 0.81 [m])
+
+        time_step : float
+            Time for the robot to make 1 step
         """
         self.N = N
         self.T = T
         self.nf = nf
         self.h_com = h_com
+        self.time_step = time_step
 
         # objective weights
 
@@ -121,11 +125,13 @@ class BaseGenerator(object):
         """
         initializes the transformation matrices according to the walking report
         """
+        time_step = self.time_step
         T = self.T
         N = self.N
+        nf = self.nf
         h_com = self.h_com
         g = self.g
-
+        
         """
         # TODO initialize v_k, V_kp1
         # according to state machine from MNaveau
@@ -136,7 +142,7 @@ class BaseGenerator(object):
             self.Pps[i, :] = (1.,   i*T,           (i**2*T**2)/2.)
             self.Pvs[i, :] = (0.,    1.,                      i*T)
             self.Pas[i, :] = (0.,    0.,                       1.)
-
+            
             for j in range(N):
                 if j <= i:
                     self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. + T*h_com/g
@@ -144,6 +150,26 @@ class BaseGenerator(object):
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
 
+        for i in range((int)(time_step/T)):
+            self.v_kp1[i] = 1
+        for i in range(N-(int)(time_step/T)):
+            self.v_kp1[i+time_step/T] = 0
+                
+        step = 0
+        for i in range (N) :
+            step = (int)( i / (time_step/T) )
+            print "step = "
+            print step
+            print "i = "
+            print i
+            print "j = "
+            print j
+            for j in range (nf):
+                self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1) 
+        
+        print self.V_kp1
+        print self.v_kp1
+ 
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations

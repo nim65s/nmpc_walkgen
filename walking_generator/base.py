@@ -165,7 +165,7 @@ class BaseGenerator(object):
             print "j = "
             print j
             for j in range (nf):
-                self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1) 
+                self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
         
         print self.V_kp1
         print self.v_kp1
@@ -189,6 +189,34 @@ class BaseGenerator(object):
 
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
+
+    def update(self):
+        """
+        update v_kp1 and V_kp1
+        """
+        nf = self.nf
+        nstep = (int)(self.time_step/self.T)
+        N = self.N
+
+        numpy.delete(self.v_kp1,0,axis=None)
+        numpy.append(self.v_kp1,[0],axis=0)
+        if self.v_kp1[0]==0:
+            nf = 1
+            for i in range(nstep):
+                self.v_kp1[i] = 1
+            for i in range(N-nstep):
+                self.v_kp1[i+time_step/T] = 0
+            step = 0
+            for i in range (N) :
+                step = (int)( i / (time_step/T) )
+                for j in range (nf):
+                    self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
+        
+        else:
+            numpy.delete(self.V_kp1,0,axis=None)
+            numpy.delete(self.V_kp1,0,axis=None)
+        print self.V_kp1
+        print self.v_kp1
 
     def solve(self):
         """

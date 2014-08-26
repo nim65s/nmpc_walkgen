@@ -12,7 +12,7 @@ class BaseGenerator(object):
     # define some constants
     g = 9.81
 
-    def __init__(self, N=15, T=0.1, nf=2, h_com=0.81, time_step=0.8):
+    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.81):
         """
         Initialize pattern generator, i.e.
         * allocate memory for matrices
@@ -33,14 +33,22 @@ class BaseGenerator(object):
         h_com: float
             Height of center of mass for the LIPM (default: 0.81 [m])
 
-        time_step : float
+        T_step : float
             Time for the robot to make 1 step
+
+        T_window : float
+            Duration of the preview window of the controller
         """
         self.N = N
         self.T = T
-        self.nf = nf
+        self.T_window = N*T
+        self.T_step = T_step
+        self.nf = (int)(self.T_window/T_step)
+        if self.T_window/T_step - self.nf > 0:
+            self.nf = self.nf + 1
         self.h_com = h_com
-        self.time_step = time_step
+        print "self.nf = "
+        print self.nf
 
         # objective weights
 
@@ -114,10 +122,8 @@ class BaseGenerator(object):
         planned on the prediction horizon, which makes a total of nf+1 steps.
         """
         self.v_kp1 = numpy.zeros((N,), dtype=float)
-        self.V_kp1 = numpy.zeros((N,nf), dtype=float)
-
+        self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
         # initialize transformation matrices
-
         self._initialize_matrices()
 
 
@@ -125,7 +131,7 @@ class BaseGenerator(object):
         """
         initializes the transformation matrices according to the walking report
         """
-        time_step = self.time_step
+        T_step = self.T_step
         T = self.T
         N = self.N
         nf = self.nf
@@ -150,26 +156,35 @@ class BaseGenerator(object):
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
 
-        for i in range((int)(time_step/T)):
-            self.v_kp1[i] = 1
-        for i in range(N-(int)(time_step/T)):
-            self.v_kp1[i+time_step/T] = 0
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+        self.updatev()
+#        for i in range((int)(T_step/T)):
+#            self.v_kp1[i] = 1
+#        for i in range(N-(int)(T_step/T)):
+#            self.v_kp1[i+T_step/T] = 0
                 
-        step = 0
-        for i in range (N) :
-            step = (int)( i / (time_step/T) )
-            print "step = "
-            print step
-            print "i = "
-            print i
-            print "j = "
-            print j
-            for j in range (nf):
-                self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
-        
-        print self.V_kp1
-        print self.v_kp1
- 
+#        step = 0
+#        for i in range (N) :
+#            step = (int)( i / (T_step/T) )
+#            for j in range (nf):
+#                self.V_kp1[i,j] = (int)(i+1>(int)(T_step/T) and j==step-1)
+
+#        print "init"
+#        print self.v_kp1.size
+#        print self.v_kp1
+#        print self.V_kp1
+
+
+
+
+
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations
@@ -190,33 +205,46 @@ class BaseGenerator(object):
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
 
-    def update(self):
+    def updatev(self):
         """
         update v_kp1 and V_kp1
         """
         nf = self.nf
-        nstep = (int)(self.time_step/self.T)
+        nstep = (int)(self.T_step/self.T)
         N = self.N
 
-        numpy.delete(self.v_kp1,0,axis=None)
-        numpy.append(self.v_kp1,[0],axis=0)
+        self.v_kp1 = numpy.delete(self.v_kp1,0,None)
+        self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
+
         if self.v_kp1[0]==0:
+            print "reinint"
+            self.v_kp1 = numpy.zeros((N,), dtype=float)
+            self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
             nf = 1
             for i in range(nstep):
                 self.v_kp1[i] = 1
             for i in range(N-nstep):
-                self.v_kp1[i+time_step/T] = 0
+                self.v_kp1[i+nstep] = 0
             step = 0
             for i in range (N) :
-                step = (int)( i / (time_step/T) )
+                step = (int)( i / nstep )
                 for j in range (nf):
-                    self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
+                    self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
         
         else:
-            numpy.delete(self.V_kp1,0,axis=None)
-            numpy.delete(self.V_kp1,0,axis=None)
-        print self.V_kp1
+            print "update"
+            self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
+            tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
+            self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
+            for j in range(self.V_kp1.shape[1]) :
+                if self.V_kp1[:,j].sum() < nstep :
+                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 1
+                    break
+                else :
+                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
+
         print self.v_kp1
+        print self.V_kp1
 
     def solve(self):
         """

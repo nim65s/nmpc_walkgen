@@ -127,7 +127,7 @@ class BaseGenerator(object):
         planned on the prediction horizon, which makes a total of nf+1 steps.
         """
         self.v_kp1 = numpy.zeros((N,),   dtype=int)
-        self.V_kp1 = numpy.zeros((N,nf), dtype=int)
+        self.V_kp1 = numpy.zeros((N,self.nf), dtype=int)
 
         # initialize transformation matrices
         self._initialize_matrices()
@@ -158,7 +158,7 @@ class BaseGenerator(object):
                     self.Pau[i, j] = T
 
         # initialize foot decision vector and matrix
-        nstep = int(time_step/T) # time span of single support phase
+        nstep = int(self.T_step/T) # time span of single support phase
 
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
 
@@ -190,12 +190,12 @@ class BaseGenerator(object):
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
 
-    def updatev(self):
+    def update(self):
         """
         update v_kp1 and V_kp1
         """
         nf = self.nf
-        nstep = int(self.time_step/self.T)
+        nstep = int(self.T_step/self.T)
         N = self.N
 
         # first implementation
@@ -214,7 +214,7 @@ class BaseGenerator(object):
             self.V_kp1[-1,-1] = first_entry_v_kp1
 
         # second implementation
-        if True:
+        if False:
             # when first column of selection matrix becomes zero,
             # then shift columns by one to the front
             if False:#(self.V_kp1[:,0] == 0).all():
@@ -239,7 +239,7 @@ class BaseGenerator(object):
 
         # old implementation
         # @Max: Why do the matrices won't change?
-        if False:
+        if True:
             self.v_kp1 = numpy.delete(self.v_kp1,0,None)
             self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
 
@@ -272,8 +272,6 @@ class BaseGenerator(object):
 
         print '[v, V0, ...]'
         print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
-
-
 
     def solve(self):
         """

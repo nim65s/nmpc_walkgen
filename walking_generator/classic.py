@@ -125,6 +125,16 @@ class ClassicGenerator(BaseGenerator):
             # TODO guess initial active set
 
         # define QP matrices
+
+        # H = ( Q_k_x     0 )
+        #     (     0 Q_k_y )
+        self._update_ori_Q() # updates values in Q
+        self.ori_H  [ :N+nf,  :N+nf] = self._Q
+
+        # g = ( p_k_x )
+        #     ( p_k_y )
+        self.pos_g  [ :N+nf] = self._get_ori_p()
+
         #self.ori_H  [...] = 0.0
         #self.ori_A  [...] = 0.0
         #self.ori_g  [...] = 0.0
@@ -161,8 +171,8 @@ class ClassicGenerator(BaseGenerator):
 
         # g = ( p_k_x )
         #     ( p_k_y )
-        self.pos_g  [ :N+nf] = self._get_pos_px()
-        self.pos_g  [-N+nf:] = self._get_pos_py()
+        self.pos_g  [ :N+nf] = self._update_pos_p('x')
+        self.pos_g  [-N+nf:] = self._update_pos_p('y')
 
         # constraints
         #self.pos_A  [...] = 0.0
@@ -170,6 +180,107 @@ class ClassicGenerator(BaseGenerator):
         #self.pos_ub [...] = 0.0
         #self.pos_lbA[...] = 0.0
         #self.pos_ubA[...] = 0.0
+    def _update_ori_Q(self):
+        '''
+        Update hessian block Q according to walking report
+
+        Q = ( a*Pvu*Pvu + b*PpuT*ET*E*Ppu + c*Pzu*Pzu + d*I, -c*Pzu*V_kp1  )
+            (                                  -c*Pzu*V_kp1, c*V_kp1*V_kp1 )
+        '''
+        # rename for convenience
+        N  = self.N
+        nf = self.nf
+
+        # weights
+        a = self.a
+        b = self.b
+        c = self.c
+        d = self.d
+
+        # matrices
+        Ppu = self.Ppu
+        Pvu = self.Pvu
+        Pzu = self.Pzu
+
+        V_kp1 = self.V_kp1
+
+        # Q = ([*], * ) = a*Pvu*Pvu + b*Ppu*E*E*Ppu + c*Pzu*Pzu + d*I
+        #     ( * , * )
+        a = 0; b = N
+        c = 0; d = N
+        self._Q[a:b,c:d] = a*Pvu.transpose().dot(Pvu) \
+                         + c*Pzu.transpose().dot(Pzu) \
+                         + d*numpy.eye(N)
+                         # TODO How is matrix E defined?
+                         # E = (I_? 0 I_?)/2tau_step
+                         #+ b*Ppu.transpose().dot(E.transpose().dot(E.dot(Ppu))) \
+
+        # Q = ( * ,[*])
+        #     ( * , * )
+        a = 0; b = N
+        c = N; d = N+nf
+        self._Q[a:b,c:d] = -c*Pzu.transpose().dot(V_kp1)
+
+        # Q = (  * , * ) = ( * , [*] )^T
+        #     ( [*], * )   ( * ,  *  )
+        dummy = self._Q[a:b,c:d].transpose()
+        a = N; b = N+nf
+        c = 0; d = N
+        self._Q[a:b,c:d] = dummy
+
+        # Q = ( * , * )
+        #     ( * ,[*])
+        a = N; b = N+nf
+        c = N; d = N+nf
+        self._Q[a:b,c:d] = c*V_kp1.transpose().dot(V_kp1)
+
+    def _update_ori_p(self, case=None):
+        """
+        Update pass gradient block p according to walking report
+
+        p = ( a*Pvu*(Pvs*ck - Refk+1) + b*Ppu*E*(E*Pps*cx - Refk+1) + c*Pzu*(Pzs*ck - vk+1*fk )
+            (                                                       -c*Vk+1*(Pzs*ck - vk+1*fk )
+        """
+        if case == 'x':
+            c_k = self.c_k_x
+            dC_kp1_ref = self.dC_kp1_x_ref
+            f_k = self.f_k_x
+
+        elif case == 'y':
+            c_k = self.c_k_y
+            dC_kp1_ref = self.dC_kp1_y_ref
+            f_k = self.f_k_y
+
+        else:
+            err_str = 'Please use either case "x" or "y" for this routine'
+            raise AttributeError(err_str)
+
+        # rename for convenience
+        N  = self.N
+        nf = self.nf
+
+        # weights
+        a = self.a
+        b = self.b
+
+        # matrices
+        Pvu = self.Pvu
+        Ppu = self.Ppu
+        Pzu = self.Pzu
+
+        V_kp1 = self.V_kp1
+
+        # p = ([*]) =
+        #     ( * )
+        a = 0; b = N
+        self._p[a:b] = a*Pvu.transpose().dot((Pvs.dot(c_k) - self.dC_kp1_ref)) \
+                     + c*Pzu.transpose().dot((Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
+                     #+ b*Ppu.transpose()*E.transpose()*E*Ppu \
+
+        # p = ( * ) =
+        #     ([*])
+        a = N; b = N+nf
+        self._p[a:b] = -c*V_kp1.transpose().dot((self.Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
 
     def _update_pos_Q(self):
         '''
@@ -204,7 +315,7 @@ class ClassicGenerator(BaseGenerator):
                          + d*numpy.eye(N)
                          # TODO How is matrix E defined?
                          # E = (I_? 0 I_?)/2tau_step
-                         #+ b*Ppu.transpose()*E.transpose()*E*Ppu \
+                         #+ b*Ppu.transpose().dot(E.transpose().dot(E.dot(Ppu))) \
 
         # Q = ( * ,[*])
         #     ( * , * )
@@ -225,19 +336,27 @@ class ClassicGenerator(BaseGenerator):
         c = N; d = N+nf
         self._Q[a:b,c:d] = c*V_kp1.transpose().dot(V_kp1)
 
-    def _get_pos_py(self):
-        pass
-
-    def _get_pos_px(self):
-        pass
-
-    def _update_pk(self):
+    def _update_pos_p(self, case=None):
         """
         Update pass gradient block p according to walking report
 
-        p = ( a*Pvu*(Pvs*ck - Refk+1 ) + b*Ppu*E*(E*Pps*cx - Refk+1 ) + c*Pzu*(Pzs*ck - vk+1*fk )
-            (                                                         -c*Vk+1*(Pzs*ck - vk+1*fk )
+        p = ( a*Pvu*(Pvs*ck - Refk+1) + b*Ppu*E*(E*Pps*cx - Refk+1) + c*Pzu*(Pzs*ck - vk+1*fk )
+            (                                                       -c*Vk+1*(Pzs*ck - vk+1*fk )
         """
+        if case == 'x':
+            c_k = self.c_k_x
+            dC_kp1_ref = self.dC_kp1_x_ref
+            f_k = self.f_k_x
+
+        elif case == 'y':
+            c_k = self.c_k_y
+            dC_kp1_ref = self.dC_kp1_y_ref
+            f_k = self.f_k_y
+
+        else:
+            err_str = 'Please use either case "x" or "y" for this routine'
+            raise AttributeError(err_str)
+
         # rename for convenience
         N  = self.N
         nf = self.nf
@@ -256,16 +375,14 @@ class ClassicGenerator(BaseGenerator):
         # p = ([*]) =
         #     ( * )
         a = 0; b = N
-        self._p[a:b] = a*Pvu.transpose()*Pvu \
-                     + c*Pzu.transpose()*Pzu \
-                     + d*numpy.eye(N)
+        self._p[a:b] = a*Pvu.transpose().dot((Pvs.dot(c_k) - self.dC_kp1_ref)) \
+                     + c*Pzu.transpose().dot((Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
                      #+ b*Ppu.transpose()*E.transpose()*E*Ppu \
 
         # p = ( * ) =
         #     ([*])
         a = N; b = N+nf
-        c = N; d = N+nf
-        self._Q[a:b,c:d] = c*V_kp1*V_kp1
+        self._p[a:b] = -c*V_kp1.transpose().dot((self.Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
 
     def _solve_qp(self):
         """

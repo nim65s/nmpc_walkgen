@@ -75,6 +75,11 @@ class BaseGenerator(object):
         self.dddC_k_y = numpy.zeros((N,), dtype=float)
         self.dddC_k_q = numpy.zeros((N,), dtype=float)
 
+        # reference matrices
+
+        self. dC_kp1_x_ref = numpy.zeros((N,), dtype=float)
+        self. dC_kp1_y_ref = numpy.zeros((N,), dtype=float)
+
         # feet matrices
 
         self.F_kp1_x = numpy.zeros((N,), dtype=float)
@@ -113,8 +118,8 @@ class BaseGenerator(object):
         nf and nf+1, because when robot takes first step nf steps are
         planned on the prediction horizon, which makes a total of nf+1 steps.
         """
-        self.v_kp1 = numpy.zeros((N,), dtype=float)
-        self.V_kp1 = numpy.zeros((N,nf), dtype=float)
+        self.v_kp1 = numpy.zeros((N,),   dtype=int)
+        self.V_kp1 = numpy.zeros((N,nf), dtype=int)
 
         # initialize transformation matrices
 
@@ -131,18 +136,13 @@ class BaseGenerator(object):
         nf = self.nf
         h_com = self.h_com
         g = self.g
-        
-        """
-        # TODO initialize v_k, V_kp1
-        # according to state machine from MNaveau
-        """
 
         for i in range(N):
             self.Pzs[i, :] = (1.,   i*T, (i**2*T**2)/2. + h_com/g)
             self.Pps[i, :] = (1.,   i*T,           (i**2*T**2)/2.)
             self.Pvs[i, :] = (0.,    1.,                      i*T)
             self.Pas[i, :] = (0.,    0.,                       1.)
-            
+
             for j in range(N):
                 if j <= i:
                     self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. + T*h_com/g
@@ -150,26 +150,19 @@ class BaseGenerator(object):
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
 
-        for i in range((int)(time_step/T)):
-            self.v_kp1[i] = 1
-        for i in range(N-(int)(time_step/T)):
-            self.v_kp1[i+time_step/T] = 0
-                
-        step = 0
-        for i in range (N) :
-            step = (int)( i / (time_step/T) )
-            print "step = "
-            print step
-            print "i = "
-            print i
-            print "j = "
-            print j
-            for j in range (nf):
-                self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
-        
-        print self.V_kp1
-        print self.v_kp1
- 
+        # initialize foot decision vector and matrix
+        nstep = int(time_step/T) # time span of single support phase
+
+        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
+
+        print '[v, V0, ...]'
+        print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations
@@ -195,28 +188,71 @@ class BaseGenerator(object):
         update v_kp1 and V_kp1
         """
         nf = self.nf
-        nstep = (int)(self.time_step/self.T)
+        nstep = int(self.time_step/self.T)
         N = self.N
 
-        numpy.delete(self.v_kp1,0,axis=None)
-        numpy.append(self.v_kp1,[0],axis=0)
-        if self.v_kp1[0]==0:
-            nf = 1
-            for i in range(nstep):
-                self.v_kp1[i] = 1
-            for i in range(N-nstep):
-                self.v_kp1[i+time_step/T] = 0
-            step = 0
-            for i in range (N) :
-                step = (int)( i / (time_step/T) )
-                for j in range (nf):
-                    self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
-        
-        else:
-            numpy.delete(self.V_kp1,0,axis=None)
-            numpy.delete(self.V_kp1,0,axis=None)
-        print self.V_kp1
-        print self.v_kp1
+        # first implementation
+        if False:
+            # save first entries for concatenation
+            first_entry_v_kp1 = self.v_kp1[0].copy()
+            first_row_V_kp1   = self.V_kp1[0,:].copy()
+
+            # shift foot decision vector and matrix
+            self.v_kp1[:-1]   = self.v_kp1[1:]
+            self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+
+            # concatenate last row
+            self.v_kp1[-1]   = first_entry_v_kp1
+            self.V_kp1[-1,:] = first_row_V_kp1
+            self.V_kp1[-1,-1] = first_entry_v_kp1
+
+        # second implementation
+        if True:
+            # when first column of selection matrix becomes zero,
+            # then shift columns by one to the front
+            if False:#(self.V_kp1[:,0] == 0).all():
+                #self.v_kp1[:] = self.V_kp1[:,0]
+                self.V_kp1[:,:-1] = self.V_kp1[:,1:]
+                self.V_kp1[:,-1] = 0
+                #self.V_kp1[:,-1] = self.V_kp1[::-1,0]
+
+            # save first value for concatenation
+            first_entry_v_kp1 = self.v_kp1[0].copy()
+            first_row_V_kp1 = self.V_kp1[0,:].copy()
+
+            # shift foot decision vector and matrix
+            self.v_kp1[:-1]   = self.v_kp1[1:]
+            self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+
+            # concatenate last row
+            self.v_kp1[-1] = first_row_V_kp1[0]
+
+            self.V_kp1[-1,:-1] = first_row_V_kp1[1:]
+            self.V_kp1[-1, -1] = first_entry_v_kp1
+
+        # old implementation
+        # @Max: Why do the matrices won't change?
+        if False:
+            numpy.delete(self.v_kp1,0,axis=None)
+            numpy.append(self.v_kp1,[0],axis=0)
+            if self.v_kp1[0]==0:
+                nf = 1
+                for i in range(nstep):
+                    self.v_kp1[i] = 1
+                for i in range(N-nstep):
+                    self.v_kp1[i+time_step/T] = 0
+                step = 0
+                for i in range (N) :
+                    step = (int)( i / (time_step/T) )
+                    for j in range (nf):
+                        self.V_kp1[i,j] = (int)(i+1>(int)(time_step/T) and j==step-1)
+
+            else:
+                numpy.delete(self.V_kp1,0,axis=None)
+                numpy.delete(self.V_kp1,0,axis=None)
+
+        print '[v, V0, ...]'
+        print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 
     def solve(self):
         """

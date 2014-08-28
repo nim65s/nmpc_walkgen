@@ -56,6 +56,9 @@ class BaseGenerator(object):
         self.c = 1.0 # weight for ZMP reference tracking
         self.d = 1.0 # weight for jerk minimization
 
+        self.E = numpy.zeros((self.N, self.N)) # matrix to get average velocity
+        self.E[:] # over two steps
+
         # center of mass initial values
 
         self.c_k_x = numpy.zeros((3,), dtype=float)
@@ -192,6 +195,15 @@ class BaseGenerator(object):
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
 
+        # initialize foot decision vector and matrix
+        nstep = int(self.T_step/T) # time span of single support phase
+        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
+
         # support foot : right
         self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
         self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;
@@ -207,18 +219,11 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
-        # initialize foot decision vector and matrix
-        nstep = int(self.T_step/T) # time span of single support phase
-        self.v_kp1[:nstep] = 1 # definitions of initial support leg
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
         self.lfoot[1,0] =  0.0686   ;  self.lfoot[1,1] = -0.029 ;
-        for j in range (nf):
-            a = min((j+1)*nstep, N)
-            b = min((j+2)*nstep, N)
-            self.V_kp1[a:b,j] = 1
         self.lfoot[2,0] = -0.0686   ;  self.lfoot[2,1] = -0.029 ;
         self.lfoot[3,0] = -0.0686   ;  self.lfoot[3,1] =  0.029 ;
         # right foot
@@ -230,7 +235,6 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
-        self.updatev()
         print '[v, V0, ...]'
         print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 
@@ -259,82 +263,72 @@ class BaseGenerator(object):
 
     def updatev(self):
         """
-        update v_kp1 and V_kp1
+        Update selection vector v_kp1 and selection matrix V_kp1.
+
+        Therefore shift foot decision vector and matrix by one row up,
+        i.e. the first entry in the selection vector and the first row in the
+        selection matrix drops out and selection vector's dropped first value
+        becomes the last entry in the decision matrix
         """
         nf = self.nf
         nstep = int(self.T_step/self.T)
         N = self.N
 
-        # first implementation
-        if False:
-            # save first entries for concatenation
-            first_entry_v_kp1 = self.v_kp1[0].copy()
-            first_row_V_kp1   = self.V_kp1[0,:].copy()
+        # save first value for concatenation
+        first_entry_v_kp1 = self.v_kp1[0].copy()
 
-            # shift foot decision vector and matrix
-            self.v_kp1[:-1]   = self.v_kp1[1:]
-            self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+        self.v_kp1[:-1]   = self.v_kp1[1:]
+        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
 
-            # concatenate last row
-            self.v_kp1[-1]   = first_entry_v_kp1
-            self.V_kp1[-1,:] = first_row_V_kp1
-            self.V_kp1[-1,-1] = first_entry_v_kp1
+        # clear last row
+        self.V_kp1[-1,:] = 0
 
-        # second implementation
-        if False:
-            # when first column of selection matrix becomes zero,
-            # then shift columns by one to the front
-            if False:#(self.V_kp1[:,0] == 0).all():
-                #self.v_kp1[:] = self.V_kp1[:,0]
-                self.V_kp1[:,:-1] = self.V_kp1[:,1:]
-                self.V_kp1[:,-1] = 0
-                #self.V_kp1[:,-1] = self.V_kp1[::-1,0]
+        # concatenate last entry
+        self.V_kp1[-1, -1] = first_entry_v_kp1
 
-            # save first value for concatenation
-            first_entry_v_kp1 = self.v_kp1[0].copy()
-            first_row_V_kp1 = self.V_kp1[0,:].copy()
+        # when first column of selection matrix becomes zero,
+        # then shift columns by one to the front
+        if (self.v_kp1 == 0).all():
+            self.v_kp1[:] = self.V_kp1[:,0]
+            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
+            self.V_kp1[:,-1] = 0
 
-            # shift foot decision vector and matrix
-            self.v_kp1[:-1]   = self.v_kp1[1:]
-            self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+        """
+        # @Max: this is the old implementation
+        # using slices is much better, because underneath is super fast c++.
+        # doing anything else, especially loops can be bad in python because of
+        # dynamic types.
 
-            # concatenate last row
-            self.v_kp1[-1] = first_row_V_kp1[0]
+        self.v_kp1 = numpy.delete(self.v_kp1,0,None)
+        self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
 
-            self.V_kp1[-1,:-1] = first_row_V_kp1[1:]
-            self.V_kp1[-1, -1] = first_entry_v_kp1
+        if self.v_kp1[0]==0:
+            self.v_kp1 = numpy.zeros((N,), dtype=float)
+            self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
+            nf = 1
+            for i in range(nstep):
+                self.v_kp1[i] = 1
+            for i in range(N-nstep):
+                self.v_kp1[i+nstep] = 0
+            step = 0
+            for i in range (N) :
+                step = (int)( i / nstep )
+                for j in range (nf):
+                    self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
 
-        # old implementation
-        # @Max: Why do the matrices won't change?
-        if True:
-            self.v_kp1 = numpy.delete(self.v_kp1,0,None)
-            self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
+        else:
+            self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
+            tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
+            self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
+            for j in range(self.V_kp1.shape[1]) :
+                if self.V_kp1[:,j].sum() < nstep :
+                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 1
+                    break
+                else :
+                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
 
-            if self.v_kp1[0]==0:
-                self.v_kp1 = numpy.zeros((N,), dtype=float)
-                self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
-                nf = 1
-                for i in range(nstep):
-                    self.v_kp1[i] = 1
-                for i in range(N-nstep):
-                    self.v_kp1[i+nstep] = 0
-                step = 0
-                for i in range (N) :
-                    step = (int)( i / nstep )
-                    for j in range (nf):
-                        self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
-
-            else:
-                self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
-                tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
-                self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
-                for j in range(self.V_kp1.shape[1]) :
-                    if self.V_kp1[:,j].sum() < nstep :
-                        self.V_kp1[self.V_kp1.shape[0]-1][j] = 1
-                        break
-                    else :
-                        self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
-
+        """
+        # TODO delete debug output
         print '[v, V0, ...]'
         print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 

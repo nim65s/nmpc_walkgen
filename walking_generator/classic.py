@@ -41,7 +41,7 @@ class ClassicGenerator(BaseGenerator):
         # s.t.   lbA(w0) <= A(w0) * x <= ubA(w0)
         #         lb(w0) <=         x <= ub(wo)
 
-        # Because of varying H and A, we have to use thr
+        # Because of varying H and A, we have to use the
         # SQPProblem class, which supports this kind of QPs
 
         # define some qpOASES specific things

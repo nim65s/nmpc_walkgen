@@ -1,4 +1,5 @@
 import numpy
+from math import cos, sin
 
 class BaseGenerator(object):
     """
@@ -47,8 +48,6 @@ class BaseGenerator(object):
         if self.T_window/T_step - self.nf > 0:
             self.nf = self.nf + 1
         self.h_com = h_com
-        print "self.nf = "
-        print self.nf
 
         # objective weights
 
@@ -116,6 +115,39 @@ class BaseGenerator(object):
         self.Pzs = numpy.zeros((N,3), dtype=float)
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
+        # convex hulls used to bound the free placement of the foot
+            # set of points
+        self.lfhull = numpy.zeros((5,2), dtype=float)
+        self.rfhull = numpy.zeros((5,2), dtype=float)
+            # set of cartesian equalities
+        self.A0r = numpy.zeros((5,2), dtype=float)
+        self.ubB0r = numpy.zeros((5,), dtype=float)
+        self.A0l = numpy.zeros((5,2), dtype=float)
+        self.ubB0l = numpy.zeros((5,), dtype=float)
+
+        # Linear constraints matrix
+        self.Acop = numpy.zeros((), dtype=float)
+        self.Afoot = numpy.zeros((), dtype=float)
+        self.eqAfoot = numpy.zeros((), dtype=float)
+
+        # Linear contraints vector
+        self.ubBfoot = numpy.zeros((), dtype=float)
+        self.ubBcop = numpy.zeros((), dtype=float)
+        self.eqBfoot = numpy.zeros((), dtype=float)
+
+        # Position of the foot in the local foot frame
+        self.lfoot = numpy.zeros((4,2), dtype=float)
+        self.rfoot = numpy.zeros((4,2), dtype=float)
+        # Corresponding linear system
+        self.A0rf = numpy.zeros((4,2), dtype=float)
+        self.ubB0rf = numpy.zeros((4,), dtype=float)
+        self.A0lf = numpy.zeros((4,2), dtype=float)
+        self.ubB0lf = numpy.zeros((4,), dtype=float)
+
+        # Current support state
+        self.currentSupport = BaseTypeSupport()
+        self.currentSupport.__init__()
+
         """
         NOTE number of foot steps in prediction horizon changes between
         nf and nf+1, because when robot takes first step nf steps are
@@ -123,9 +155,13 @@ class BaseGenerator(object):
         """
         self.v_kp1 = numpy.zeros((N,), dtype=float)
         self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
+
         # initialize transformation matrices
         self._initialize_matrices()
 
+        # build the constraints linked to
+        # the foot step placement and to the cop
+        self.buildConstraints()
 
     def _initialize_matrices(self):
         """
@@ -156,34 +192,38 @@ class BaseGenerator(object):
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
 
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-        self.updatev()
-#        for i in range((int)(T_step/T)):
-#            self.v_kp1[i] = 1
-#        for i in range(N-(int)(T_step/T)):
-#            self.v_kp1[i+T_step/T] = 0
-                
-#        step = 0
-#        for i in range (N) :
-#            step = (int)( i / (T_step/T) )
-#            for j in range (nf):
-#                self.V_kp1[i,j] = (int)(i+1>(int)(T_step/T) and j==step-1)
+        # support foot : right
+        self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
+        self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;
+        self.rfhull[2,0] =  0     ;  self.rfhull[2,1] = -0.4 ;
+        self.rfhull[3,0] =  0.2   ;  self.rfhull[3,1] = -0.3 ;
+        self.rfhull[4,0] =  0.28  ;  self.rfhull[4,1] = -0.2 ;
+        # support foot : left
+        self.lfhull[0,0] = -0.28  ;  self.lfhull[0,1] =  0.2 ;
+        self.lfhull[1,0] = -0.2   ;  self.lfhull[1,1] =  0.3 ;
+        self.lfhull[2,0] =  0     ;  self.lfhull[2,1] =  0.4 ;
+        self.lfhull[3,0] =  0.2   ;  self.lfhull[3,1] =  0.3 ;
+        self.lfhull[4,0] =  0.28  ;  self.lfhull[4,1] =  0.2 ;
+        # linear system corresponding to the convex hulls
+        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
+        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
 
-#        print "init"
-#        print self.v_kp1.size
-#        print self.v_kp1
-#        print self.V_kp1
+        # position of the vertices of the feet in the foot coordinates.
+        # left foot
+        self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
+        self.lfoot[1,0] =  0.0686   ;  self.lfoot[1,1] = -0.029 ;
+        self.lfoot[2,0] = -0.0686   ;  self.lfoot[2,1] = -0.029 ;
+        self.lfoot[3,0] = -0.0686   ;  self.lfoot[3,1] =  0.029 ;
+        # right foot
+        self.rfoot[0,0] =  0.0686   ;  self.rfoot[0,1] = -0.029 ;
+        self.rfoot[1,0] =  0.0686   ;  self.rfoot[1,1] =  0.029 ;
+        self.rfoot[2,0] = -0.0686   ;  self.rfoot[2,1] =  0.029 ;
+        self.rfoot[3,0] = -0.0686   ;  self.rfoot[3,1] = -0.029 ;
+        # linear system corresponding to the convex hulls
+        self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
+        self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
-
-
-
+        self.updatev()
 
     def simulate(self):
         """
@@ -217,7 +257,6 @@ class BaseGenerator(object):
         self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
 
         if self.v_kp1[0]==0:
-            print "reinint"
             self.v_kp1 = numpy.zeros((N,), dtype=float)
             self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
             nf = 1
@@ -232,7 +271,6 @@ class BaseGenerator(object):
                     self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
         
         else:
-            print "update"
             self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
             tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
             self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
@@ -243,8 +281,103 @@ class BaseGenerator(object):
                 else :
                     self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
 
-        print self.v_kp1
-        print self.V_kp1
+    def ComputeLinearSystem(self, hull, foot, A0, B0 ):
+
+        nEdges = hull.shape[0]
+        print nEdges
+        if foot == "left" :
+            sign = 1
+        else :
+            sign = -1
+        for i in range(nEdges):
+            if i == nEdges-1 :
+                k = 0
+            else :
+                k = i + 1
+
+            x1 = hull[i,0]
+            y1 = hull[i,1]
+            x2 = hull[k,0]
+            y2 = hull[k,1]
+
+            dx = y1 - y2
+            dy = x2 - x1
+            dc = dx*x1 + dy*y1
+
+            # symmetrical constraints
+            A0[i,0] = sign * dx
+            A0[i,1] = sign * dy
+            B0[i] =   sign * dc
+
+    def buildConstraints(self):
+        self.nc = 0
+        self.buildCoPconstraint()
+        self.buildFootConstraint()
+
+    def buildCoPconstraint(self):
+
+
+
+
+
+
+
+
+
+
+        self.Acop
+        self.ubBcop
+
+    def buildFootConstraint(self):
+        # need the self.currentSupport to be updated
+        #               before calling this function
+
+        # inequality constraint on both feet A u + B <= 0
+        # A0 R(theta) [Fx_k+1 - Fx_k] <= ubB0
+        #             [Fy_k+1 - Fy_k]
+        self.Afoot.resize(2*(self.N+self.nf,2*self.nf))
+
+        matSelec = numpy.array([ [1, 0],[-1, 1] ])
+        footSelec = numpy.array([ [self.currentSupport.x, 0],[self.currentSupport.y, 0] ])
+        theta = self.currentSupport.theta
+        # rotation matrice from F_k+1 to F_k
+        rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
+        nf = self.nf
+        nEdges = self.A0l.shape[0]
+        N = self.N
+        ncfoot = nf * nEdges
+
+        A0lrot = self.A0l.dot(rotMat)
+        A0rrot = self.A0r.dot(rotMat)
+        if self.currentSupport.foot == "left":
+            tmp1 = numpy.array( [A0lrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
+            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0rrot[:,0]] )
+            tmp3 = numpy.array( [A0lrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
+            tmp4 = numpy.array( [numpy.zeros(nEdges,),A0rrot[:,1]] )
+        else :
+            tmp1 = numpy.array( [A0rrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
+            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,0]] )
+            tmp3 = numpy.array( [A0rrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
+            tmp4 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,1]] )
+
+        X_mat = numpy.concatenate( (tmp1.T,tmp2.T) , 0)
+        A0x = X_mat.dot(matSelec)
+        Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
+        A0y = Y_mat.dot(matSelec)
+
+        B0full = numpy.concatenate( (self.ubB0l, self.ubB0r) , 0 )
+        B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
+
+        self.Afoot = numpy.concatenate ( (numpy.zeros((ncfoot,N),dtype=float),\
+                                          A0x,\
+                                          numpy.zeros((ncfoot,N),dtype=float),\
+                                          A0y) , 1 )
+        self.Bfoot = B0
+        self.nc = self.nc + ncfoot
+
+        print A0x
+        print A0y
+        print B0
 
     def solve(self):
         """
@@ -252,3 +385,20 @@ class BaseGenerator(object):
         """
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
+
+class BaseTypeSupport(object):
+
+    def __init__(self, x=0, y=0, theta=0, foot="left"):
+        self.x = x
+        self.y = y
+        self.theta = theta
+
+        self.dx = 0
+        self.dy = 0
+        self.dtheta = 0
+
+        self.ddx = 0
+        self.ddy = 0
+        self.ddtheta = 0
+
+        self.foot = foot

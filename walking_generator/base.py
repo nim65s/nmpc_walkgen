@@ -234,6 +234,9 @@ class BaseGenerator(object):
         print '[v, V0, ...]'
         print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 
+    def update(self):
+        self.updatev()
+
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations

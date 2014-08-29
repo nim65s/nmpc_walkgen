@@ -157,6 +157,7 @@ class BaseGenerator(object):
 
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
+        self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Current support state
         self.currentSupport = BaseTypeSupport()
@@ -179,6 +180,7 @@ class BaseGenerator(object):
 
         # build the constraints linked to
         # the foot step placement and to the cop
+        self.update()
         self.buildConstraints()
 
     def _initialize_matrices(self):
@@ -204,7 +206,7 @@ class BaseGenerator(object):
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
-
+     
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
@@ -229,7 +231,7 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
-
+ 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
@@ -287,7 +289,7 @@ class BaseGenerator(object):
 
         # save first value for concatenation
         first_entry_v_kp1 = self.v_kp1[0].copy()
-
+ 
         self.v_kp1[:-1]   = self.v_kp1[1:]
         self.V_kp1[:-1,:] = self.V_kp1[1:,:]
 
@@ -353,7 +355,7 @@ class BaseGenerator(object):
             impair = "right"
         else :
             pair = "right"
-            impair = "left"
+            impair = "left"    
 
         for i in range(N):
             for j in range(U_kp1.shape[1]):
@@ -366,9 +368,9 @@ class BaseGenerator(object):
             if i > 0 :
                 self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
                                             self.supportDeque[i-1].stepNumber
-            print "stepNumber = ", self.supportDeque[i].stepNumber,\
-                  " foot = " , self.supportDeque[i].foot,\
-                  " ds = " , self.supportDeque[i].ds
+           # print "stepNumber = ", self.supportDeque[i].stepNumber,\
+           #       " foot = " , self.supportDeque[i].foot,\
+           #       " ds = " , self.supportDeque[i].ds
 
 
 
@@ -384,6 +386,7 @@ class BaseGenerator(object):
             for j in range(self.nFootEdge):
                 self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
                 self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
+                self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
 
@@ -416,15 +419,46 @@ class BaseGenerator(object):
     def buildConstraints(self):
         self.nc = 0
         self.buildCoPconstraint()
-        self.buildFootConstraint()
+        self.buildFootEqConstraint()
+        self.buildFootIneqConstraint()
 
     def buildCoPconstraint(self):
-        self.D_kp1x
-        self.D_kp1y
-        self.Acop
-        self.ubBcop
+        zeroDim = (self.N, self.N+self.nf)
 
-    def buildFootConstraint(self):
+        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
+        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
+        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
+        D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
+
+        self.Acop = D_kp1.dot(PZUV)
+
+        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
+        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
+                                        self.v_kp1.dot(self.currentSupport.y) ) , 0 )
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
+
+    def buildFootEqConstraint(self):
+        for i in range(self.N):
+            i
+
+        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
+        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
+        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
+        D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
+
+        self.Acop = D_kp1.dot(PZUV)
+
+        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
+        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
+                                        self.v_kp1.dot(self.currentSupport.y) ) , 0 )
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
+
+    def buildFootEqConstraint(self):
+        for i in range(self.N):
+            i
+
+
+    def buildFootIneqConstraint(self):
         # need the self.currentSupport to be updated
         #               before calling this function
 

@@ -1,4 +1,6 @@
 
 *.fuse_hidden*
 *.pyc
+*.orig
+
 !*.py

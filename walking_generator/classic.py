@@ -124,25 +124,23 @@ class ClassicGenerator(BaseGenerator):
             self.ori_dofs[-nf:] = self.F_k_q
 
             # TODO guess initial active set
+            # this requires changes to the python interface
 
         # define QP matrices
 
-        # H = ( Q_k_x     0 )
-        #     (     0 Q_k_y )
+        # H = ( Q_k_q )
         self._update_ori_Q() # updates values in Q
-        self.ori_H  [ :N+nf,  :N+nf] = self._Q
+        self.ori_H  [:,:] = self._Q
 
-        # g = ( p_k_x )
-        #     ( p_k_y )
-        self.pos_g  [ :N+nf] = self._get_ori_p()
+        # g = ( p_k_q )
+        self._update_ori_p() # updates values in _p
+        self.ori_g  [:]   = self._p
 
-        #self.ori_H  [...] = 0.0
-        #self.ori_A  [...] = 0.0
-        #self.ori_g  [...] = 0.0
-        #self.ori_lb [...] = 0.0
-        #self.ori_ub [...] = 0.0
-        #self.ori_lbA[...] = 0.0
-        #self.ori_ubA[...] = 0.0
+        self.ori_A  [...] = 0.0
+        self.ori_lb [...] = 0.0
+        self.ori_ub [...] = 0.0
+        self.ori_lbA[...] = 0.0
+        self.ori_ubA[...] = 0.0
 
         # POSITIONS
 
@@ -161,32 +159,36 @@ class ClassicGenerator(BaseGenerator):
             self.pos_dofs[a+N:a+N+nf] = self.F_k_y
 
             # TODO guess initial active set
+            # this requires changes to the python interface
 
         # define QP matrices
 
-        # H = ( Q_k_x     0 )
-        #     (     0 Q_k_y )
-        self._update_pos_Q() # updates values in Q
+        # H = ( Q_k   0 )
+        #     (   0 Q_k )
+        self._update_pos_Q() # updates values in _Q
         self.pos_H  [ :N+nf,  :N+nf] = self._Q
         self.pos_H  [-N-nf:, -N-nf:] = self._Q
 
         # g = ( p_k_x )
         #     ( p_k_y )
-        self.pos_g  [ :N+nf] = self._update_pos_p('x')
-        self.pos_g  [-N+nf:] = self._update_pos_p('y')
+        self._update_pos_p('x') # updates values in _p
+        self.pos_g  [ :N+nf] = self._p
+        self._update_pos_p('y') # updates values in _p
+        self.pos_g  [-N-nf:] = self._p
 
         # constraints
-        #self.pos_A  [...] = 0.0
-        #self.pos_lb [...] = 0.0
-        #self.pos_ub [...] = 0.0
-        #self.pos_lbA[...] = 0.0
-        #self.pos_ubA[...] = 0.0
+        self.pos_A  [...] = 0.0
+        self.pos_lb [...] = 0.0
+        self.pos_ub [...] = 0.0
+        self.pos_lbA[...] = 0.0
+        self.pos_ubA[...] = 0.0
+
     def _update_ori_Q(self):
         '''
         Update hessian block Q according to walking report
 
-        Q = ( a*Pvu*Pvu + b*PpuT*ET*E*Ppu + c*Pzu*Pzu + d*I, -c*Pzu*V_kp1  )
-            (                                  -c*Pzu*V_kp1, c*V_kp1*V_kp1 )
+        Q = ( a*Pvu*Pvu + b*PpuT*ET*E*Ppu + c*Ppu*Ppu, -c*Ppu*V_kp1  )
+            (                            -c*Ppu*V_kp1, c*V_kp1*V_kp1 )
         '''
         # rename for convenience
         N  = self.N
@@ -198,64 +200,47 @@ class ClassicGenerator(BaseGenerator):
         c = self.c
         d = self.d
 
-        # matrices
-        Ppu = self.Ppu
-        Pvu = self.Pvu
-        Pzu = self.Pzu
+        # cast matrices for convenience
+        E     = numpy.asmatrix(self.E)
+        Ppu   = numpy.asmatrix(self.Ppu)
+        Pvu   = numpy.asmatrix(self.Pvu)
+        Pzu   = numpy.asmatrix(self.Pzu)
+        V_kp1 = numpy.asmatrix(self.V_kp1)
 
-        V_kp1 = self.V_kp1
-
-        # Q = ([*], * ) = a*Pvu*Pvu + b*Ppu*E*E*Ppu + c*Pzu*Pzu + d*I
+        # Q = ([*], * ) = a*Pvu*Pvu + b*Ppu*E*E*Ppu + c*Ppu*Ppu
         #     ( * , * )
         a = 0; b = N
         c = 0; d = N
-        self._Q[a:b,c:d] = a*Pvu.transpose().dot(Pvu) \
-                         + c*Pzu.transpose().dot(Pzu) \
-                         + d*numpy.eye(N)
-                         # TODO How is matrix E defined?
-                         # E = (I_? 0 I_?)/2tau_step
-                         #+ b*Ppu.transpose().dot(E.transpose().dot(E.dot(Ppu))) \
+        self._Q[a:b,c:d] = a * Pvu.transpose() * Pvu \
+                         + b * Ppu.transpose() * E.transpose() * E * Ppu \
+                         + c * Ppu.transpose() * Ppu
 
         # Q = ( * ,[*])
         #     ( * , * )
         a = 0; b = N
         c = N; d = N+nf
-        self._Q[a:b,c:d] = -c*Pzu.transpose().dot(V_kp1)
+        self._Q[a:b,c:d] = -c * Ppu.transpose() * V_kp1
 
         # Q = (  * , * ) = ( * , [*] )^T
         #     ( [*], * )   ( * ,  *  )
-        dummy = self._Q[a:b,c:d].transpose()
+        dummy = self._Q[a:b,c:d]
         a = N; b = N+nf
         c = 0; d = N
-        self._Q[a:b,c:d] = dummy
+        self._Q[a:b,c:d] = dummy.transpose()
 
         # Q = ( * , * )
         #     ( * ,[*])
         a = N; b = N+nf
         c = N; d = N+nf
-        self._Q[a:b,c:d] = c*V_kp1.transpose().dot(V_kp1)
+        self._Q[a:b,c:d] = c * V_kp1.transpose() * V_kp1
 
-    def _update_ori_p(self, case=None):
+    def _update_ori_p(self):
         """
         Update pass gradient block p according to walking report
 
         p = ( a*Pvu*(Pvs*ck - Refk+1) + b*Ppu*E*(E*Pps*cx - Refk+1) + c*Pzu*(Pzs*ck - vk+1*fk )
             (                                                       -c*Vk+1*(Pzs*ck - vk+1*fk )
         """
-        if case == 'x':
-            c_k = self.c_k_x
-            dC_kp1_ref = self.dC_kp1_x_ref
-            f_k = self.f_k_x
-
-        elif case == 'y':
-            c_k = self.c_k_y
-            dC_kp1_ref = self.dC_kp1_y_ref
-            f_k = self.f_k_y
-
-        else:
-            err_str = 'Please use either case "x" or "y" for this routine'
-            raise AttributeError(err_str)
-
         # rename for convenience
         N  = self.N
         nf = self.nf
@@ -263,20 +248,28 @@ class ClassicGenerator(BaseGenerator):
         # weights
         a = self.a
         b = self.b
+        c = self.c
 
         # matrices
+        E = self.E
+        c_k = self.c_k_x
+        f_k = self.f_k_x
+        dC_kp1_ref = self.dC_kp1_q_ref
+        Pvs = self.Pvs
         Pvu = self.Pvu
+        Pps = self.Pps
         Ppu = self.Ppu
+        Pzs = self.Pzs
         Pzu = self.Pzu
-
+        v_kp1 = self.v_kp1
         V_kp1 = self.V_kp1
 
         # p = ([*]) =
         #     ( * )
         a = 0; b = N
-        self._p[a:b] = a*Pvu.transpose().dot((Pvs.dot(c_k) - self.dC_kp1_ref)) \
-                     + c*Pzu.transpose().dot((Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
-                     #+ b*Ppu.transpose()*E.transpose()*E*Ppu \
+        self._p[a:b] = a*Pvu.transpose().dot((Pvs.dot(c_k) - dC_kp1_ref)) \
+                     + c*Pzu.transpose().dot((Pzs.dot(c_k) - v_kp1.dot(f_k)))
+                     #+ b*Ppu.transpose().dot(E.transpose()).dot(E).dot(Ppu) \
 
         # p = ( * ) =
         #     ([*])
@@ -300,42 +293,40 @@ class ClassicGenerator(BaseGenerator):
         c = self.c
         d = self.d
 
-        # matrices
-        Ppu = self.Ppu
-        Pvu = self.Pvu
-        Pzu = self.Pzu
-
-        V_kp1 = self.V_kp1
+        # cast matrices for convenience
+        E     = numpy.asmatrix(self.E)
+        Ppu   = numpy.asmatrix(self.Ppu)
+        Pvu   = numpy.asmatrix(self.Pvu)
+        Pzu   = numpy.asmatrix(self.Pzu)
+        V_kp1 = numpy.asmatrix(self.V_kp1)
 
         # Q = ([*], * ) = a*Pvu*Pvu + b*Ppu*E*E*Ppu + c*Pzu*Pzu + d*I
         #     ( * , * )
         a = 0; b = N
         c = 0; d = N
-        self._Q[a:b,c:d] = a*Pvu.transpose().dot(Pvu) \
-                         + c*Pzu.transpose().dot(Pzu) \
-                         + d*numpy.eye(N)
-                         # TODO How is matrix E defined?
-                         # E = (I_? 0 I_?)/2tau_step
-                         #+ b*Ppu.transpose().dot(E.transpose().dot(E.dot(Ppu))) \
+        self._Q[a:b,c:d] = a * Pvu.transpose() * Pvu \
+                         + b * Ppu.transpose() * E.transpose() * E * Ppu \
+                         + c * Pzu.transpose() * Pzu \
+                         + d * numpy.eye(N)
 
         # Q = ( * ,[*])
         #     ( * , * )
         a = 0; b = N
         c = N; d = N+nf
-        self._Q[a:b,c:d] = -c*Pzu.transpose().dot(V_kp1)
+        self._Q[a:b,c:d] = -c * Pzu.transpose() * V_kp1
 
         # Q = (  * , * ) = ( * , [*] )^T
         #     ( [*], * )   ( * ,  *  )
-        dummy = self._Q[a:b,c:d].transpose()
+        dummy = self._Q[a:b,c:d]
         a = N; b = N+nf
         c = 0; d = N
-        self._Q[a:b,c:d] = dummy
+        self._Q[a:b,c:d] = dummy.transpose()
 
         # Q = ( * , * )
         #     ( * ,[*])
         a = N; b = N+nf
         c = N; d = N+nf
-        self._Q[a:b,c:d] = c*V_kp1.transpose().dot(V_kp1)
+        self._Q[a:b,c:d] = c * V_kp1.transpose() * V_kp1
 
     def _update_pos_p(self, case=None):
         """
@@ -346,8 +337,8 @@ class ClassicGenerator(BaseGenerator):
         """
         if case == 'x':
             c_k = self.c_k_x
-            dC_kp1_ref = self.dC_kp1_x_ref
             f_k = self.f_k_x
+            dC_kp1_ref = self.dC_kp1_x_ref
 
         elif case == 'y':
             c_k = self.c_k_y
@@ -365,20 +356,25 @@ class ClassicGenerator(BaseGenerator):
         # weights
         a = self.a
         b = self.b
+        c = self.c
 
         # matrices
+        E = self.E
+        Pvs = self.Pvs
         Pvu = self.Pvu
+        Pps = self.Pps
         Ppu = self.Ppu
+        Pzs = self.Pzs
         Pzu = self.Pzu
-
+        v_kp1 = self.v_kp1
         V_kp1 = self.V_kp1
 
         # p = ([*]) =
         #     ( * )
         a = 0; b = N
-        self._p[a:b] = a*Pvu.transpose().dot((Pvs.dot(c_k) - self.dC_kp1_ref)) \
-                     + c*Pzu.transpose().dot((Pzs.dot(c_k) - self.v_kp1.dot(f_k)))
-                     #+ b*Ppu.transpose()*E.transpose()*E*Ppu \
+        self._p[a:b] = a*Pvu.transpose().dot(Pvs.dot(c_k) - dC_kp1_ref) \
+                     + c*Pzu.transpose().dot(Pzs.dot(c_k) - self.v_kp1.dot(f_k))
+                     #+ b*Ppu.transpose().dot(E.transpose()).dot(E).dot(Ppu) \
 
         # p = ( * ) =
         #     ([*])

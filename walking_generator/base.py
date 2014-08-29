@@ -56,8 +56,12 @@ class BaseGenerator(object):
         self.c = 1.0 # weight for ZMP reference tracking
         self.d = 1.0 # weight for jerk minimization
 
-        self.E = numpy.zeros((self.N, self.N)) # matrix to get average velocity
-        self.E[:] # over two steps
+        # matrix to get average velocity
+
+        self.E = numpy.zeros((self.N/self.nf, self.N))
+        self.E[:, :self.N/self.nf] = -numpy.eye(self.N/self.nf)
+        self.E[:,-self.N/self.nf:] =  numpy.eye(self.N/self.nf)
+        self.E /= 2*self.T_step
 
         # center of mass initial values
 
@@ -89,6 +93,7 @@ class BaseGenerator(object):
 
         self. dC_kp1_x_ref = numpy.zeros((N,), dtype=float)
         self. dC_kp1_y_ref = numpy.zeros((N,), dtype=float)
+        self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
 
         # feet matrices
 

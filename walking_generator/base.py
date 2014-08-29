@@ -150,6 +150,7 @@ class BaseGenerator(object):
 
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
+        self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Current support state
         self.currentSupport = BaseTypeSupport()
@@ -172,6 +173,7 @@ class BaseGenerator(object):
 
         # build the constraints linked to
         # the foot step placement and to the cop
+        self.update()
         self.buildConstraints()
 
     def _initialize_matrices(self):
@@ -237,8 +239,8 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
         self.updatev()
-        print '[v, V0, ...]'
-        print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+        #print '[v, V0, ...]'
+        #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 
     def update(self):
         self.updatev()
@@ -346,9 +348,9 @@ class BaseGenerator(object):
                     else :
                         self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
 
-        print '[v, V0, ...]'
+        #print '[v, V0, ...]'
         U_kp1 =  numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
-        print U_kp1
+        #print U_kp1
 
         if (self.currentSupport.foot == "left" ) :
             pair = "left"
@@ -368,15 +370,15 @@ class BaseGenerator(object):
             if i > 0 :
                 self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
                                             self.supportDeque[i-1].stepNumber
-            print "stepNumber = ", self.supportDeque[i].stepNumber,\
-                  " foot = " , self.supportDeque[i].foot,\
-                  " ds = " , self.supportDeque[i].ds
+           # print "stepNumber = ", self.supportDeque[i].stepNumber,\
+           #       " foot = " , self.supportDeque[i].foot,\
+           #       " ds = " , self.supportDeque[i].ds
 
 
 
     def updateD(self):
     # need updatev to be run before
-        for i in range(N):
+        for i in range(self.N):
             if self.supportDeque[i].foot == "left" :
                 A0 = self.A0lf
                 B0 = self.ubB0lf
@@ -386,11 +388,11 @@ class BaseGenerator(object):
             for j in range(self.nFootEdge):
                 self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
                 self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
+                self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
 
         nEdges = hull.shape[0]
-        print nEdges
         if foot == "left" :
             sign = 1
         else :
@@ -418,23 +420,30 @@ class BaseGenerator(object):
     def buildConstraints(self):
         self.nc = 0
         self.buildCoPconstraint()
-        self.buildFootConstraint()
+        self.buildFootEqConstraint()
+        self.buildFootIneqConstraint()
 
     def buildCoPconstraint(self):
-        self.D_kp1x
-        self.D_kp1y
+        zeroDim = (self.N, self.N+self.nf)
+
+        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
+        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
+        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
+        D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
+
+        self.Acop = D_kp1.dot(PZUV)
+
+        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
+        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
+                                        self.v_kp1.dot(self.currentSupport.y) ) , 0 )
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
+
+    def buildFootEqConstraint(self):
+        for i in range(self.N):
+            i
 
 
-
-
-
-
-
-
-        self.Acop
-        self.ubBcop
-
-    def buildFootConstraint(self):
+    def buildFootIneqConstraint(self):
         # need the self.currentSupport to be updated
         #               before calling this function
 
@@ -480,10 +489,6 @@ class BaseGenerator(object):
                                           A0y) , 1 )
         self.Bfoot = B0
         self.nc = self.nc + ncfoot
-
-        print A0x
-        print A0y
-        print B0
 
     def solve(self):
         """

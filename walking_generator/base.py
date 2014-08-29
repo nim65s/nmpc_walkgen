@@ -45,8 +45,6 @@ class BaseGenerator(object):
         self.T_window = N*T
         self.T_step = T_step
         self.nf = (int)(self.T_window/T_step)
-        if self.T_window/T_step - self.nf > 0:
-            self.nf = self.nf + 1
         self.h_com = h_com
 
         # objective weights
@@ -141,16 +139,24 @@ class BaseGenerator(object):
         self.eqBfoot = numpy.zeros((), dtype=float)
 
         # Position of the foot in the local foot frame
-        self.lfoot = numpy.zeros((4,2), dtype=float)
-        self.rfoot = numpy.zeros((4,2), dtype=float)
+        self.nFootEdge = 4
+        self.lfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.rfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
         # Corresponding linear system
-        self.A0rf = numpy.zeros((4,2), dtype=float)
-        self.ubB0rf = numpy.zeros((4,), dtype=float)
-        self.A0lf = numpy.zeros((4,2), dtype=float)
-        self.ubB0lf = numpy.zeros((4,), dtype=float)
+        self.A0rf = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0rf = numpy.zeros((self.nFootEdge,), dtype=float)
+        self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
+
+        self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
+        self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
 
         # Current support state
         self.currentSupport = BaseTypeSupport()
+        self.supportDeque = numpy.empty( (N,) , dtype=object )
+        for i in range(N):
+            self.supportDeque[i] = BaseTypeSupport()
+            self.supportDeque[i].__init__()
         self.currentSupport.__init__()
 
         """
@@ -210,15 +216,15 @@ class BaseGenerator(object):
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
         self.lfoot[1,0] =  0.0686   ;  self.lfoot[1,1] = -0.029 ;
-        for j in range (nf):
-            a = min((j+1)*nstep, N)
-            b = min((j+2)*nstep, N)
-            self.V_kp1[a:b,j] = 1
         self.lfoot[2,0] = -0.0686   ;  self.lfoot[2,1] = -0.029 ;
         self.lfoot[3,0] = -0.0686   ;  self.lfoot[3,1] =  0.029 ;
         # right foot
@@ -236,6 +242,7 @@ class BaseGenerator(object):
 
     def update(self):
         self.updatev()
+        self.updateD()
 
     def simulate(self):
         """
@@ -311,6 +318,10 @@ class BaseGenerator(object):
             self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
 
             if self.v_kp1[0]==0:
+                if (self.currentSupport.foot == "left" ) :
+                    self.currentSupport.foot = "right"
+                else :
+                    self.currentSupport.foot = "left"
                 self.v_kp1 = numpy.zeros((N,), dtype=float)
                 self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
                 nf = 1
@@ -336,7 +347,45 @@ class BaseGenerator(object):
                         self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
 
         print '[v, V0, ...]'
-        print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+        U_kp1 =  numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+        print U_kp1
+
+        if (self.currentSupport.foot == "left" ) :
+            pair = "left"
+            impair = "right"
+        else :
+            pair = "right"
+            impair = "left"    
+
+        for i in range(N):
+            for j in range(U_kp1.shape[1]):
+                if U_kp1[i][j] == 1 :
+                    self.supportDeque[i].stepNumber = j
+                    if (j % 2) == 0:
+                        self.supportDeque[i].foot = pair
+                    else :
+                        self.supportDeque[i].foot = impair
+            if i > 0 :
+                self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
+                                            self.supportDeque[i-1].stepNumber
+            print "stepNumber = ", self.supportDeque[i].stepNumber,\
+                  " foot = " , self.supportDeque[i].foot,\
+                  " ds = " , self.supportDeque[i].ds
+
+
+
+    def updateD(self):
+    # need updatev to be run before
+        for i in range(N):
+            if self.supportDeque[i].foot == "left" :
+                A0 = self.A0lf
+                B0 = self.ubB0lf
+            else :
+                A0 = self.A0rf
+                B0 = self.ubB0rf
+            for j in range(self.nFootEdge):
+                self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
+                self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
 
@@ -372,8 +421,8 @@ class BaseGenerator(object):
         self.buildFootConstraint()
 
     def buildCoPconstraint(self):
-
-
+        self.D_kp1x
+        self.D_kp1y
 
 
 
@@ -459,3 +508,5 @@ class BaseTypeSupport(object):
         self.ddtheta = 0
 
         self.foot = foot
+        self.ds = 0
+        self.stepNumber = 0

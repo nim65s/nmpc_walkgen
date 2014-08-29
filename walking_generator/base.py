@@ -204,7 +204,7 @@ class BaseGenerator(object):
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
-        
+
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
@@ -229,7 +229,7 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
-        
+
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
@@ -287,7 +287,7 @@ class BaseGenerator(object):
 
         # save first value for concatenation
         first_entry_v_kp1 = self.v_kp1[0].copy()
-        
+
         self.v_kp1[:-1]   = self.v_kp1[1:]
         self.V_kp1[:-1,:] = self.V_kp1[1:,:]
 
@@ -353,7 +353,7 @@ class BaseGenerator(object):
             impair = "right"
         else :
             pair = "right"
-            impair = "left"    
+            impair = "left"
 
         for i in range(N):
             for j in range(U_kp1.shape[1]):
@@ -374,7 +374,7 @@ class BaseGenerator(object):
 
     def updateD(self):
     # need updatev to be run before
-        for i in range(N):
+        for i in range(self.N):
             if self.supportDeque[i].foot == "left" :
                 A0 = self.A0lf
                 B0 = self.ubB0lf

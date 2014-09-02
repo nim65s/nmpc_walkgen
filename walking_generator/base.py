@@ -311,45 +311,6 @@ class BaseGenerator(object):
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
             self.V_kp1[:,-1] = 0
 
-        """
-        # @Max: this is the old implementation
-        # using slices is much better, because underneath is super fast c++.
-        # doing anything else, especially loops can be bad in python because of
-        # dynamic types.
-
-        self.v_kp1 = numpy.delete(self.v_kp1,0,None)
-        self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
-
-        if self.v_kp1[0]==0:
-                if (self.currentSupport.foot == "left" ) :
-                    self.currentSupport.foot = "right"
-                else :
-                    self.currentSupport.foot = "left"
-            self.v_kp1 = numpy.zeros((N,), dtype=float)
-            self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
-            nf = 1
-            for i in range(nstep):
-                self.v_kp1[i] = 1
-            for i in range(N-nstep):
-                self.v_kp1[i+nstep] = 0
-            step = 0
-            for i in range (N) :
-                step = (int)( i / nstep )
-                for j in range (nf):
-                    self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
-
-        else:
-            self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
-            tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
-            self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
-            for j in range(self.V_kp1.shape[1]) :
-                if self.V_kp1[:,j].sum() < nstep :
-                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 1
-                    break
-                else :
-                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
-
-        """
         # TODO delete debug output
         #print '[v, V0, ...]'
         U_kp1 =  numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
@@ -528,3 +489,20 @@ class BaseTypeFoot(object):
         self.foot = foot
         self.ds = 0
         self.stepNumber = 0
+        self.timeLimit = 0
+        self.supportFoot = 0
+
+class CoMState(object):
+
+    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
+        self.x = numpy.zeros( (3,) , dtype=float )
+        self.y = numpy.zeros( (3,) , dtype=float )
+        self.z = h_com
+        self.theta = numpy.zeros( (3,) , dtype=float )
+
+class ZMPState(object):
+
+    def __init__(self, x=0, y=0, z=0):
+        self.x = x
+        self.y = y
+        self.z = z

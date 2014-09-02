@@ -1,5 +1,5 @@
 import numpy
-from base import CoMState, ZMPState
+from base import CoMState, ZMPState, BaseTypeFoot
 
 class Interpolation(object):
     """
@@ -10,7 +10,7 @@ class Interpolation(object):
     pattern generator. It interpolate the CoM, the ZMP and the Feet state along the
     whole trajectory with a given interpolation period (input)
     """
-    def __init__(self, T=0.005, Tcontrol=0.1, Tstep=0.8, h_com=0.81):
+    def __init__(self, T=0.005, Tcontrol=0.1, Tstep=0.8, h_com=0.81, initCoM, initLeftFoot, initRightFoot):
         self.T = T
         self.Tc = Tcontrol
         self.interval = int(self.Tc/self.T)
@@ -21,11 +21,30 @@ class Interpolation(object):
             self.CoMbuffer[i] = CoMState()
             self.ZMPbuffer[i] = ZMPState()
 
-        self.curCoM = CoMState()
-        self.curZMP = ZMPState()
-
+        self.curCoM = initCoM
+        if initLeftFoot.supportFoot = 1:
+            self.curSupport = initLeftFoot
+            self.curSwingFoot = initRightFoot
+        else:
+            self.curSupport = initRightFoot
+            self.curSwingFoot = initLeftFoot
         self.lipm = LIPM(Tcontrol,T,h_com)
-        self.fi = footInterpolation
+        self.fi = FootInterpolation()
+
+    def interpolate(self, F_k_x, F_k_y, jerkX, jerkY,\
+                    CoMbuffer, ZMPbuffer, LeftFootBuffer, RightFootBuffer):
+
+        self.lipm.interpolate(self, self.curCoM, CoMbuffer, ZMPbuffer,jerkX, jerkY)
+        self.curCoM = CoMbuffer[-1:]
+
+        self.fi.interpolate(time, currentSupport, currentSwingFootPosition,\
+                            F_k_x, F_k_y, PreviewAngle,LeftFootBuffer, RightFootBuffer)
+        if LeftFootBuffer[-1:].supportFoot = 1:
+            self.curSupport = LeftFootBuffer[-1:]
+            self.curSwingFoot = RightFootBuffer[-1:]
+        else:
+            self.curSupport = RightFootBuffer[-1:]
+            self.curSwingFoot = LeftFootBuffer[-1:]
 
 
 class LIPM(object):
@@ -71,13 +90,13 @@ class LIPM(object):
 
     def interpolate(self, CoMinit, CoMbuffer, ZMPbuffer,\
                     jerkX, jerkY):
-        for i in range(self.intervaleSize):
+        for i in range(self.intervaleSize+1):
             CoMbuffer[i].x = A.dot(CoMinit.x) + B.dot(jerkX)
             CoMbuffer[i].y = A.dot(CoMinit.y) + B.dot(jerkY)
             ZMPbuffer[i].x = C.CoMbuffer[i].x
             ZMPbuffer[i].y = C.CoMbuffer[i].y
 
-class footInterpolation(object):
+class FootInterpolation(object):
     """
     footInterpolation class of walking pattern generator for humanoids, cf.
     LAAS-UHEI walking report.
@@ -100,9 +119,10 @@ class footInterpolation(object):
         self.TSS = stepTime - doubleSupportTime
         self.TDS = doubleSupportTime
 
-    def interpolate(time, currentSupport, currentSwingFootPosition,\#input
-                    F_k_x, F_k_y, PreviewAngle,\#input
-                    LeftFootBuffer, RightFootBuffer):#output
+    def interpolate(time, currentSupport,\            #input
+                    currentSwingFootPosition,\        #input
+                    F_k_x, F_k_y, PreviewAngle,\      #input
+                    LeftFootBuffer, RightFootBuffer): #output
 
         # Deal with the lift off time and the landing time. During those period
         # the foot do not move along the x and y axis.
@@ -136,8 +156,10 @@ class footInterpolation(object):
             else :
                 sf = LeftFootBuffer[i]
                 nsf = RightFootBuffer[i]
-            # the non swing foot stay still
 
+            # the non swing foot stay still
+            nsf = currentSupport
+            nsf.supportFoot = 1
 
             Ti = Tc * i # interpolation time
             # if we are landing or lifting the foot, do not modify the x,y and theta

@@ -210,8 +210,8 @@ class TestClassecGenerator(TestCase):
         dC_kp1_y_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
         dC_kp1_q_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
 
-        dC_kp1_x_ref[50:,:] = 2 #m/s
-        dC_kp1_y_ref[50:,:] = 2 #m/s
+        dC_kp1_x_ref[50:,:] = 0.2 #m/s
+        dC_kp1_y_ref[50:,:] = 0.2 #m/s
 
         gen.dC_kp1_x_ref[:] = dC_kp1_x_ref[0,:]
         gen.dC_kp1_y_ref[:] = dC_kp1_y_ref[0,:]
@@ -241,8 +241,8 @@ class TestClassecGenerator(TestCase):
             # get reference from data
             dddC_k_x = data[i,  0:16]
             dddC_k_y = data[i, 18:34]
-            F_k_x      = data[i, 16:18]
-            F_k_y      = data[i, 34:36]
+            F_k_x    = data[i, 16:18]
+            F_k_y    = data[i, 34:36]
 
             assert_allclose(gen.dddC_k_x, dddC_k_x)
             assert_allclose(gen.dddC_k_y, dddC_k_y)

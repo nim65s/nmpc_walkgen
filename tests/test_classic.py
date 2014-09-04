@@ -241,8 +241,8 @@ class TestClassecGenerator(TestCase):
             # get reference from data
             dddC_k_x = data[i,  0:16]
             dddC_k_y = data[i, 18:34]
-            F_k_x      = data[i, 16:18]
-            F_k_y      = data[i, 34:36]
+            F_k_x    = data[i, 16:18]
+            F_k_y    = data[i, 34:36]
 
             assert_allclose(gen.dddC_k_x, dddC_k_x)
             assert_allclose(gen.dddC_k_y, dddC_k_y)

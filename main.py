@@ -6,12 +6,13 @@ from walking_generator.interpolation import Interpolation
 if __name__ == '__main__':
     gen = ClassicGenerator()
     gen.simulate()
-    gen.solve()
 
     # set reference velocities to zero
     gen.dC_kp1_x_ref[...] = 0.1
     gen.dC_kp1_y_ref[...] = 0.1
     gen.dC_kp1_q_ref[...] = 0.0
+
+    gen.solve()
 
     for i in range(1):
         print 'iteration: ', i

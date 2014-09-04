@@ -50,10 +50,10 @@ class BaseGenerator(object):
 
         # objective weights
 
-        self.a = 1.0 # weight for CoM velocity tracking
-        self.b = 0.0 # weight for CoM average velocity tracking
-        self.c = 1.0 # weight for ZMP reference tracking
-        self.d = 1.0 # weight for jerk minimization
+        self.a = 1.0   # weight for CoM velocity tracking
+        self.b = 0.0   # weight for CoM average velocity tracking
+        self.c = 1e-06 # weight for ZMP reference tracking
+        self.d = 1e-05 # weight for jerk minimization
 
         # matrix to get average velocity
 

@@ -62,9 +62,9 @@ class ClassicGenerator(BaseGenerator):
         self.ori_qp = SQProblem(self.ori_nv, self.ori_nc)
         #self.ori_qp.setOptions(self.options)
 
-        self.ori_H   = numpy.zeros((self.ori_nv,self.ori_nv))
-        self.ori_A   = numpy.zeros((self.ori_nc,self.ori_nv))
-        self.ori_g   = numpy.zeros((self.ori_nv,))
+        self.ori_H   =  numpy.zeros((self.ori_nv,self.ori_nv))
+        self.ori_A   =  numpy.zeros((self.ori_nc,self.ori_nv))
+        self.ori_g   =  numpy.zeros((self.ori_nv,))
         self.ori_lb  = -numpy.ones((self.ori_nv,))*1e+08
         self.ori_ub  =  numpy.ones((self.ori_nv,))*1e+08
         self.ori_lbA = -numpy.ones((self.ori_nc,))*1e+08
@@ -136,11 +136,11 @@ class ClassicGenerator(BaseGenerator):
         self._update_ori_p() # updates values in _p
         self.ori_g  [:]   = self._p
 
-        self.ori_A  [...] = 0.0
-        self.ori_lb [...] = 0.0
-        self.ori_ub [...] = 0.0
-        self.ori_lbA[...] = 0.0
-        self.ori_ubA[...] = 0.0
+        #self.ori_A  [...] = 0.0
+        #self.ori_lb [...] = 0.0
+        #self.ori_ub [...] = 0.0
+        #self.ori_lbA[...] = 0.0
+        #self.ori_ubA[...] = 0.0
 
         # POSITIONS
 
@@ -177,11 +177,11 @@ class ClassicGenerator(BaseGenerator):
         self.pos_g  [-N-nf:] = self._p
 
         # constraints
-        self.pos_A  [...] = 0.0
-        self.pos_lb [...] = 0.0
-        self.pos_ub [...] = 0.0
-        self.pos_lbA[...] = 0.0
-        self.pos_ubA[...] = 0.0
+        #self.pos_A  [...] = 0.0
+        #self.pos_lb [...] = 0.0
+        #self.pos_ub [...] = 0.0
+        #self.pos_lbA[...] = 0.0
+        #self.pos_ubA[...] = 0.0
 
     def _update_ori_Q(self):
         '''

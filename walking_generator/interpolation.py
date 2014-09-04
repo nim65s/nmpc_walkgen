@@ -10,7 +10,9 @@ class Interpolation(object):
     pattern generator. It interpolate the CoM, the ZMP and the Feet state along the
     whole trajectory with a given interpolation period (input)
     """
-    def __init__(self, T=0.005, Tcontrol=0.1, Tstep=0.8, h_com=0.81, initCoM, initLeftFoot, initRightFoot):
+    def __init__(self, T=0.005, Tcontrol=0.1, Tstep=0.8, h_com=0.81,
+        initCoM=CoMState(), initLeftFoot=BaseTypeFoot(),
+        initRightFoot=BaseTypeFoot()):
         self.T = T
         self.Tc = Tcontrol
         self.interval = int(self.Tc/self.T)
@@ -22,7 +24,7 @@ class Interpolation(object):
             self.ZMPbuffer[i] = ZMPState()
 
         self.curCoM = initCoM
-        if initLeftFoot.supportFoot = 1:
+        if initLeftFoot.supportFoot == 1:
             self.curSupport = initLeftFoot
             self.curSwingFoot = initRightFoot
         else:
@@ -39,7 +41,7 @@ class Interpolation(object):
 
         self.fi.interpolate(time, currentSupport, currentSwingFootPosition,\
                             F_k_x, F_k_y, PreviewAngle,LeftFootBuffer, RightFootBuffer)
-        if LeftFootBuffer[-1:].supportFoot = 1:
+        if LeftFootBuffer[-1:].supportFoot == 1:
             self.curSupport = LeftFootBuffer[-1:]
             self.curSwingFoot = RightFootBuffer[-1:]
         else:
@@ -105,8 +107,8 @@ class FootInterpolation(object):
     of the pattern generator. It interpolate the feet trajectory during the QP period
     """
 
-    def __init__(self, QPsamplingPeriod=0.1, NbSamplingPreviewed=16, controlPeriod=0.005\
-                        FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
+    def __init__(self, QPsamplingPeriod=0.1, NbSamplingPreviewed=16, controlPeriod=0.005,
+        FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
         self.T = QPsamplingPeriod
         self.Tc = controlPeriod
         self.N = NbSamplingPreviewed
@@ -119,10 +121,10 @@ class FootInterpolation(object):
         self.TSS = stepTime - doubleSupportTime
         self.TDS = doubleSupportTime
 
-    def interpolate(time, currentSupport,\            #input
-                    currentSwingFootPosition,\        #input
-                    F_k_x, F_k_y, PreviewAngle,\      #input
-                    LeftFootBuffer, RightFootBuffer): #output
+    def interpolate(self, time, currentSupport,
+        currentSwingFootPosition,
+        F_k_x, F_k_y, PreviewAngle,
+        LeftFootBuffer, RightFootBuffer):
 
         # Deal with the lift off time and the landing time. During those period
         # the foot do not move along the x and y axis.
@@ -132,7 +134,7 @@ class FootInterpolation(object):
         endOfLiftoff = 0.5(TSS-UnlockedSwingPeriod)
         startLanding = endOfLiftoff + UnlockedSwingPeriod
         SwingTimePassed = 0.0
-        if localInterpolationStartTime > endOfLiftoff
+        if localInterpolationStartTime > endOfLiftoff:
             SwingTimePassed = localInterpolationStartTime - endOfLiftoff
         timeInterval = UnlockedSwingPeriod - endOfLiftoff
 
@@ -142,7 +144,7 @@ class FootInterpolation(object):
         self.polynomeY.setParameters(timeInterval,F_k_y,csf.y,csf.dy,csf.ddy)
         self.polynomeTheta.setParameters(timeInterval,PreviewAngle,\
                                             csf.theta,csf.dtheta,csf.ddtheta)
-        if currentSupport.ds = 1 :
+        if currentSupport.ds == 1 :
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,csfp.z,csfp.dz)
 
         # begin the interpolation
@@ -167,10 +169,10 @@ class FootInterpolation(object):
                 sf.x = csf.x
                 sf.y = csf.y
                 sf.theta = csf.theta
-            else if localInterpolationStartTime < endOfLiftoff
+            elif localInterpolationStartTime < endOfLiftoff:
                 Tr = Ti - endOfLiftoff # Tr = remaining time
                 self.computeXYTheta(sf,Tr)
-            else
+            else:
                 self.computeXYTheta(sf,Ti)
 
 
@@ -195,33 +197,33 @@ class Polynome(object):
 
     Polynome class provides basic mathematics tools for the interpolation
     """
-    def __init__(self,degree)
+    def __init__(self,degree):
         self.degree = degree
         self.coef = numpy.zeros( (degree+1,) , dtype=float )
 
-    def compute(time)
+    def compute(self,time):
         if time > self.FT :
             time = FT
-        r = 0.0, t = 1.0
-        for i in [0:self.coef.shape[0]:1]:
+        r = 0.0; t = 1.0
+        for i in range(self.coef.shape[0]):
             r += i * self.coef[i] * t
             t *= time ;
         return r
 
-    def computeDerivative(time)
+    def computeDerivative(self,time):
         if time > self.FT :
             time = FT
-        r = 0.0, t = 1.0
-        for i in [1:self.coef.shape[0]:1]:
-            r += i*(i-1) self.coef[i] * t
+        r = 0.0; t = 1.0
+        for i in range(self.coef.shape[0])[1:]:
+            r += i*(i-1) * self.coef[i] * t
             t *= time ;
         return r
 
-    def computeSecDerivative(time)
+    def computeSecDerivative(self,time):
         if time > self.FT :
             time = FT
-        r = 0.0, t = 1.0
-        for i in [2:self.coef.shape[0]:1]:
+        r = 0.0; t = 1.0
+        for i in range(self.coef.shape[0])[2:]:
             r += i*(i-1)*(i-2) * self.coef[i] * t
             t *= time ;
         return r
@@ -235,17 +237,17 @@ class Polynome5(Polynome):
     to a point A with certain velocity an acceleration with a 5th degree
     polynome
     """
-    def __init__(self,FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration):
-        self.FT = FT = FinalTime
-        self.FP = FP = FinalPosition
-        self.IP = IP = InitialPosition
-        self.IS = IS = InitialSpeed
-        self.IA = IA = InitialAcceleration
+    def __init__(self):
+        self.FT = FT = 0.0
+        self.FP = FP = 0.0
+        self.IP = IP = 0.0
+        self.IS = IS = 0.0
+        self.IA = IA = 0.0
         initialAcceleration = 0.0
         Polynome.__init__(self,5)
         self.setParameters(FT,FP,IP,IS,IA)
 
-    def setParameters(FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration)
+    def setParameters(self,FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration):
         self.FT = FT = FinalTime
         self.FP = FP = FinalPosition
         self.IP = IP = InitialPosition
@@ -276,13 +278,13 @@ class Polynome4(Polynome):
     to a point A with certain velocity an acceleration with a 4th degree
     polynome
     """
-    def __init__(FinalTime,MiddlePosition):
-        self.FT = FT = FinalTime
-        self.MP = MP = MiddlePosition
+    def __init__(self):
+        self.FT = FT = 0.0
+        self.MP = MP = 0.0
         Polynome.__init__(self,4)
         self.setParameters(FT,MP,0.0,0.0)
 
-    def setParameters(FinalTime,MiddlePosition,InitialPosition,InitialSpeed):
+    def setParameters(self,FinalTime,MiddlePosition,InitialPosition,InitialSpeed):
         self.FT = FT = FinalTime
         self.MP = MP = MiddlePosition
         IP = InitialPosition

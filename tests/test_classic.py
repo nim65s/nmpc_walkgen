@@ -18,6 +18,17 @@ class TestClassecGenerator(TestCase):
     """
     Test classic pattern generator, also against results from LAAS
     """
+
+    def test_generator_with_zero_reference_velocity(self):
+        gen = ClassicGenerator()
+
+        # set reference velocities to zero
+        gen.dC_kp1_x_ref[...] = 0.0
+        gen.dC_kp1_y_ref[...] = 0.0
+        gen.dC_kp1_q_ref[...] = 0.0
+
+
+
     def test_qp_setup_with_toy_example(self):
         gen = ClassicGenerator()
 
@@ -44,11 +55,11 @@ class TestClassecGenerator(TestCase):
         gen.ori_ubA[...] =  numpy.ones((gen.ori_nc,))
 
         # define solution
-        ori_x = -numpy.ones((gen.ori_nv,))*0.125
+        ori_x = -numpy.ones((gen.ori_nv,))*0.11764706
         ori_x[gen.ori_nc] = 0.5
         pos_x = -numpy.ones((gen.pos_nv,))*0.5
-        pos_f = -12.75
-        ori_f = -1.25
+        pos_f = -13.5
+        ori_f = -1.2573529411764695
 
         # test first qp solution
         gen._solve_qp()

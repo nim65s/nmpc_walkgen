@@ -1,5 +1,6 @@
 import numpy
 from math import cos, sin
+from copy import deepcopy
 
 class BaseGenerator(object):
     """
@@ -164,8 +165,6 @@ class BaseGenerator(object):
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupport()
-            self.supportDeque[i].__init__()
-        self.currentSupport.__init__()
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -178,10 +177,16 @@ class BaseGenerator(object):
         # initialize transformation matrices
         self._initialize_matrices()
 
+        # define initial support feet order
+        self._calculate_support_order()
+
         # build the constraints linked to
         # the foot step placement and to the cop
-        self.update()
+        #self.update()
         self.buildConstraints()
+
+        # simulate initializes all states and ZMP values
+        self.simulate()
 
     def _initialize_matrices(self):
         """
@@ -206,7 +211,7 @@ class BaseGenerator(object):
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
-     
+
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
@@ -231,7 +236,7 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
- 
+
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
@@ -243,16 +248,111 @@ class BaseGenerator(object):
         self.rfoot[1,0] =  0.0686   ;  self.rfoot[1,1] =  0.029 ;
         self.rfoot[2,0] = -0.0686   ;  self.rfoot[2,1] =  0.029 ;
         self.rfoot[3,0] = -0.0686   ;  self.rfoot[3,1] = -0.029 ;
+
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
-        print '[v, V0, ...]'
-        print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+        # Debug Output
+        #print '[v, V0, ...]'
+        #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+
+    def _calculate_support_order(self):
+        # find correct initial support foot
+        if (self.currentSupport.foot == "left" ) :
+            pair = "left"
+            impair = "right"
+        else :
+            pair = "right"
+            impair = "left"
+
+        # define support feet for whole horizon
+        for i in range(self.N):
+            for j in range(self.nf):
+                if self.V_kp1[i][j] == 1 :
+                    self.supportDeque[i].stepNumber = j+1
+                    if (j % 2) == 1:
+                        self.supportDeque[i].foot = pair
+                    else :
+                        self.supportDeque[i].foot = impair
+            if i > 0 :
+                self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
+                                          self.supportDeque[i-1].stepNumber
 
     def update(self):
+        """
+        Update all interior matrices, vectors.
+        Has to be used to prepare the QP after each iteration
+        """
         self.updatev()
         self.updateD()
+
+    def updatev(self):
+        """
+        Update selection vector v_kp1 and selection matrix V_kp1.
+
+        Therefore shift foot decision vector and matrix by one row up,
+        i.e. the first entry in the selection vector and the first row in the
+        selection matrix drops out and selection vector's dropped first value
+        becomes the last entry in the decision matrix
+        """
+        nf = self.nf
+        nstep = int(self.T_step/self.T)
+        N = self.N
+
+        # save first value for concatenation
+        first_entry_v_kp1 = self.v_kp1[0].copy()
+
+        self.v_kp1[:-1]   = self.v_kp1[1:]
+        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+
+        # clear last row
+        self.V_kp1[-1,:] = 0
+
+        # concatenate last entry
+        self.V_kp1[-1, -1] = first_entry_v_kp1
+
+        # when first column of selection matrix becomes zero,
+        # then shift columns by one to the front
+        if (self.v_kp1 == 0).all():
+            self.v_kp1[:] = self.V_kp1[:,0]
+            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
+            self.V_kp1[:,-1] = 0
+
+            # this way also the current support foot changes
+            currentSupport.foot       = deepcopy(supportDeque[0].foot)
+            currentSupport.ds         = deepcopy(supportDeque[0].ds)
+
+            # @Max do I need the stuff?
+            #currentSupport.x          = deepcopy(supportDeque[0].x)
+            #currentSupport.y          = deepcopy(supportDeque[0].y)
+            #currentSupport.theta      = deepcopy(supportDeque[0].theta)
+            #currentSupport.dx         = deepcopy(supportDeque[0].dx)
+            #currentSupport.dy         = deepcopy(supportDeque[0].dy)
+            #currentSupport.dtheta     = deepcopy(supportDeque[0].dtheta)
+            #currentSupport.ddx        = deepcopy(supportDeque[0].ddx)
+            #currentSupport.ddy        = deepcopy(supportDeque[0].ddy)
+            #currentSupport.ddtheta    = deepcopy(supportDeque[0].ddtheta)
+            #currentSupport.stepNumber = deepcopy(supportDeque[0].stepNumber)
+            # supportDeque is then calculated from
+            # from current support in the following
+
+        self._calculate_support_order()
+
+    def updateD(self):
+    # need updatev to be run before
+        for i in range(self.N):
+            if self.supportDeque[i].foot == "left" :
+                A0 = self.A0lf
+                B0 = self.ubB0lf
+            else :
+                A0 = self.A0rf
+                B0 = self.ubB0rf
+            for j in range(self.nFootEdge):
+                self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
+                self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
+                self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
+
 
     def simulate(self):
         """
@@ -273,120 +373,6 @@ class BaseGenerator(object):
 
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
-
-    def updatev(self):
-        """
-        Update selection vector v_kp1 and selection matrix V_kp1.
-
-        Therefore shift foot decision vector and matrix by one row up,
-        i.e. the first entry in the selection vector and the first row in the
-        selection matrix drops out and selection vector's dropped first value
-        becomes the last entry in the decision matrix
-        """
-        nf = self.nf
-        nstep = int(self.T_step/self.T)
-        N = self.N
-
-        # save first value for concatenation
-        first_entry_v_kp1 = self.v_kp1[0].copy()
- 
-        self.v_kp1[:-1]   = self.v_kp1[1:]
-        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
-
-        # clear last row
-        self.V_kp1[-1,:] = 0
-
-        # concatenate last entry
-        self.V_kp1[-1, -1] = first_entry_v_kp1
-
-        # when first column of selection matrix becomes zero,
-        # then shift columns by one to the front
-        if (self.v_kp1 == 0).all():
-            self.v_kp1[:] = self.V_kp1[:,0]
-            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
-            self.V_kp1[:,-1] = 0
-
-        """
-        # @Max: this is the old implementation
-        # using slices is much better, because underneath is super fast c++.
-        # doing anything else, especially loops can be bad in python because of
-        # dynamic types.
-
-        self.v_kp1 = numpy.delete(self.v_kp1,0,None)
-        self.v_kp1 = numpy.append(self.v_kp1,[0],axis=0)
-
-        if self.v_kp1[0]==0:
-                if (self.currentSupport.foot == "left" ) :
-                    self.currentSupport.foot = "right"
-                else :
-                    self.currentSupport.foot = "left"
-            self.v_kp1 = numpy.zeros((N,), dtype=float)
-            self.V_kp1 = numpy.zeros((N,self.nf), dtype=float)
-            nf = 1
-            for i in range(nstep):
-                self.v_kp1[i] = 1
-            for i in range(N-nstep):
-                self.v_kp1[i+nstep] = 0
-            step = 0
-            for i in range (N) :
-                step = (int)( i / nstep )
-                for j in range (nf):
-                    self.V_kp1[i,j] = (int)( i+1>nstep and j==step-1)
-
-        else:
-            self.V_kp1 = numpy.delete(self.V_kp1,0,axis=0)
-            tmp = numpy.zeros( (1,self.V_kp1.shape[1]) , dtype=float)
-            self.V_kp1 = numpy.append(self.V_kp1, tmp, axis=0)
-            for j in range(self.V_kp1.shape[1]) :
-                if self.V_kp1[:,j].sum() < nstep :
-                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 1
-                    break
-                else :
-                    self.V_kp1[self.V_kp1.shape[0]-1][j] = 0
-
-        """
-        # TODO delete debug output
-        print '[v, V0, ...]'
-        U_kp1 =  numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
-        print U_kp1
-
-        if (self.currentSupport.foot == "left" ) :
-            pair = "left"
-            impair = "right"
-        else :
-            pair = "right"
-            impair = "left"    
-
-        for i in range(N):
-            for j in range(U_kp1.shape[1]):
-                if U_kp1[i][j] == 1 :
-                    self.supportDeque[i].stepNumber = j
-                    if (j % 2) == 0:
-                        self.supportDeque[i].foot = pair
-                    else :
-                        self.supportDeque[i].foot = impair
-            if i > 0 :
-                self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
-                                            self.supportDeque[i-1].stepNumber
-           # print "stepNumber = ", self.supportDeque[i].stepNumber,\
-           #       " foot = " , self.supportDeque[i].foot,\
-           #       " ds = " , self.supportDeque[i].ds
-
-
-
-    def updateD(self):
-    # need updatev to be run before
-        for i in range(self.N):
-            if self.supportDeque[i].foot == "left" :
-                A0 = self.A0lf
-                B0 = self.ubB0lf
-            else :
-                A0 = self.A0rf
-                B0 = self.ubB0rf
-            for j in range(self.nFootEdge):
-                self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
-                self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
-                self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
 
@@ -534,3 +520,13 @@ class BaseTypeSupport(object):
         self.foot = foot
         self.ds = 0
         self.stepNumber = 0
+
+    def __eq__(self, other):
+        """ equality operator to check if A == B """
+        return (isinstance(other, self.__class__) # check for inheritance
+            and self.__dict__ == other.__dict__)  # check componentwise __dict__
+                                                  # __dict__ contains all
+                                                  # members and functions
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

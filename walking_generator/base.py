@@ -166,7 +166,7 @@ class BaseGenerator(object):
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeFoot()
-        
+
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -211,7 +211,7 @@ class BaseGenerator(object):
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
-     
+
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
@@ -236,7 +236,7 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
- 
+
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
@@ -301,7 +301,7 @@ class BaseGenerator(object):
 
         # save first value for concatenation
         first_entry_v_kp1 = self.v_kp1[0].copy()
- 
+
         self.v_kp1[:-1]   = self.v_kp1[1:]
         self.V_kp1[:-1,:] = self.V_kp1[1:,:]
 
@@ -319,8 +319,8 @@ class BaseGenerator(object):
             self.V_kp1[:,-1] = 0
 
             # this way also the current support foot changes
-            currentSupport.foot       = deepcopy(supportDeque[0].foot)
-            currentSupport.ds         = deepcopy(supportDeque[0].ds)
+            self.currentSupport.foot       = deepcopy(self.supportDeque[0].foot)
+            self.currentSupport.ds         = deepcopy(self.supportDeque[0].ds)
 
             # @Max do I need the stuff?
             #currentSupport.x          = deepcopy(supportDeque[0].x)
@@ -336,7 +336,7 @@ class BaseGenerator(object):
             # supportDeque is then calculated from
             # from current support in the following
 
-        
+
         self._calculate_support_order()
 
     def updateD(self):
@@ -352,7 +352,7 @@ class BaseGenerator(object):
                 self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
                 self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
                 self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
-    
+
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations
@@ -489,6 +489,9 @@ class BaseGenerator(object):
         """
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
+
+    def shift(self):
+        pass
 
 class BaseTypeFoot(object):
 

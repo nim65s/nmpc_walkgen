@@ -29,7 +29,6 @@ class ClassicGenerator(BaseGenerator):
         one for position of CoM and feet.
 
         """
-        print "initialize matrices in ClassicGenerator class"
         BaseGenerator.__init__(self, N, T, T_step, h_com)
         # TODO for speed up one can define members of BaseGenerator as
         #      direct views of QP data structures according to walking report
@@ -397,7 +396,7 @@ class ClassicGenerator(BaseGenerator):
         """
         Solve QP first run with init functionality and other runs with warmstart
         """
-        sys.stdout.write('Solve for orientations:\n')
+        #sys.stdout.write('Solve for orientations:\n')
         if not self._ori_qp_is_initialized:
             self.ori_qp.init(
                 self.ori_H, self.ori_g, self.ori_A,
@@ -414,7 +413,7 @@ class ClassicGenerator(BaseGenerator):
                 self.nwsr, self.cpu_time
             )
 
-        sys.stdout.write('Solve for positions:\n')
+        #sys.stdout.write('Solve for positions:\n')
         if not self._pos_qp_is_initialized:
             self.pos_qp.init(
                 self.pos_H, self.pos_g, self.pos_A,

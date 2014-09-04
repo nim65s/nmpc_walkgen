@@ -19,16 +19,6 @@ class TestClassecGenerator(TestCase):
     Test classic pattern generator, also against results from LAAS
     """
 
-    def test_generator_with_zero_reference_velocity(self):
-        gen = ClassicGenerator()
-
-        # set reference velocities to zero
-        gen.dC_kp1_x_ref[...] = 0.0
-        gen.dC_kp1_y_ref[...] = 0.0
-        gen.dC_kp1_q_ref[...] = 0.0
-
-
-
     def test_qp_setup_with_toy_example(self):
         gen = ClassicGenerator()
 
@@ -172,6 +162,102 @@ class TestClassecGenerator(TestCase):
         assert_allclose(gen.ori_dofs, x)
         assert_allclose(gen.ori_qp.getObjVal(), f)
 
+    def test_generator_with_zero_reference_velocity(self):
+        gen = ClassicGenerator()
+
+        # set reference velocities to zero
+        gen.dC_kp1_x_ref[...] = 0.0
+        gen.dC_kp1_y_ref[...] = 0.0
+        gen.dC_kp1_q_ref[...] = 0.0
+
+        gen.solve()
+
+        for i in range(100):
+            gen.c_k_x[0] = gen.  C_kp1_x[0]
+            gen.c_k_x[1] = gen. dC_kp1_x[0]
+            gen.c_k_x[2] = gen.ddC_kp1_x[0]
+
+            gen.c_k_y[0] = gen.  C_kp1_y[0]
+            gen.c_k_y[1] = gen. dC_kp1_y[0]
+            gen.c_k_y[2] = gen.ddC_kp1_y[0]
+
+            gen.c_k_q[0] = gen.  C_kp1_q[0]
+            gen.c_k_q[1] = gen. dC_kp1_q[0]
+            gen.c_k_q[2] = gen.ddC_kp1_q[0]
+
+            gen.update()
+            gen.solve()
+
+            assert_allclose(gen.dddC_k_x, 0.0)
+            assert_allclose(gen.dddC_k_y, 0.0)
+            assert_allclose(gen.dddC_k_q, 0.0)
+
+            assert_allclose(gen.F_k_x, 0.0)
+            assert_allclose(gen.F_k_y, 0.0)
+            assert_allclose(gen.F_k_q, 0.0)
+
+    def test_against_real_pattern_genererator_walkForward2m_s(self):
+        # get test data
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+            "walkForward2m_s.dat")
+        )
+
+        #
+        gen = ClassicGenerator()
+
+        # define reference velocity
+        dC_kp1_x_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
+        dC_kp1_y_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
+        dC_kp1_q_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
+
+        dC_kp1_x_ref[50:,:] = 2 #m/s
+        dC_kp1_y_ref[50:,:] = 2 #m/s
+
+        gen.dC_kp1_x_ref[:] = dC_kp1_x_ref[0,:]
+        gen.dC_kp1_y_ref[:] = dC_kp1_y_ref[0,:]
+
+        gen.solve()
+
+        for i in range(100):
+            print 'iteration: i = ', i
+            gen.dC_kp1_x_ref[:] = dC_kp1_x_ref[i,:]
+            gen.dC_kp1_y_ref[:] = dC_kp1_y_ref[i,:]
+
+            gen.c_k_x[0] = gen.  C_kp1_x[0]
+            gen.c_k_x[1] = gen. dC_kp1_x[0]
+            gen.c_k_x[2] = gen.ddC_kp1_x[0]
+
+            gen.c_k_y[0] = gen.  C_kp1_y[0]
+            gen.c_k_y[1] = gen. dC_kp1_y[0]
+            gen.c_k_y[2] = gen.ddC_kp1_y[0]
+
+            gen.c_k_q[0] = gen.  C_kp1_q[0]
+            gen.c_k_q[1] = gen. dC_kp1_q[0]
+            gen.c_k_q[2] = gen.ddC_kp1_q[0]
+
+            gen.update()
+            gen.solve()
+
+            # get reference from data
+            dddC_k_x = data[i,  0:16]
+            dddC_k_y = data[i, 18:34]
+            F_k_x      = data[i, 16:18]
+            F_k_y      = data[i, 34:36]
+
+            assert_allclose(gen.dddC_k_x, dddC_k_x)
+            assert_allclose(gen.dddC_k_y, dddC_k_y)
+            assert_allclose(gen.dddC_k_y, 0.0)
+
+            assert_allclose(gen.F_k_x, F_k_x)
+            assert_allclose(gen.F_k_y, F_k_y)
+            assert_allclose(gen.F_k_q, 0.0)
+
+    def test_against_real_pattern_genererator_walkSideward2m_s(self):
+        # get test data
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+            "walkSideward2m_s.dat")
+        )
+
     def test_against_real_pattern_genererator_emergency_stop(self):
         # get test data
         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
@@ -213,7 +299,6 @@ class TestClassecGenerator(TestCase):
         dFr_q  = data[:,20]
         ddFr_q = data[:,21]
 
-        gen = ClassicGenerator()
 
     def test_against_real_pattern_genererator_online_walking(self):
         # get test data

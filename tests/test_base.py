@@ -3,7 +3,7 @@ import numpy
 from numpy.testing import *
 
 from walking_generator.base import BaseGenerator as Generator
-from walking_generator.base import BaseTypeSupport
+from walking_generator.base import BaseTypeFoot
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,13 +38,13 @@ class TestBaseGenerator(TestCase):
                     assert_allclose(gen.Pvu[i,j], 0.0)
                     assert_allclose(gen.Pau[i,j], 0.0)
 
-    def test_basetypesupport_initialization(self):
+    def test_basetypefoot_initialization(self):
         gen = Generator()
 
-        currentSupport = BaseTypeSupport()
+        currentSupport = BaseTypeFoot()
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeSupport()
+            supportDeque[i] = BaseTypeFoot()
 
         U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))
 
@@ -70,13 +70,13 @@ class TestBaseGenerator(TestCase):
         assert_equal(gen.currentSupport, currentSupport)
         assert_array_equal(gen.supportDeque, supportDeque)
 
-    def test_basetypesupport_update(self):
+    def test_BaseTypeFoot_update(self):
         gen = Generator()
 
-        currentSupport = BaseTypeSupport()
+        currentSupport = BaseTypeFoot()
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeSupport()
+            supportDeque[i] = BaseTypeFoot()
 
         for i in range(100):
             U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))

@@ -167,7 +167,6 @@ class BaseGenerator(object):
         for i in range(N):
             self.supportDeque[i] = BaseTypeFoot()
 
-
         """
         NOTE number of foot steps in prediction horizon changes between
         nf and nf+1, because when robot takes first step nf steps are
@@ -178,6 +177,7 @@ class BaseGenerator(object):
 
         # initialize transformation matrices
         self._initialize_matrices()
+
         # define initial support feet order
         self._calculate_support_order()
 
@@ -335,7 +335,6 @@ class BaseGenerator(object):
             #currentSupport.stepNumber = deepcopy(supportDeque[0].stepNumber)
             # supportDeque is then calculated from
             # from current support in the following
-
 
         self._calculate_support_order()
 

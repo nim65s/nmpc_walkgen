@@ -210,8 +210,8 @@ class TestClassecGenerator(TestCase):
         dC_kp1_y_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
         dC_kp1_q_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
 
-        dC_kp1_x_ref[50:,:] = 2 #m/s
-        dC_kp1_y_ref[50:,:] = 2 #m/s
+        dC_kp1_x_ref[50:,:] = 0.2 #m/s
+        dC_kp1_y_ref[50:,:] = 0.2 #m/s
 
         gen.dC_kp1_x_ref[:] = dC_kp1_x_ref[0,:]
         gen.dC_kp1_y_ref[:] = dC_kp1_y_ref[0,:]

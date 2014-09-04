@@ -114,14 +114,14 @@ class FootInterpolation(object):
         self.N = NbSamplingPreviewed
         self.feetDist = FeetDistance
         self.stepHeigth = StepHeight
-        #self.polynomeX     = Polynome5()
-        #self.polynomeY     = Polynome5()
-        #self.polynomeTheta = Polynome5()
-        #self.ploynomeZ     = Polynome4()
+        self.polynomeX     = Polynome5()
+        self.polynomeY     = Polynome5()
+        self.polynomeTheta = Polynome5()
+        self.ploynomeZ     = Polynome4()
         self.TSS = stepTime - doubleSupportTime
         self.TDS = doubleSupportTime
 
-    def interpolate(time, currentSupport,
+    def interpolate(self, time, currentSupport,
         currentSwingFootPosition,
         F_k_x, F_k_y, PreviewAngle,
         LeftFootBuffer, RightFootBuffer):
@@ -201,7 +201,7 @@ class Polynome(object):
         self.degree = degree
         self.coef = numpy.zeros( (degree+1,) , dtype=float )
 
-    def compute(time):
+    def compute(self,time):
         if time > self.FT :
             time = FT
         r = 0.0; t = 1.0
@@ -210,7 +210,7 @@ class Polynome(object):
             t *= time ;
         return r
 
-    def computeDerivative(time):
+    def computeDerivative(self,time):
         if time > self.FT :
             time = FT
         r = 0.0; t = 1.0
@@ -219,7 +219,7 @@ class Polynome(object):
             t *= time ;
         return r
 
-    def computeSecDerivative(time):
+    def computeSecDerivative(self,time):
         if time > self.FT :
             time = FT
         r = 0.0; t = 1.0
@@ -237,17 +237,17 @@ class Polynome5(Polynome):
     to a point A with certain velocity an acceleration with a 5th degree
     polynome
     """
-    def __init__(self,FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration):
-        self.FT = FT = FinalTime
-        self.FP = FP = FinalPosition
-        self.IP = IP = InitialPosition
-        self.IS = IS = InitialSpeed
-        self.IA = IA = InitialAcceleration
+    def __init__(self):
+        self.FT = FT = 0.0
+        self.FP = FP = 0.0
+        self.IP = IP = 0.0
+        self.IS = IS = 0.0
+        self.IA = IA = 0.0
         initialAcceleration = 0.0
         Polynome.__init__(self,5)
         self.setParameters(FT,FP,IP,IS,IA)
 
-    def setParameters(FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration):
+    def setParameters(self,FinalTime,FinalPosition,InitialPosition,InitialSpeed,InitialAcceleration):
         self.FT = FT = FinalTime
         self.FP = FP = FinalPosition
         self.IP = IP = InitialPosition
@@ -278,13 +278,13 @@ class Polynome4(Polynome):
     to a point A with certain velocity an acceleration with a 4th degree
     polynome
     """
-    def __init__(FinalTime,MiddlePosition):
-        self.FT = FT = FinalTime
-        self.MP = MP = MiddlePosition
+    def __init__(self):
+        self.FT = FT = 0.0
+        self.MP = MP = 0.0
         Polynome.__init__(self,4)
         self.setParameters(FT,MP,0.0,0.0)
 
-    def setParameters(FinalTime,MiddlePosition,InitialPosition,InitialSpeed):
+    def setParameters(self,FinalTime,MiddlePosition,InitialPosition,InitialSpeed):
         self.FT = FT = FinalTime
         self.MP = MP = MiddlePosition
         IP = InitialPosition

@@ -139,12 +139,12 @@ class BaseGenerator(object):
         # Linear constraints matrix
         self.Acop = numpy.zeros((), dtype=float)
         self.Afoot = numpy.zeros((), dtype=float)
-        self.eqAfoot = numpy.zeros((), dtype=float)
+        self.eqAfoot = numpy.zeros( (2,2*(self.N+self.nf)), dtype=float)
 
         # Linear contraints vector
         self.ubBfoot = numpy.zeros((), dtype=float)
         self.ubBcop = numpy.zeros((), dtype=float)
-        self.eqBfoot = numpy.zeros((), dtype=float)
+        self.eqBfoot = numpy.zeros((2,), dtype=float)
 
         # Position of the foot in the local foot frame
         self.nFootEdge = 4
@@ -161,10 +161,12 @@ class BaseGenerator(object):
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Current support state
-        self.currentSupport = BaseTypeSupport()
+        self.currentSupport = BaseTypeFoot()
+        self.lastSolutionSupport = BaseTypeFoot()
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
-            self.supportDeque[i] = BaseTypeSupport()
+            self.supportDeque[i] = BaseTypeFoot()
+        
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -176,7 +178,6 @@ class BaseGenerator(object):
 
         # initialize transformation matrices
         self._initialize_matrices()
-
         # define initial support feet order
         self._calculate_support_order()
 
@@ -184,7 +185,6 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         #self.update()
         self.buildConstraints()
-
         # simulate initializes all states and ZMP values
         self.simulate()
 
@@ -211,7 +211,7 @@ class BaseGenerator(object):
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T
-
+     
         # initialize foot decision vector and matrix
         nstep = int(self.T_step/T) # time span of single support phase
         self.v_kp1[:nstep] = 1 # definitions of initial support leg
@@ -236,7 +236,7 @@ class BaseGenerator(object):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
-
+ 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
         self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
@@ -248,7 +248,6 @@ class BaseGenerator(object):
         self.rfoot[1,0] =  0.0686   ;  self.rfoot[1,1] =  0.029 ;
         self.rfoot[2,0] = -0.0686   ;  self.rfoot[2,1] =  0.029 ;
         self.rfoot[3,0] = -0.0686   ;  self.rfoot[3,1] = -0.029 ;
-
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
@@ -302,7 +301,7 @@ class BaseGenerator(object):
 
         # save first value for concatenation
         first_entry_v_kp1 = self.v_kp1[0].copy()
-
+ 
         self.v_kp1[:-1]   = self.v_kp1[1:]
         self.V_kp1[:-1,:] = self.V_kp1[1:,:]
 
@@ -337,6 +336,7 @@ class BaseGenerator(object):
             # supportDeque is then calculated from
             # from current support in the following
 
+        
         self._calculate_support_order()
 
     def updateD(self):
@@ -352,8 +352,7 @@ class BaseGenerator(object):
                 self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
                 self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
                 self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
-
-
+    
     def simulate(self):
         """
         integrates model for given jerks and feet positions and orientations
@@ -377,7 +376,6 @@ class BaseGenerator(object):
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
 
         nEdges = hull.shape[0]
-        print nEdges
         if foot == "left" :
             sign = 1
         else :
@@ -421,27 +419,17 @@ class BaseGenerator(object):
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
                                         self.v_kp1.dot(self.currentSupport.y) ) , 0 )
+
         self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
 
     def buildFootEqConstraint(self):
-        for i in range(self.N):
-            i
-
-        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
-        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
-        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
-        D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
-
-        self.Acop = D_kp1.dot(PZUV)
-
-        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
-        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
-                                        self.v_kp1.dot(self.currentSupport.y) ) , 0 )
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
-
-    def buildFootEqConstraint(self):
-        for i in range(self.N):
-            i
+        # A x + B = 0
+        # Support_Foot(k+1) = Support_Foot(k)
+        itBeforeLanding = numpy.sum(self.v_kp1)
+        itBeforeLandingThreshold = 2
+        if ( itBeforeLanding < itBeforeLandingThreshold ) :
+            self.eqAfoot[0][self.N] = 1 ;           self.eqBfoot[0][self.N] = - lastSolutionSupport.x
+            self.eqAfoot[1][2*self.N+self.nf] = 1 ; self.eqBfoot[1][self.N] = - lastSolutionSupport.y
 
 
     def buildFootIneqConstraint(self):
@@ -491,9 +479,9 @@ class BaseGenerator(object):
         self.Bfoot = B0
         self.nc = self.nc + ncfoot
 
-        print A0x
-        print A0y
-        print B0
+        #print A0x
+        #print A0y
+        #print B0
 
     def solve(self):
         """
@@ -502,7 +490,7 @@ class BaseGenerator(object):
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
 
-class BaseTypeSupport(object):
+class BaseTypeFoot(object):
 
     def __init__(self, x=0, y=0, theta=0, foot="left"):
         self.x = x
@@ -520,6 +508,8 @@ class BaseTypeSupport(object):
         self.foot = foot
         self.ds = 0
         self.stepNumber = 0
+        self.timeLimit = 0
+        self.supportFoot = 0
 
     def __eq__(self, other):
         """ equality operator to check if A == B """
@@ -530,3 +520,18 @@ class BaseTypeSupport(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+class CoMState(object):
+
+    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
+        self.x = numpy.zeros( (3,) , dtype=float )
+        self.y = numpy.zeros( (3,) , dtype=float )
+        self.z = h_com
+        self.theta = numpy.zeros( (3,) , dtype=float )
+
+class ZMPState(object):
+
+    def __init__(self, x=0, y=0, z=0):
+        self.x = x
+        self.y = y
+        self.z = z

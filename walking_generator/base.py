@@ -422,13 +422,13 @@ class BaseGenerator(object):
         self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
 
     def buildFootEqConstraint(self):
-        # A x + B = 0
+        # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)
         itBeforeLandingThreshold = 2
         if ( itBeforeLanding < itBeforeLandingThreshold ) :
-            self.eqAfoot[0][self.N] = 1 ;           self.eqBfoot[0][self.N] = - lastSolutionSupport.x
-            self.eqAfoot[1][2*self.N+self.nf] = 1 ; self.eqBfoot[1][self.N] = - lastSolutionSupport.y
+            self.eqAfoot[0][self.N] = 1 ;           self.eqBfoot[0][self.N] = self.F_k_x[0]
+            self.eqAfoot[1][2*self.N+self.nf] = 1 ; self.eqBfoot[1][self.N] = self.F_k_y[0]
 
 
     def buildFootIneqConstraint(self):

@@ -151,9 +151,7 @@ class TestBaseGenerator(TestCase):
     def test_constraint_matrices(self):
 
         # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "A.dat")
-        )
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "A.dat", skiprows=1))
 
         print "data.shape = ", data.shape
         Arfoot = data[:,:16]
@@ -169,7 +167,6 @@ class TestBaseGenerator(TestCase):
 
         print "Afoot.shape = ", gen.Afoot.shape
         print "Bfoot.shape = ", gen.Bfoot.shape
-
 
 
     def test_all_zero_when_idle(self):
@@ -219,6 +216,7 @@ class TestBaseGenerator(TestCase):
         data_DY = numpy.genfromtxt("./tests/data/DY.dat",skip_header=0)
         data_Pzu = numpy.genfromtxt("./tests/data/Pzu.dat",skip_header=0)
 
+        """
         ok = 1
         for i in range (data_DX.shape[0]):
             for j in range (data_DX.shape[1]):
@@ -254,9 +252,18 @@ class TestBaseGenerator(TestCase):
         if ok == 0 :
             print "##################### warning ###################################"
         print "ok = " , ok
+        """
+        #print "data_DX:\n", data_DX
+        #print "D_kp1x:\n", gen.D_kp1x
+        #print "A-B:\n",((data_DX - gen.D_kp1x) == 0).all()
+        assert_allclose(data_DX, gen.D_kp1x)
 
-        assert_allclose(data_DX, gen.D_kp1x, atol=1.e-4, rtol=1.e-4)
-        assert_allclose(data_DY, gen.D_kp1y, atol=1.e-4, rtol=1.e-4)
+        print "data_DY:\n", data_DY
+        print "D_kp1y:\n", gen.D_kp1y
+        print "A-B:\n",((data_DY - gen.D_kp1y) == 0).all()
+        #print "A-B:\n",data_DY - gen.D_kp1y
+        assert_allclose(data_DY, gen.D_kp1y)
+        return 0
 
         A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
         lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)

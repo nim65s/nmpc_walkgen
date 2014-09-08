@@ -26,15 +26,14 @@ class TestBaseGenerator(TestCase):
         g = gen.g
 
         for i in range(gen.N):
-            assert_allclose(gen.Pzs[i,:], (1, i*T, i**2*T**2/2 + h_com/g))
+            assert_allclose(gen.Pzs[i,:], (1, i*T, i**2*T**2/2 - h_com/g))
             assert_allclose(gen.Pps[i,:], (1, i*T, i**2*T**2/2))
             assert_allclose(gen.Pvs[i,:], (0,       1, i*T))
             assert_allclose(gen.Pas[i,:], (0,       0,       1))
 
             for j in range(gen.N):
                 if j <= i:
-                    pass
-                    assert_allclose(gen.Pzu[i,j], (3*(i-j)**2 + 3*(i-j) + 1)*T**3/6. + T*h_com/g)
+                    assert_allclose(gen.Pzu[i,j], (3*(i-j)**2 + 3*(i-j) + 1)*T**3/6. - T*h_com/g)
                     assert_allclose(gen.Ppu[i,j], (3*(i-j)**2 + 3*(i-j) + 1)*T**3/6.)
                     assert_allclose(gen.Pvu[i,j], (2*(i-j) + 1)*T**2/2)
                     assert_allclose(gen.Pau[i,j], T)
@@ -44,15 +43,17 @@ class TestBaseGenerator(TestCase):
                     assert_allclose(gen.Pvu[i,j], 0.0)
                     assert_allclose(gen.Pau[i,j], 0.0)
 
-    def test_pzu_matrix(self):
+    def test_fixed_ZMP_matrices(self):
         gen = Generator()
 
         T = gen.T
         h_com = gen.h_com
         g = gen.g
 
+        Pzs = gen.Pps - h_com/g * gen.Pas
         Pzu = gen.Ppu - h_com/g * gen.Pau
 
+        assert_allclose(gen.Pzs, Pzs)
         assert_allclose(gen.Pzu, Pzu)
 
     def test_basetypefoot_initialization(self):

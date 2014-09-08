@@ -53,7 +53,7 @@ class ClassicGenerator(BaseGenerator):
 
         # FOR ORIENTATIONS
         # define dimensions
-        self.ori_nv = self.nf
+        self.ori_nv = self.N + self.nf
         self.ori_nc = 1
 
         # setup problem

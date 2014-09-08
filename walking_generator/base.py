@@ -434,8 +434,8 @@ class BaseGenerator(object):
         gen_A_jx = -self.Acop[ : , 0:self.N ]
         gen_A_jx = numpy.concatenate( (gen_A_jx , -self.Afoot[0:self.A0l.shape[0] , 0:self.N]) )
 
-        numpy.savetxt( "./data_A_jx.txt" , data_A_jx )
-        numpy.savetxt( "./gen_A_jx.txt" , gen_A_jx )
+        #numpy.savetxt( "./data_A_jx.txt" , data_A_jx )
+        #numpy.savetxt( "./gen_A_jx.txt" , gen_A_jx )
 
     def buildCoPconstraint(self):
         zeroDim = (self.N, self.N+self.nf)

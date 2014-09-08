@@ -44,6 +44,17 @@ class TestBaseGenerator(TestCase):
                     assert_allclose(gen.Pvu[i,j], 0.0)
                     assert_allclose(gen.Pau[i,j], 0.0)
 
+    def test_pzu_matrix(self):
+        gen = Generator()
+
+        T = gen.T
+        h_com = gen.h_com
+        g = gen.g
+
+        Pzu = gen.Ppu - h_com/g * gen.Pau
+
+        assert_allclose(gen.Pzu, Pzu)
+
     def test_basetypefoot_initialization(self):
         gen = Generator()
 

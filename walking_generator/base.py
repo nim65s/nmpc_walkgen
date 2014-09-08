@@ -14,7 +14,7 @@ class BaseGenerator(object):
     # define some constants
     g = 9.81
 
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.81):
+    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
         """
         Initialize pattern generator, i.e.
         * allocate memory for matrices

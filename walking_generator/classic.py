@@ -22,7 +22,7 @@ class ClassicGenerator(BaseGenerator):
     independently of each other in each timestep.
     First solve  for orientations, then solve for the postions.
     """
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.81):
+    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
         """
         Initialize pattern generator matrices through base class
         and allocate two QPs one for optimzation of orientation and

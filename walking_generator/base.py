@@ -443,7 +443,7 @@ class BaseGenerator(object):
         PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
         D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
         self.Acop = D_kp1.dot(PZUV)
-
+        print self.Pzu.shape
         print self.D_kp1x
 
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )

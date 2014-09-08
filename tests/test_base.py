@@ -190,6 +190,23 @@ class TestBaseGenerator(TestCase):
 
         repos = numpy.DataSource()
 
+        data_DX = numpy.genfromtxt("./tests/data/DX.dat",skip_header=0)
+        data_DY = numpy.genfromtxt("./tests/data/DY.dat",skip_header=0)
+
+        ok = 1
+        for i in range (data_DX.shape[0]):
+            for j in range (data_DX.shape[1]):
+                if data_DX[i,j] - gen.D_kp1x[i,j] == 0 :
+                    print "no pb"
+                else :
+                    print "problem at " , i , "," , j
+                    ok = 0
+        if ok == 0 :
+            print "##################### warning ###################################"
+        print "ok = " , ok
+        assert_allclose(data_DX, gen.D_kp1x, atol=1.e-4, rtol=1.e-4)
+        assert_allclose(data_DY, gen.D_kp1y, atol=1.e-4, rtol=1.e-4)
+
         A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
         lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
 

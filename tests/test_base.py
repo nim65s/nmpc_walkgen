@@ -300,53 +300,26 @@ class TestBaseGenerator(TestCase):
         data_DY = numpy.genfromtxt("./tests/data/DY.dat",skip_header=0)
         data_Pzu = numpy.genfromtxt("./tests/data/Pzu.dat",skip_header=0)
 
-        """
-        ok = 1
-        for i in range (data_DX.shape[0]):
-            for j in range (data_DX.shape[1]):
-                if data_DX[i,j] - gen.D_kp1x[i,j] == 0 :
-                    print "no pb"
-                else :
-                    print "problem at " , i , "," , j
-                    ok = 0
-        if ok == 0 :
-            print "##################### warning ###################################"
-        print "ok = " , ok
-
-        ok = 1
-        for i in range (data_DY.shape[0]):
-            for j in range (data_DY.shape[1]):
-                if data_DX[i,j] - gen.D_kp1y[i,j] == 0 :
-                    print "no pb"
-                else :
-                    print "problem at " , i , "," , j
-                    ok = 0
-        if ok == 0 :
-            print "##################### warning ###################################"
-        print "ok = " , ok
-
-        ok = 1
-        for i in range (data_DX.shape[0]):
-            for j in range (data_DX.shape[1]):
-                if data_DX[i,j] - gen.D_kp1x[i,j] == 0 :
-                    print "no pb"
-                else :
-                    print "problem at " , i , "," , j
-                    ok = 0
-        if ok == 0 :
-            print "##################### warning ###################################"
-        print "ok = " , ok
-        """
         #print "data_DX:\n", data_DX
         #print "D_kp1x:\n", gen.D_kp1x
         #print "A-B:\n",((data_DX - gen.D_kp1x) == 0).all()
         assert_allclose(data_DX, gen.D_kp1x)
 
-        print "data_DY:\n", data_DY
-        print "D_kp1y:\n", gen.D_kp1y
-        print "A-B:\n",((data_DY - gen.D_kp1y) == 0).all()
+        #print "data_DY:\n", data_DY
+        #print "D_kp1y:\n", gen.D_kp1y
+        #print "A-B:\n",((data_DY - gen.D_kp1y) == 0).all()
         #print "A-B:\n",data_DY - gen.D_kp1y
         assert_allclose(data_DY, gen.D_kp1y)
+
+        print "data_Pzu:\n", data_Pzu
+        print "gen.Pzu:\n", gen.Pzu
+        print "A-B:\n",((data_Pzu - gen.Pzu) == 0).all()
+        #print "A-B:\n",data_DY - gen.D_kp1y
+        assert_allclose(data_Pzu,gen.Pzu)
+
+
+
+
         return 0
 
         A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)

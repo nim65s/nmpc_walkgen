@@ -162,6 +162,19 @@ class TestClassecGenerator(TestCase):
         assert_allclose(gen.ori_dofs, x)
         assert_allclose(gen.ori_qp.getObjVal(), f)
 
+    def test_qp_matrix_setup_against_real_pattern_generator(self):
+        pos_Q = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
+        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
+
+        # instantiate pattern generator
+        gen = ClassicGenerator()
+
+        # setup QP matrices
+        gen._preprocess_solution()
+
+        assert_allclose(gen.pos_H, pos_Q)
+        assert_allclose(gen.pos_g, pos_P)
+
     def test_generator_with_zero_reference_velocity(self):
         gen = ClassicGenerator()
 

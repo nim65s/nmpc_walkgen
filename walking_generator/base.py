@@ -130,7 +130,7 @@ class BaseGenerator(object):
             # set of points
         self.lfhull = numpy.zeros((5,2), dtype=float)
         self.rfhull = numpy.zeros((5,2), dtype=float)
-            # set of cartesian equalities
+            # set of Cartesian equalities
         self.A0r = numpy.zeros((5,2), dtype=float)
         self.ubB0r = numpy.zeros((5,), dtype=float)
         self.A0l = numpy.zeros((5,2), dtype=float)
@@ -141,7 +141,7 @@ class BaseGenerator(object):
         self.Afoot = numpy.zeros((), dtype=float)
         self.eqAfoot = numpy.zeros( (2,2*(self.N+self.nf)), dtype=float)
 
-        # Linear contraints vector
+        # Linear constraints vector
         self.ubBfoot = numpy.zeros((), dtype=float)
         self.ubBcop = numpy.zeros((), dtype=float)
         self.eqBfoot = numpy.zeros((2,), dtype=float)
@@ -457,8 +457,11 @@ class BaseGenerator(object):
         itBeforeLanding = numpy.sum(self.v_kp1)
         itBeforeLandingThreshold = 2
         if ( itBeforeLanding < itBeforeLandingThreshold ) :
-            self.eqAfoot[0][self.N] = 1 ;           self.eqBfoot[0][self.N] = self.F_k_x[0]
-            self.eqAfoot[1][2*self.N+self.nf] = 1 ; self.eqBfoot[1][self.N] = self.F_k_y[0]
+            self.eqAfoot[0][self.N] = 1
+            self.eqAfoot[1][2*self.N+self.nf] = 1
+
+            self.eqBfoot[0][self.N] = self.F_k_x[0]
+            self.eqBfoot[1][self.N] = self.F_k_y[0]
 
 
     def buildFootIneqConstraint(self):

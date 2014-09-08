@@ -252,16 +252,59 @@ class TestClassecGenerator(TestCase):
             assert_allclose(gen.F_k_y, F_k_y)
             assert_allclose(gen.F_k_q, 0.0)
 
+    def test_against_real_pattern_genererator_walk_forward_interpolation(self):
+         # get test data
+         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+             "walkForward2m_sInterpolation.dat")
+         )
+
+         time   = data[:, 0]
+         C_x    = data[:, 1]
+         C_y    = data[:, 2]
+         C_z    = data[:, 3]
+         C_q    = data[:, 4]
+         dC_x   = data[:, 5]
+         dC_y   = data[:, 6]
+         dC_z   = data[:, 7]
+         Z_x    = data[:, 8]
+         Z_y    = data[:, 9]
+         Fl_x   = data[:,10]
+         Fl_y   = data[:,11]
+         Fl_z   = data[:,12]
+         dFl_x  = data[:,13]
+         dFl_y  = data[:,14]
+         dFl_z  = data[:,15]
+         ddFl_x = data[:,16]
+         ddFl_y = data[:,17]
+         ddFl_z = data[:,18]
+         Fl_q   = data[:,19]
+         dFl_q  = data[:,20]
+         ddFl_q = data[:,21]
+         Fr_x   = data[:,10]
+         Fr_y   = data[:,11]
+         Fr_z   = data[:,12]
+         dFr_x  = data[:,13]
+         dFr_y  = data[:,14]
+         dFr_z  = data[:,15]
+         ddFr_x = data[:,16]
+         ddFr_y = data[:,17]
+         ddFr_z = data[:,18]
+         Fr_q   = data[:,19]
+         dFr_q  = data[:,20]
+         ddFr_q = data[:,21]
+
+         gen = ClassicGenerator()
+
     def test_against_real_pattern_genererator_walkSideward2m_s(self):
         # get test data
         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
             "walkSideward2m_s.dat")
         )
 
-    def test_against_real_pattern_genererator_emergency_stop(self):
+    def test_against_real_pattern_genererator_walk_sideward_interpolation(self):
         # get test data
         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "TestHerdt2010EmergencyStopTestFGPI.dat")
+            "walkSideward2m_sInterpolation.dat")
         )
 
         time   = data[:, 0]
@@ -298,50 +341,6 @@ class TestClassecGenerator(TestCase):
         Fr_q   = data[:,19]
         dFr_q  = data[:,20]
         ddFr_q = data[:,21]
-
-
-    def test_against_real_pattern_genererator_online_walking(self):
-        # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "TestHerdt2010OnLineTestFGPI.dat")
-        )
-
-        time   = data[:, 0]
-        C_x    = data[:, 1]
-        C_y    = data[:, 2]
-        C_z    = data[:, 3]
-        C_q    = data[:, 4]
-        dC_x   = data[:, 5]
-        dC_y   = data[:, 6]
-        dC_z   = data[:, 7]
-        Z_x    = data[:, 8]
-        Z_y    = data[:, 9]
-        Fl_x   = data[:,10]
-        Fl_y   = data[:,11]
-        Fl_z   = data[:,12]
-        dFl_x  = data[:,13]
-        dFl_y  = data[:,14]
-        dFl_z  = data[:,15]
-        ddFl_x = data[:,16]
-        ddFl_y = data[:,17]
-        ddFl_z = data[:,18]
-        Fl_q   = data[:,19]
-        dFl_q  = data[:,20]
-        ddFl_q = data[:,21]
-        Fr_x   = data[:,10]
-        Fr_y   = data[:,11]
-        Fr_z   = data[:,12]
-        dFr_x  = data[:,13]
-        dFr_y  = data[:,14]
-        dFr_z  = data[:,15]
-        ddFr_x = data[:,16]
-        ddFr_y = data[:,17]
-        ddFr_z = data[:,18]
-        Fr_q   = data[:,19]
-        dFr_q  = data[:,20]
-        ddFr_q = data[:,21]
-
-        gen = ClassicGenerator()
 
 
 if __name__ == '__main__':

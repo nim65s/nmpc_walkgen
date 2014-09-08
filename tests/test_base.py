@@ -73,7 +73,7 @@ class TestBaseGenerator(TestCase):
     def test_BaseTypeFoot_update(self):
         gen = Generator()
 
-        currentSupport = BaseTypeFoot()
+        currentSupport = BaseTypeFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
             supportDeque[i] = BaseTypeFoot()
@@ -184,6 +184,50 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_x, 0.0)
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
+
+    def test_constraint_matrices(self):
+        gen = Generator()
+
+        repos = numpy.DataSource()
+
+        A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
+        lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
+
+        data_A_jx = A[ 1:(A.shape[0]-1) , 0:gen.N ]
+        gen_A_jx = -gen.Acop[ : , 0:gen.N ]
+        gen_A_jx = numpy.concatenate( (gen_A_jx , -gen.Afoot[0:gen.A0l.shape[0] , 0:gen.N]) )
+
+        assert_allclose(data_A_jx, gen_A_jx)
+
+        data_A_jy
+        gen_A_jy
+
+        data_A_fx
+        gen_A_fx
+
+        data_A_fy
+        gen_A_fy
+
+
+
+
+
+
+        genA = numpy.zeros( (1,2*gen.N+gen.nf) , dtype=float )
+        genA = numpy.concatenate( (genA,-gen.Acop[: , 0:(2*gen.N+gen.nf)]) )
+        genA = numpy.concatenate( (genA,-gen.Afoot[0:gen.A0l.shape[0] , 0:(2*gen.N+gen.nf)]) )
+        genA = numpy.concatenate( (genA,numpy.zeros( (1,2*gen.N+gen.nf) , dtype=float )) )
+
+        dimlbA = 129
+        genlbA = [0]
+        genlbA = numpy.concatenate( (genlbA,gen.ubBcop) )
+        genlbA = numpy.concatenate( (genlbA,gen.Bfoot[0:gen.A0l.shape[0]]) )
+        genlbA = numpy.concatenate( (genlbA,numpy.zeros( (129-genlbA.shape[0]-1,) , dtype=float )) )
+
+        assert_allclose(genlbA, lbA)
+        assert_allclose(genA, A)
+
+
 
 if __name__ == '__main__':
     try:

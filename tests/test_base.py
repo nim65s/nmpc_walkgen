@@ -74,7 +74,7 @@ class TestBaseGenerator(TestCase):
     def test_BaseTypeFoot_update(self):
         gen = Generator()
 
-        currentSupport = BaseTypeFoot()
+        currentSupport = BaseTypeFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
             supportDeque[i] = BaseTypeFoot()
@@ -151,9 +151,7 @@ class TestBaseGenerator(TestCase):
     def test_constraint_matrices(self):
 
         # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "A.dat")
-        )
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "A.dat", skiprows=1))
 
         print "data.shape = ", data.shape
         Arfoot = data[:,:16]
@@ -169,7 +167,6 @@ class TestBaseGenerator(TestCase):
 
         print "Afoot.shape = ", gen.Afoot.shape
         print "Bfoot.shape = ", gen.Bfoot.shape
-
 
 
     def test_all_zero_when_idle(self):
@@ -209,6 +206,103 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_x, 0.0)
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
+
+    def test_constraint_matrices(self):
+        gen = Generator()
+
+        repos = numpy.DataSource()
+
+        data_DX = numpy.genfromtxt("./tests/data/DX.dat",skip_header=0)
+        data_DY = numpy.genfromtxt("./tests/data/DY.dat",skip_header=0)
+        data_Pzu = numpy.genfromtxt("./tests/data/Pzu.dat",skip_header=0)
+
+        """
+        ok = 1
+        for i in range (data_DX.shape[0]):
+            for j in range (data_DX.shape[1]):
+                if data_DX[i,j] - gen.D_kp1x[i,j] == 0 :
+                    print "no pb"
+                else :
+                    print "problem at " , i , "," , j
+                    ok = 0
+        if ok == 0 :
+            print "##################### warning ###################################"
+        print "ok = " , ok
+
+        ok = 1
+        for i in range (data_DY.shape[0]):
+            for j in range (data_DY.shape[1]):
+                if data_DX[i,j] - gen.D_kp1y[i,j] == 0 :
+                    print "no pb"
+                else :
+                    print "problem at " , i , "," , j
+                    ok = 0
+        if ok == 0 :
+            print "##################### warning ###################################"
+        print "ok = " , ok
+
+        ok = 1
+        for i in range (data_DX.shape[0]):
+            for j in range (data_DX.shape[1]):
+                if data_DX[i,j] - gen.D_kp1x[i,j] == 0 :
+                    print "no pb"
+                else :
+                    print "problem at " , i , "," , j
+                    ok = 0
+        if ok == 0 :
+            print "##################### warning ###################################"
+        print "ok = " , ok
+        """
+        #print "data_DX:\n", data_DX
+        #print "D_kp1x:\n", gen.D_kp1x
+        #print "A-B:\n",((data_DX - gen.D_kp1x) == 0).all()
+        assert_allclose(data_DX, gen.D_kp1x)
+
+        print "data_DY:\n", data_DY
+        print "D_kp1y:\n", gen.D_kp1y
+        print "A-B:\n",((data_DY - gen.D_kp1y) == 0).all()
+        #print "A-B:\n",data_DY - gen.D_kp1y
+        assert_allclose(data_DY, gen.D_kp1y)
+        return 0
+
+        A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
+        lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
+
+        data_A_jx = A[ 1:(A.shape[0]-1) , 0:gen.N ]
+        gen_A_jx = -gen.Acop[ : , 0:gen.N ]
+        gen_A_jx = numpy.concatenate( (gen_A_jx , -gen.Afoot[0:gen.A0l.shape[0] , 0:gen.N]) )
+
+        assert_allclose(data_A_jx, gen_A_jx)
+
+        data_A_jy
+        gen_A_jy
+
+        data_A_fx
+        gen_A_fx
+
+        data_A_fy
+        gen_A_fy
+
+
+
+
+
+
+        genA = numpy.zeros( (1,2*gen.N+gen.nf) , dtype=float )
+        genA = numpy.concatenate( (genA,-gen.Acop[: , 0:(2*gen.N+gen.nf)]) )
+        genA = numpy.concatenate( (genA,-gen.Afoot[0:gen.A0l.shape[0] , 0:(2*gen.N+gen.nf)]) )
+        genA = numpy.concatenate( (genA,numpy.zeros( (1,2*gen.N+gen.nf) , dtype=float )) )
+
+        dimlbA = 129
+        genlbA = [0]
+        genlbA = numpy.concatenate( (genlbA,gen.ubBcop) )
+        genlbA = numpy.concatenate( (genlbA,gen.Bfoot[0:gen.A0l.shape[0]]) )
+        genlbA = numpy.concatenate( (genlbA,numpy.zeros( (129-genlbA.shape[0]-1,) , dtype=float )) )
+
+        assert_allclose(genlbA, lbA)
+        assert_allclose(genA, A)
+
+
 
 if __name__ == '__main__':
     try:

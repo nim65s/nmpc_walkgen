@@ -99,8 +99,8 @@ class BaseGenerator(object):
         self.F_kp1_y = numpy.zeros((N,), dtype=float)
         self.F_kp1_q = numpy.zeros((N,), dtype=float)
 
-        self.f_k_x = 0.0
-        self.f_k_y = 0.0
+        self.f_k_x = 0.00949035
+        self.f_k_y = 0.095
         self.f_k_q = 0.0
 
         self.F_k_x = numpy.zeros((self.nf,), dtype=float)
@@ -161,8 +161,7 @@ class BaseGenerator(object):
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Current support state
-        self.currentSupport = BaseTypeFoot()
-        self.lastSolutionSupport = BaseTypeFoot()
+        self.currentSupport = BaseTypeFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeFoot()
@@ -175,6 +174,10 @@ class BaseGenerator(object):
         self.v_kp1 = numpy.zeros((N,),   dtype=int)
         self.V_kp1 = numpy.zeros((N,self.nf), dtype=int)
 
+
+        """
+        NOTE Initialize all the base matrices of the QP.
+        """
         # initialize transformation matrices
         self._initialize_matrices()
 
@@ -183,10 +186,22 @@ class BaseGenerator(object):
 
         # build the constraints linked to
         # the foot step placement and to the cop
-        #self.update()
         self.buildConstraints()
+
         # simulate initializes all states and ZMP values
         self.simulate()
+
+        selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
+        selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )
+        selfA = numpy.concatenate( (selfA,-self.Afoot[0:self.A0l.shape[0] , 0:(2*self.N+self.nf)]) )
+        selfA = numpy.concatenate( (selfA,numpy.zeros( (1,2*self.N+self.nf) , dtype=float )) )
+
+        dimlbA = 129
+        selflbA = [0]
+        selflbA = numpy.concatenate( (selflbA,self.ubBcop) )
+        selflbA = numpy.concatenate( (selflbA,self.Bfoot[0:self.A0l.shape[0]]) )
+        selflbA = numpy.concatenate( (selflbA,numpy.zeros( (129-selflbA.shape[0]-1,) , dtype=float )) )
+
 
     def _initialize_matrices(self):
         """
@@ -252,6 +267,10 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
+        print self.A0rf
+        print self.ubB0rf
+
+        self.updateD()
         # Debug Output
         #print '[v, V0, ...]'
         #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
@@ -405,6 +424,17 @@ class BaseGenerator(object):
         self.buildFootEqConstraint()
         self.buildFootIneqConstraint()
 
+        repos = numpy.DataSource()
+        A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
+        lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
+
+        data_A_jx = A[ 1:(A.shape[0]-1) , 0:self.N ]
+        gen_A_jx = -self.Acop[ : , 0:self.N ]
+        gen_A_jx = numpy.concatenate( (gen_A_jx , -self.Afoot[0:self.A0l.shape[0] , 0:self.N]) )
+
+        numpy.savetxt( "./data_A_jx.txt" , data_A_jx )
+        numpy.savetxt( "./gen_A_jx.txt" , gen_A_jx )
+
     def buildCoPconstraint(self):
         zeroDim = (self.N, self.N+self.nf)
 
@@ -412,12 +442,12 @@ class BaseGenerator(object):
         PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
         PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
         D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
-
         self.Acop = D_kp1.dot(PZUV)
+        print self.Pzu.shape
+        print self.D_kp1x
 
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
-        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.currentSupport.x),\
-                                        self.v_kp1.dot(self.currentSupport.y) ) , 0 )
+        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
 
         self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
 
@@ -444,7 +474,7 @@ class BaseGenerator(object):
         self.Afoot.resize(2*(self.N+self.nf,2*self.nf))
 
         matSelec = numpy.array([ [1, 0],[-1, 1] ])
-        footSelec = numpy.array([ [self.currentSupport.x, 0],[self.currentSupport.y, 0] ])
+        footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])
         theta = self.currentSupport.theta
         # rotation matrice from F_k+1 to F_k
         rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
@@ -481,10 +511,6 @@ class BaseGenerator(object):
         self.Bfoot = B0
         self.nc = self.nc + ncfoot
 
-        #print A0x
-        #print A0y
-        #print B0
-
     def solve(self):
         """
         Solve problem on given prediction horizon with implemented solver.
@@ -519,7 +545,7 @@ class BaseTypeFoot(object):
     def __eq__(self, other):
         """ equality operator to check if A == B """
         return (isinstance(other, self.__class__) # check for inheritance
-            and self.__dict__ == other.__dict__)  # check componentwise __dict__
+            or self.__dict__ == other.__dict__)  # check componentwise __dict__
                                                   # __dict__ contains all
                                                   # members and functions
 

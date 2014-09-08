@@ -1,5 +1,6 @@
 import os
 import numpy
+numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from numpy.testing import *
 
 from walking_generator.classic import ClassicGenerator
@@ -163,11 +164,21 @@ class TestClassecGenerator(TestCase):
         assert_allclose(gen.ori_qp.getObjVal(), f)
 
     def test_qp_matrix_setup_against_real_pattern_generator(self):
-        pos_Q = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
-        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
-
         # instantiate pattern generator
         gen = ClassicGenerator()
+
+        # data follows other convention, i.e.
+        # U_k = (dddC_x, dddC_y, F_x, F_y)
+
+        # assemble pos_H matrix
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
+        pos_H = numpy.zeros((gen.pos_H.shape))
+        a = 0; b = gen.N; e = 0; f = gen.N
+        c = 0; d = gen.N; g = 0; h = gen.N
+        pos_H[a:b,c:d] = data[e:f,g:h]
+        pos_H[gen.N+gen.nf:2*gen.N+gen.nf,gen.N:2*gen.N] = data[:gen.N,:gen.N]
+        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
+
 
         # setup QP matrices
         gen._preprocess_solution()
@@ -264,6 +275,97 @@ class TestClassecGenerator(TestCase):
             assert_allclose(gen.F_k_x, F_k_x)
             assert_allclose(gen.F_k_y, F_k_y)
             assert_allclose(gen.F_k_q, 0.0)
+
+    def test_against_real_pattern_genererator_walk_forward_interpolation(self):
+         # get test data
+         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+             "walkForward2m_sInterpolation.dat")
+         )
+
+         time   = data[:, 0]
+         C_x    = data[:, 1]
+         C_y    = data[:, 2]
+         C_z    = data[:, 3]
+         C_q    = data[:, 4]
+         dC_x   = data[:, 5]
+         dC_y   = data[:, 6]
+         dC_z   = data[:, 7]
+         Z_x    = data[:, 8]
+         Z_y    = data[:, 9]
+         Fl_x   = data[:,10]
+         Fl_y   = data[:,11]
+         Fl_z   = data[:,12]
+         dFl_x  = data[:,13]
+         dFl_y  = data[:,14]
+         dFl_z  = data[:,15]
+         ddFl_x = data[:,16]
+         ddFl_y = data[:,17]
+         ddFl_z = data[:,18]
+         Fl_q   = data[:,19]
+         dFl_q  = data[:,20]
+         ddFl_q = data[:,21]
+         Fr_x   = data[:,10]
+         Fr_y   = data[:,11]
+         Fr_z   = data[:,12]
+         dFr_x  = data[:,13]
+         dFr_y  = data[:,14]
+         dFr_z  = data[:,15]
+         ddFr_x = data[:,16]
+         ddFr_y = data[:,17]
+         ddFr_z = data[:,18]
+         Fr_q   = data[:,19]
+         dFr_q  = data[:,20]
+         ddFr_q = data[:,21]
+
+         gen = ClassicGenerator()
+
+    def test_against_real_pattern_genererator_walkSideward2m_s(self):
+        # get test data
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+            "walkSideward2m_s.dat")
+        )
+
+    def test_against_real_pattern_genererator_walk_sideward_interpolation(self):
+        # get test data
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+            "walkSideward2m_sInterpolation.dat")
+        )
+
+        time   = data[:, 0]
+        C_x    = data[:, 1]
+        C_y    = data[:, 2]
+        C_z    = data[:, 3]
+        C_q    = data[:, 4]
+        dC_x   = data[:, 5]
+        dC_y   = data[:, 6]
+        dC_z   = data[:, 7]
+        Z_x    = data[:, 8]
+        Z_y    = data[:, 9]
+        Fl_x   = data[:,10]
+        Fl_y   = data[:,11]
+        Fl_z   = data[:,12]
+        dFl_x  = data[:,13]
+        dFl_y  = data[:,14]
+        dFl_z  = data[:,15]
+        ddFl_x = data[:,16]
+        ddFl_y = data[:,17]
+        ddFl_z = data[:,18]
+        Fl_q   = data[:,19]
+        dFl_q  = data[:,20]
+        ddFl_q = data[:,21]
+        Fr_x   = data[:,10]
+        Fr_y   = data[:,11]
+        Fr_z   = data[:,12]
+        dFr_x  = data[:,13]
+        dFr_y  = data[:,14]
+        dFr_z  = data[:,15]
+        ddFr_x = data[:,16]
+        ddFr_y = data[:,17]
+        ddFr_z = data[:,18]
+        Fr_q   = data[:,19]
+        dFr_q  = data[:,20]
+        ddFr_q = data[:,21]
+
 
 if __name__ == '__main__':
     try:

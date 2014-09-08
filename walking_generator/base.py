@@ -236,6 +236,9 @@ class BaseGenerator(object):
             b = min((j+2)*nstep, N)
             self.V_kp1[a:b,j] = 1
 
+
+        self._calculate_support_order()
+
         # support foot : right
         self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
         self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;
@@ -267,8 +270,8 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
-        print self.A0rf
-        print self.ubB0rf
+#        print self.A0rf
+#        print self.ubB0rf
 
         self.updateD()
         # Debug Output
@@ -443,8 +446,8 @@ class BaseGenerator(object):
         PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
         D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
         self.Acop = D_kp1.dot(PZUV)
-        print self.Pzu.shape
-        print self.D_kp1x
+#        print self.Pzu.shape
+#        print self.D_kp1x
 
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )

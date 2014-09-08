@@ -15,7 +15,7 @@ except ImportError:
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
-class TestClassecGenerator(TestCase):
+class TestClassicGenerator(TestCase):
     """
     Test classic pattern generator, also against results from LAAS
     """
@@ -166,12 +166,13 @@ class TestClassecGenerator(TestCase):
         assert_allclose(gen.ori_dofs, x, rtol=self.RTOL, atol=self.ATOL)
         assert_allclose(gen.ori_qp.getObjVal(), f, rtol=self.RTOL, atol=self.ATOL)
 
-    def test_qp_matrix_setup_against_real_pattern_generator(self):
+    def test_qp_objective_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
+
         # assemble pos_H and pos_g for our convention
         data_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
         pos_H  = numpy.zeros((gen.pos_H.shape))
@@ -203,11 +204,41 @@ class TestClassecGenerator(TestCase):
         pos_H[a:b,c:d] = data_H[e:f,g:h]
         pos_g[a:b]     = data_g[e:f]
 
+        # get box constraints from data
+        pos_lb = numpy.loadtxt(os.path.join(BASEDIR, "data", "LB.dat"), skiprows=1)
+        pos_ub = numpy.loadtxt(os.path.join(BASEDIR, "data", "UB.dat"), skiprows=1)
+
         # setup QP matrices
         gen._preprocess_solution()
 
+        # test Hessian and gradient
         assert_allclose(gen.pos_H, pos_H, rtol=self.RTOL, atol=self.ATOL)
         assert_allclose(gen.pos_g, pos_g, rtol=self.RTOL, atol=self.ATOL)
+
+    def test_qpO_constraint_setup_against_real_pattern_generator(self):
+        # instantiate pattern generator
+        gen = ClassicGenerator()
+
+        # data follows other convention, i.e.
+        # U_k = (dddC_x, dddC_y, F_x, F_y)
+
+        # get linear constraints from data
+        pos_lbA = numpy.loadtxt(
+            os.path.join(BASEDIR, "data", "lbA.dat"), skiprows=1)
+
+        # get box constraints from data
+        pos_lb = numpy.loadtxt(os.path.join(BASEDIR, "data", "LB.dat"), skiprows=1)
+        pos_ub = numpy.loadtxt(os.path.join(BASEDIR, "data", "UB.dat"), skiprows=1)
+
+        # setup QP matrices
+        gen._preprocess_solution()
+
+        # test linear constraints
+        assert_allclose(gen.pos_lbA[:-gen.pos_nc_eqfoot], pos_lbA, rtol=self.RTOL, atol=self.ATOL)
+
+        # test box constraints
+        assert_allclose(gen.pos_lb[:34], pos_lb, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_ub[:34], pos_ub, rtol=self.RTOL, atol=self.ATOL)
 
     def test_generator_with_zero_reference_velocity(self):
         gen = ClassicGenerator()

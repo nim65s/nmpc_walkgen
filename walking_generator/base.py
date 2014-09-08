@@ -542,7 +542,7 @@ class BaseTypeFoot(object):
     def __eq__(self, other):
         """ equality operator to check if A == B """
         return (isinstance(other, self.__class__) # check for inheritance
-            and self.__dict__ == other.__dict__)  # check componentwise __dict__
+            or self.__dict__ == other.__dict__)  # check componentwise __dict__
                                                   # __dict__ contains all
                                                   # members and functions
 

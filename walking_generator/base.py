@@ -215,14 +215,14 @@ class BaseGenerator(object):
         g = self.g
 
         for i in range(N):
-            self.Pzs[i, :] = (1.,   i*T, (i**2*T**2)/2. + h_com/g)
+            self.Pzs[i, :] = (1.,   i*T, (i**2*T**2)/2. - h_com/g)
             self.Pps[i, :] = (1.,   i*T,           (i**2*T**2)/2.)
             self.Pvs[i, :] = (0.,    1.,                      i*T)
             self.Pas[i, :] = (0.,    0.,                       1.)
 
             for j in range(N):
                 if j <= i:
-                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. + T*h_com/g
+                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
                     self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
                     self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
                     self.Pau[i, j] = T

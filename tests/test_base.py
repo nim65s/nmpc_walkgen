@@ -1,5 +1,6 @@
 import os
 import numpy
+numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from numpy.testing import *
 
 from walking_generator.base import BaseGenerator as Generator
@@ -146,6 +147,30 @@ class TestBaseGenerator(TestCase):
 
         assert_array_equal(gen.v_kp1, v_kp1)
         assert_array_equal(gen.V_kp1, V_kp1)
+
+    def test_constraint_matrices(self):
+
+        # get test data
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
+            "A.dat")
+        )
+
+        print "data.shape = ", data.shape
+        Arfoot = data[:,:16]
+        Alfoor = data[:,16:]
+
+        gen = Generator()
+
+        print "Acop.shape = ", gen.Acop.shape
+        print "ubBcop.shape = ", gen.ubBcop.shape
+
+        print "eqAfoot.shape = ", gen.eqAfoot.shape
+        print "eqBfoot.shape = ", gen.eqBfoot.shape
+
+        print "Afoot.shape = ", gen.Afoot.shape
+        print "Bfoot.shape = ", gen.Bfoot.shape
+
+
 
     def test_all_zero_when_idle(self):
         gen = Generator()

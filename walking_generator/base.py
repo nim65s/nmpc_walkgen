@@ -236,6 +236,8 @@ class BaseGenerator(object):
             b = min((j+2)*nstep, N)
             self.V_kp1[a:b,j] = 1
 
+        self._calculate_support_order()
+
         # support foot : right
         self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
         self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;

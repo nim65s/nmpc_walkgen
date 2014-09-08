@@ -75,7 +75,10 @@ class ClassicGenerator(BaseGenerator):
         # FOR POSITIONS
         # define dimensions
         self.pos_nv = 2*(self.N + self.nf)
-        self.pos_nc = 1
+        self.pos_nc_cop    = self.nFootEdge*(self.N)      # ZMP constraints
+        self.pos_nc_eqfoot = self.nf                      # foot equality constraints
+        self.pos_nc_foot   = self.lfhull.shape[0]*self.nf # foot position constraints
+        self.pos_nc = self.pos_nc_cop + self.pos_nc_eqfoot + self.pos_nc_foot
 
         # setup problem
         self.pos_dofs = numpy.zeros(self.pos_nv)
@@ -137,10 +140,10 @@ class ClassicGenerator(BaseGenerator):
         self.ori_g  [:]   = self._p
 
         #self.ori_A  [...] = 0.0
-        #self.ori_lb [...] = 0.0
-        #self.ori_ub [...] = 0.0
         #self.ori_lbA[...] = 0.0
         #self.ori_ubA[...] = 0.0
+        #self.ori_lb [...] = 0.0
+        #self.ori_ub [...] = 0.0
 
         # POSITIONS
 
@@ -176,12 +179,35 @@ class ClassicGenerator(BaseGenerator):
         self._update_pos_p('y') # updates values in _p
         self.pos_g  [-N-nf:] = self._p
 
-        # constraints
-        #self.pos_A  [...] = 0.0
+        # lbA <= A x <= ubA
+        # () <= (    Acop ) <= (    Bcop )
+        # () <= ( eqAfoot ) <= ( eqBfoot )
+        # () <= (   Afoot ) <= (   Bfoot )
+
+        # CoP constraints
+        a = 0
+        b = self.pos_nc_cop
+        self.pos_A  [a:b] = self.Acop
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+
+        #foot inequality constraints
+        a = self.pos_nc_cop
+        b = self.pos_nc_cop + self.pos_nc_foot
+        self.pos_A  [a:b] = self.Afoot
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+
+        #foot equality constraints
+        a = self.pos_nc_cop + self.pos_nc_foot
+        b = self.pos_nc_cop + self.pos_nc_foot + self.pos_nc_eqfoot
+        self.pos_A  [a:b] = self.eqAfoot
+        self.pos_lbA[a:b] = self.eqBfoot
+        self.pos_ubA[a:b] = self.eqBfoot
+
+        # NOTE: they stay plus minus infinity, i.e. 1e+08
         #self.pos_lb [...] = 0.0
         #self.pos_ub [...] = 0.0
-        #self.pos_lbA[...] = 0.0
-        #self.pos_ubA[...] = 0.0
 
     def _update_ori_Q(self):
         '''

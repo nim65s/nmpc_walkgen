@@ -1,5 +1,6 @@
 import os
 import numpy
+numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from numpy.testing import *
 
 from walking_generator.classic import ClassicGenerator
@@ -163,11 +164,21 @@ class TestClassecGenerator(TestCase):
         assert_allclose(gen.ori_qp.getObjVal(), f)
 
     def test_qp_matrix_setup_against_real_pattern_generator(self):
-        pos_Q = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
-        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
-
         # instantiate pattern generator
         gen = ClassicGenerator()
+
+        # data follows other convention, i.e.
+        # U_k = (dddC_x, dddC_y, F_x, F_y)
+
+        # assemble pos_H matrix
+        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
+        pos_H = numpy.zeros((gen.pos_H.shape))
+        a = 0; b = gen.N; e = 0; f = gen.N
+        c = 0; d = gen.N; g = 0; h = gen.N
+        pos_H[a:b,c:d] = data[e:f,g:h]
+        pos_H[gen.N+gen.nf:2*gen.N+gen.nf,gen.N:2*gen.N] = data[:gen.N,:gen.N]
+        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
+
 
         # setup QP matrices
         gen._preprocess_solution()

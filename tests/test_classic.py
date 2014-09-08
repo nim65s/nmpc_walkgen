@@ -19,6 +19,9 @@ class TestClassecGenerator(TestCase):
     """
     Test classic pattern generator, also against results from LAAS
     """
+    #define tolerance for unittests
+    ATOL = 1e-07
+    RTOL = 1e-07
 
     def test_qp_setup_with_toy_example(self):
         gen = ClassicGenerator()
@@ -57,10 +60,10 @@ class TestClassecGenerator(TestCase):
         gen._postprocess_solution()
 
         # get solution
-        assert_allclose(gen.ori_dofs, ori_x)
-        assert_allclose(gen.ori_qp.getObjVal(), ori_f)
-        assert_allclose(gen.pos_dofs, pos_x)
-        assert_allclose(gen.pos_qp.getObjVal(), pos_f)
+        assert_allclose(gen.ori_dofs, ori_x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.ori_qp.getObjVal(), ori_f, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_dofs, pos_x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_qp.getObjVal(), pos_f, rtol=self.RTOL, atol=self.ATOL)
 
     def test_qp_setup_with_toy_example_hack_from_qpoases_manual(self):
         gen = ClassicGenerator()
@@ -118,10 +121,10 @@ class TestClassecGenerator(TestCase):
         gen.pos_qp.getPrimalSolution(gen.pos_dofs)
         gen.ori_qp.getPrimalSolution(gen.ori_dofs)
 
-        assert_allclose(gen.pos_dofs, x)
-        assert_allclose(gen.pos_qp.getObjVal(), f)
-        assert_allclose(gen.ori_dofs, x)
-        assert_allclose(gen.ori_qp.getObjVal(), f)
+        assert_allclose(gen.pos_dofs, x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_qp.getObjVal(), f, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.ori_dofs, x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.ori_qp.getObjVal(), f, rtol=self.RTOL, atol=self.ATOL)
 
         # define matrices for warmstart
         H_new   = numpy.array([ 1.0, 0.5, 0.5, 0.5 ]).reshape((2,2))
@@ -158,10 +161,10 @@ class TestClassecGenerator(TestCase):
         gen.pos_qp.getPrimalSolution(gen.pos_dofs)
         gen.ori_qp.getPrimalSolution(gen.ori_dofs)
 
-        assert_allclose(gen.pos_dofs, x)
-        assert_allclose(gen.pos_qp.getObjVal(), f)
-        assert_allclose(gen.ori_dofs, x)
-        assert_allclose(gen.ori_qp.getObjVal(), f)
+        assert_allclose(gen.pos_dofs, x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_qp.getObjVal(), f, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.ori_dofs, x, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.ori_qp.getObjVal(), f, rtol=self.RTOL, atol=self.ATOL)
 
     def test_qp_matrix_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
@@ -169,22 +172,42 @@ class TestClassecGenerator(TestCase):
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
+        # assemble pos_H and pos_g for our convention
+        data_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
+        pos_H  = numpy.zeros((gen.pos_H.shape))
 
-        # assemble pos_H matrix
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"))
-        pos_H = numpy.zeros((gen.pos_H.shape))
+        data_g = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"), skiprows=1)
+        pos_g  = numpy.zeros((gen.pos_g.shape))
+
+        # compare values for dddC_kp1_x
         a = 0; b = gen.N; e = 0; f = gen.N
         c = 0; d = gen.N; g = 0; h = gen.N
-        pos_H[a:b,c:d] = data[e:f,g:h]
-        pos_H[gen.N+gen.nf:2*gen.N+gen.nf,gen.N:2*gen.N] = data[:gen.N,:gen.N]
-        pos_P = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"))
+        pos_H[a:b,c:d] = data_H[e:f,g:h]
+        pos_g[a:b]     = data_g[e:f]
 
+        # compare values for F_k_x
+        a = gen.N; b = gen.N + gen.nf-1; e = 2*gen.N + 0; f = 2*gen.N + 1
+        c = gen.N; d = gen.N + gen.nf-1; g = 2*gen.N + 0; h = 2*gen.N + 1
+        pos_H[a:b,c:d] = data_H[e:f,g:h]
+        pos_g[a:b]     = data_g[e:f]
+
+        # compare values for dddC_kp1_y
+        a = gen.N + gen.nf; b = 2*gen.N+gen.nf; e = gen.N; f = 2*gen.N
+        c = gen.N + gen.nf; d = 2*gen.N+gen.nf; g = gen.N; h = 2*gen.N
+        pos_H[a:b,c:d] = data_H[e:f,g:h]
+        pos_g[a:b]     = data_g[e:f]
+
+        # compare values for F_k_x
+        a = 2*gen.N +gen.nf; b = 2*gen.N + 2*gen.nf - 1; e = 2*gen.N + 1; f = 2*gen.N + 2
+        c = 2*gen.N +gen.nf; d = 2*gen.N + 2*gen.nf - 1; g = 2*gen.N + 1; h = 2*gen.N + 2
+        pos_H[a:b,c:d] = data_H[e:f,g:h]
+        pos_g[a:b]     = data_g[e:f]
 
         # setup QP matrices
         gen._preprocess_solution()
 
-        assert_allclose(gen.pos_H, pos_Q)
-        assert_allclose(gen.pos_g, pos_P)
+        assert_allclose(gen.pos_H, pos_H, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_g, pos_g, rtol=self.RTOL, atol=self.ATOL)
 
     def test_generator_with_zero_reference_velocity(self):
         gen = ClassicGenerator()
@@ -212,13 +235,13 @@ class TestClassecGenerator(TestCase):
             gen.update()
             gen.solve()
 
-            assert_allclose(gen.dddC_k_x, 0.0)
-            assert_allclose(gen.dddC_k_y, 0.0)
-            assert_allclose(gen.dddC_k_q, 0.0)
+            assert_allclose(gen.dddC_k_x, 0.0, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.dddC_k_y, 0.0, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.dddC_k_q, 0.0, rtol=self.RTOL, atol=self.ATOL)
 
-            assert_allclose(gen.F_k_x, 0.0)
-            assert_allclose(gen.F_k_y, 0.0)
-            assert_allclose(gen.F_k_q, 0.0)
+            assert_allclose(gen.F_k_x, 0.0, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.F_k_y, 0.0, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.F_k_q, 0.0, rtol=self.RTOL, atol=self.ATOL)
 
     def test_against_real_pattern_genererator_walkForward2m_s(self):
         # get test data
@@ -268,13 +291,13 @@ class TestClassecGenerator(TestCase):
             F_k_x    = data[i, 16:18]
             F_k_y    = data[i, 34:36]
 
-            assert_allclose(gen.dddC_k_x, dddC_k_x)
-            assert_allclose(gen.dddC_k_y, dddC_k_y)
-            assert_allclose(gen.dddC_k_y, 0.0)
+            assert_allclose(gen.dddC_k_x, dddC_k_x, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.dddC_k_y, dddC_k_y, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.dddC_k_y, 0.0, rtol=self.RTOL, atol=self.ATOL)
 
-            assert_allclose(gen.F_k_x, F_k_x)
-            assert_allclose(gen.F_k_y, F_k_y)
-            assert_allclose(gen.F_k_q, 0.0)
+            assert_allclose(gen.F_k_x, F_k_x, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.F_k_y, F_k_y, rtol=self.RTOL, atol=self.ATOL)
+            assert_allclose(gen.F_k_q, 0.0, rtol=self.RTOL, atol=self.ATOL)
 
     def test_against_real_pattern_genererator_walk_forward_interpolation(self):
          # get test data

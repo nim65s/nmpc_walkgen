@@ -2,6 +2,7 @@ import os
 import numpy
 numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from numpy.testing import *
+import numpy.testing.decorators as decorators
 
 from walking_generator.base import BaseGenerator as Generator
 from walking_generator.base import BaseTypeFoot
@@ -12,6 +13,10 @@ class TestBaseGenerator(TestCase):
     """
     Test if BaseGenerator is assembling everything correctly
     """
+    #define tolerance for unittests
+    ATOL = 1e-07
+    RTOL = 1e-07
+
     def test_fixed_model_matrices(self):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
@@ -148,25 +153,103 @@ class TestBaseGenerator(TestCase):
         assert_array_equal(gen.v_kp1, v_kp1)
         assert_array_equal(gen.V_kp1, V_kp1)
 
-    def test_constraint_matrices(self):
-
+    def test_constraint_matrices_foot(self):
         # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data", "A.dat", skiprows=1))
+        data_A = numpy.loadtxt(os.path.join(BASEDIR, "data", "A.dat"), skiprows=1)
+        data_B = numpy.loadtxt(os.path.join(BASEDIR, "data", "lbA.dat"), skiprows=1)
 
-        print "data.shape = ", data.shape
-        Arfoot = data[:,:16]
-        Alfoor = data[:,16:]
+        # test data is arranged as follows:
+        # A = (      0 ), b = (      0 ) <- first row is zero
+        #     (  A_zmp )      (  B_zmp ) <- 64 ZMP constraints, i.e. 4*16
+        #     ( A_foot )      ( B_foot ) <- 5 foot position constraints, i.e. nedges = 5
+        #     (      0 )      (      0)  <- last rows are zero
+        data_A = data_A[1:70,:]
+        data_B = data_B[1:70]
 
         gen = Generator()
 
-        print "Acop.shape = ", gen.Acop.shape
-        print "ubBcop.shape = ", gen.ubBcop.shape
+        # assemble Afoot and Bfoot using our convention
+        Afoot = numpy.zeros(gen.Afoot.shape)
+        Bfoot = numpy.zeros(gen.Bfoot.shape)
 
-        print "eqAfoot.shape = ", gen.eqAfoot.shape
-        print "eqBfoot.shape = ", gen.eqBfoot.shape
+        # dddC_x
+        a = 0; b = gen.N; c = 0; d = gen.N
+        Afoot[:5,a:b] = data_A[64:69, c:d]
 
-        print "Afoot.shape = ", gen.Afoot.shape
-        print "Bfoot.shape = ", gen.Bfoot.shape
+        # F_x
+        a = gen.N; b = gen.N + gen.nf -1; c = 2*gen.N; d = 2*gen.N + 1
+        Afoot[:5,a:b] = data_A[64:69, c:d]
+
+        # dddC_y
+        a = gen.N + gen.nf; b = 2*gen.N + gen.nf; c = gen.N; d = 2*gen.N
+        Afoot[:5,a:b] = data_A[64:69, c:d]
+
+        # F_y
+        a = 2*gen.N + gen.nf; b = 2*gen.N + 2*gen.nf -1; c = 2*gen.N + 1; d = 2*gen.N + 2
+        Afoot[:5,a:b] = data_A[64:69, c:d]
+
+        Bfoot[:5] = data_B[64:69]
+
+        print "Afoot:\n", Afoot
+        print "gen.Afoot:\n", gen.Afoot
+        print "A-B:\n", gen.Afoot - Afoot
+        print "A-B = 0\n", ((gen.Afoot - Afoot) == 0).all()
+        assert_allclose(gen.Afoot, Afoot, atol=self.ATOL, rtol=self.RTOL)
+
+        print "Bfoot:\n", Bfoot
+        print "gen.Bfoot:\n", gen.Bfoot
+        print "A-B:\n", gen.Bfoot - Bfoot
+        print "A-B = 0\n", ((gen.Bfoot - Bfoot) == 0).all()
+        assert_allclose(gen.Bfoot, Bfoot, atol=self.ATOL, rtol=self.RTOL)
+
+    def test_constraint_matrices_cop(self):
+        # get test data
+        data_A = numpy.loadtxt(os.path.join(BASEDIR, "data", "A.dat"), skiprows=1)
+        data_B = numpy.loadtxt(os.path.join(BASEDIR, "data", "lbA.dat"), skiprows=1)
+
+        # test data is arranged as follows:
+        # A = (      0 ), b = (      0 ) <- first row is zero
+        #     (  A_zmp )      (  B_zmp ) <- 64 ZMP constraints, i.e. 4*16
+        #     ( A_foot )      ( B_foot ) <- 5 foot position constraints, i.e. nedges = 5
+        #     (      0 )      (      0)  <- last rows are zero
+        data_A = data_A[1:70,:]
+        data_B = data_B[1:70]
+
+        gen = Generator()
+
+        # assemble Acop and Bcop using our convention
+        Acop = numpy.zeros(gen.Acop.shape)
+        Bcop = numpy.zeros(gen.ubBcop.shape)
+
+        # dddC_x
+        a = 0; b = gen.N; c = 0; d = gen.N
+        Acop[:,a:b] = data_A[:64, c:d]
+
+        # F_x
+        a = gen.N; b = gen.N + gen.nf -1; c = 2*gen.N; d = 2*gen.N + 1
+        Acop[:,a:b] = data_A[:64, c:d]
+
+        # dddC_y
+        a = gen.N + gen.nf; b = 2*gen.N + gen.nf; c = gen.N; d = 2*gen.N
+        Acop[:,a:b] = data_A[:64, c:d]
+
+        # F_y
+        a = 2*gen.N + gen.nf; b = 2*gen.N + 2*gen.nf -1; c = 2*gen.N + 1; d = 2*gen.N + 2
+        Acop[:,a:b] = data_A[:64, c:d]
+
+        Bcop = data_B[:64]
+
+        print "Acop:\n", Acop
+        print "gen.Acop:\n", gen.Acop
+        print "A-B:\n", gen.Acop - Acop
+        print "A-B = 0\n", ((gen.Acop - Acop) == 0).all()
+        assert_allclose(gen.Acop, Acop, atol=self.ATOL, rtol=self.RTOL)
+
+        print "Bcop:\n", Bcop
+        print "gen.Bcop:\n", gen.ubBcop
+        print "A-B:\n", gen.ubBcop - Bcop
+        print "A-B = 0\n", ((gen.ubBcop - Bcop) == 0).all()
+        assert_allclose(gen.ubBcop, Bcop, atol=self.ATOL, rtol=self.RTOL)
 
 
     def test_all_zero_when_idle(self):
@@ -207,6 +290,7 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
 
+    @decorators.setastest(False) # decorator for disabling test
     def test_constraint_matrices(self):
         gen = Generator()
 

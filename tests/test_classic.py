@@ -23,8 +23,8 @@ class TestClassicGenerator(TestCase):
     Test classic pattern generator, also against results from LAAS
     """
     #define tolerance for unittests
-    ATOL = 1e-07
-    RTOL = 1e-07
+    ATOL = 1e-06
+    RTOL = 1e-06
 
     def test_qp_setup_with_toy_example(self):
         gen = ClassicGenerator()
@@ -200,19 +200,54 @@ class TestClassicGenerator(TestCase):
         pos_H_B = pos_H[-gen.N-gen.nf:,-gen.N-gen.nf:]
         assert_allclose(pos_H_A, pos_H_B, rtol=self.RTOL, atol=self.ATOL)
 
-    def test_qp_objective_setup_against_real_pattern_generator(self):
+    def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
+        N = gen.N
+        nf = gen.nf
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
 
+        data_g = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"), skiprows=1)
+        pos_g  = numpy.zeros((data_g.shape))
+        g_mask = numpy.zeros(gen.pos_g.shape, dtype=bool)
+
+        # compare values for dddC_kp1_x
+        g_mask[...] = 0
+        g_mask[:N] = 1
+        assert_allclose(gen.pos_g[g_mask], pos_g[:N] ,rtol=self.RTOL, atol=self.ATOL)
+
+        # compare values for dddC_kp1_y
+        g_mask[...] = 0
+        g_mask[N+nf:-nf] = 1
+        assert_allclose(gen.pos_g[g_mask], pos_g[N:2*N] ,rtol=self.RTOL, atol=self.ATOL)
+
+        # compare values for F_k_x
+        g_mask[...] = 0
+        g_mask[N:N+nf-1] = 1
+        assert_allclose(gen.pos_g[g_mask], pos_g[2*N:2*N+1] ,rtol=self.RTOL, atol=self.ATOL)
+
+        # compare values for F_k_y
+        g_mask[...] = 0
+        g_mask[-nf:-1] = 1
+        assert_allclose(gen.pos_g[g_mask], pos_g[2*N+1:] ,rtol=self.RTOL, atol=self.ATOL)
+
+    def test_qp_objective_hessian_against_real_pattern_generator(self):
+        # instantiate pattern generator
+        gen = ClassicGenerator()
+        N = gen.N
+        nf = gen.nf
+
         # assemble pos_H and pos_g for our convention
         data_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
-        pos_H  = numpy.zeros((gen.pos_H.shape))
+        pos_H  = numpy.zeros((data_H.shape))
+        gen_H_mask = numpy.ones(gen.pos_H.shape, dtype=bool)
+        gen_H_mask[gen.N+gen.nf-1, :] = False
+        gen_H_mask[            -1, :] = False
+        gen_H_mask[:,gen.N+gen.nf-1]  = False
+        gen_H_mask[:,            -1]  = False
 
-        data_g = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"), skiprows=1)
-        pos_g  = numpy.zeros((gen.pos_g.shape))
 
         # compare values for dddC_kp1_x
         a = 0; b = gen.N; e = 0; f = gen.N
@@ -244,8 +279,8 @@ class TestClassicGenerator(TestCase):
         # test Hessian and gradient
         # NOTE the data is not saved in right precision, so rounding on python
         #      data structures hast to be applied
-        assert_allclose(gen.pos_H.round(5), pos_H, rtol=self.RTOL, atol=self.ATOL)
-        assert_allclose(gen.pos_g.round(5), pos_g, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_H[gen_H_mask].reshape(pos_H.shape).round(6), pos_H, rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(gen.pos_g[gen_g_mask], pos_g, rtol=self.RTOL, atol=self.ATOL)
 
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator

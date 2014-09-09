@@ -157,6 +157,9 @@ class BaseGenerator(object):
         self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
         self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
 
+        self.SecurityMarginX = 0.04
+        self.SecurityMarginY = 0.04
+
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )

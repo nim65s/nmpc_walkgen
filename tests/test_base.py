@@ -336,7 +336,6 @@ class TestBaseGenerator(TestCase):
         #print "A-B:\n",data_DY - gen.D_kp1y
         assert_allclose(data_Pzu,gen.Pzu)
 
-
     def test_all_zero_when_idle(self):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
@@ -378,8 +377,6 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_x, 0.0)
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
-
-
 
 if __name__ == '__main__':
     try:

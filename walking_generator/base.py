@@ -100,8 +100,8 @@ class BaseGenerator(object):
         self.F_kp1_y = numpy.zeros((N,), dtype=float)
         self.F_kp1_q = numpy.zeros((N,), dtype=float)
 
-        self.f_k_x = 0.00949035
-        self.f_k_y = 0.095
+        self.f_k_x = 0.0
+        self.f_k_y = 0.0
         self.f_k_q = 0.0
 
         self.F_k_x = numpy.zeros((self.nf,), dtype=float)
@@ -157,8 +157,8 @@ class BaseGenerator(object):
         self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
         self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
 
-        self.SecurityMarginX = 0.04
-        self.SecurityMarginY = 0.04
+        self.SecurityMarginX = 0.09
+        self.SecurityMarginY = 0.05
 
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
@@ -185,26 +185,7 @@ class BaseGenerator(object):
         # initialize transformation matrices
         self._initialize_matrices()
 
-        # define initial support feet order
-        self._calculate_support_order()
-
-        # build the constraints linked to
-        # the foot step placement and to the cop
-        self.buildConstraints()
-
     def _initialize_matrices(self):
-        """
-        initializes the CoM state corresponding to the first step of the robot.
-        WARNING the initial state should be different.
-        """
-        self.c_k_x[0] = 0.06591456
-        self.c_k_x[1] = 0.07638739
-        self.c_k_x[2] = -0.1467377
-        self.c_k_y[0] = 2.49008564e-02
-        self.c_k_y[1] = 6.61665254e-02
-        self.c_k_y[2] = 6.72712187e-01
-        if self.c_k_y[2] != 0:
-            print "WARNING, PLEASE verify the initiale state !!!!!"
 
         """
         initializes the transformation matrices according to the walking report
@@ -258,16 +239,18 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
 
         # position of the vertices of the feet in the foot coordinates.
+        self.footWidth = 0.2172
+        self.footHeigth = 0.138
         # left foot
-        self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
-        self.lfoot[1,0] =  0.0686   ;  self.lfoot[1,1] = -0.029 ;
-        self.lfoot[2,0] = -0.0686   ;  self.lfoot[2,1] = -0.029 ;
-        self.lfoot[3,0] = -0.0686   ;  self.lfoot[3,1] =  0.029 ;
+        self.lfoot[0,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[0,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.lfoot[1,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[1,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.lfoot[2,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[2,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.lfoot[3,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[3,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
         # right foot
-        self.rfoot[0,0] =  0.0686   ;  self.rfoot[0,1] = -0.029 ;
-        self.rfoot[1,0] =  0.0686   ;  self.rfoot[1,1] =  0.029 ;
-        self.rfoot[2,0] = -0.0686   ;  self.rfoot[2,1] =  0.029 ;
-        self.rfoot[3,0] = -0.0686   ;  self.rfoot[3,1] = -0.029 ;
+        self.rfoot[0,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[0,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.rfoot[1,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[1,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.rfoot[2,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[2,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
+        self.rfoot[3,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[3,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
@@ -279,6 +262,24 @@ class BaseGenerator(object):
         # Debug Output
         #print '[v, V0, ...]'
         #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+
+        # define initial support feet order
+        self._calculate_support_order()
+
+        # build the constraints linked to
+        # the foot step placement and to the cop
+        self.buildConstraints()
+
+    def _initState(self, comx, comy , comz, supportfootx, supportfooty, supportfootq, secmarginx, secmarginy):
+        self.f_k_x = supportfootx
+        self.f_k_y = supportfooty
+        self.f_k_q = supportfootq
+        self.c_k_x = comx
+        self.c_k_y = comy
+        self.h_com = comz
+        self.SecurityMarginX = secmarginx
+        self.SecurityMarginY = secmarginy
+        self._initialize_matrices()
 
     def _calculate_support_order(self):
         # find correct initial support foot
@@ -428,17 +429,6 @@ class BaseGenerator(object):
         self.buildFootEqConstraint()
         self.buildFootIneqConstraint()
 
-        repos = numpy.DataSource()
-        A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
-        lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
-
-        data_A_jx = A[ 1:(A.shape[0]-1) , 0:self.N ]
-        gen_A_jx = -self.Acop[ : , 0:self.N ]
-        gen_A_jx = numpy.concatenate( (gen_A_jx , -self.Afoot[0:self.A0l.shape[0] , 0:self.N]) )
-
-        #numpy.savetxt( "./data_A_jx.txt" , data_A_jx )
-        #numpy.savetxt( "./gen_A_jx.txt" , gen_A_jx )
-
     def buildCoPconstraint(self):
         zeroDim = (self.N, self.N+self.nf)
 
@@ -475,7 +465,6 @@ class BaseGenerator(object):
         # inequality constraint on both feet A u + B <= 0
         # A0 R(theta) [Fx_k+1 - Fx_k] <= ubB0
         #             [Fy_k+1 - Fy_k]
-        self.Afoot.resize(2*(self.N+self.nf,2*self.nf))
 
         matSelec = numpy.array([ [1, 0],[-1, 1] ])
         footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])

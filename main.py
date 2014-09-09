@@ -5,6 +5,14 @@ from walking_generator.interpolation import Interpolation
 
 if __name__ == '__main__':
     gen = ClassicGenerator()
+    gen._initState(
+    comx = [0.00124774,0.0,0.0]\
+    comy = [0.00157175,0.0,0.0]\
+    comz = 0.08108886\
+    supportfootx = 0.00949035\
+    supportfooty = 0.095\
+    supportfootq = 0.0)
+
     gen.simulate()
 
     # set reference velocities to zero

@@ -19,6 +19,16 @@ class TestBaseGenerator(TestCase):
 
     def test_fixed_model_matrices(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
+
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
 
         T = gen.T
@@ -46,6 +56,15 @@ class TestBaseGenerator(TestCase):
 
     def test_fixed_ZMP_matrices(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         T = gen.T
         h_com = gen.h_com
@@ -59,6 +78,15 @@ class TestBaseGenerator(TestCase):
 
     def test_basetypefoot_initialization(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         currentSupport = BaseTypeFoot()
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
@@ -91,6 +119,15 @@ class TestBaseGenerator(TestCase):
 
     def test_BaseTypeFoot_update(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         currentSupport = BaseTypeFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
@@ -127,6 +164,15 @@ class TestBaseGenerator(TestCase):
 
     def test_selection_matrix_initialization(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         nf = gen.nf
         N = gen.N
@@ -180,6 +226,15 @@ class TestBaseGenerator(TestCase):
         data_B = data_B[65:70]
 
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         # assemble Afoot and Bfoot using our convention
         Afoot = numpy.zeros( (gen.Afoot.shape[0]-5, gen.Afoot.shape[1]-2) )
@@ -243,6 +298,15 @@ class TestBaseGenerator(TestCase):
         data_B = data_B[1:65]
 
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         # assemble Acop and Bcop using our convention
         Acop = numpy.zeros((gen.Acop.shape[0],gen.Acop.shape[1]-2),dtype=float)
@@ -291,6 +355,15 @@ class TestBaseGenerator(TestCase):
 
     def test_constraint_elemental_matrices_cop(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         data_V = numpy.loadtxt(os.path.join(BASEDIR, "data", "V_kp1.dat"), skiprows=0)
         assert_allclose(gen.V_kp1[:,0], data_V)

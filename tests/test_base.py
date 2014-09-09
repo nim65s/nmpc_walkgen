@@ -30,7 +30,7 @@ class TestBaseGenerator(TestCase):
             assert_allclose(gen.Pzs[i,:], (1, j*T, j**2*T**2/2 - h_com/g))
             assert_allclose(gen.Pps[i,:], (1, j*T, j**2*T**2/2))
             assert_allclose(gen.Pvs[i,:], (0,   1, j*T))
-            assert_allclose(gen.Pas[i,:], (0,   0,       1))
+            assert_allclose(gen.Pas[i,:], (0,   0,   1))
 
             for j in range(gen.N):
                 if j <= i:
@@ -183,7 +183,7 @@ class TestBaseGenerator(TestCase):
 
         # assemble Afoot and Bfoot using our convention
         Afoot = numpy.zeros( (gen.Afoot.shape[0]-5, gen.Afoot.shape[1]-2) )
-        Bfoot = numpy.zeros( gen.Bfoot.shape[0]-5)
+        Bfoot = numpy.zeros( gen.ubBfoot.shape[0]-5)
 
         # dddC_x
         a = 0; b = gen.N; c = 0; d = gen.N
@@ -215,18 +215,18 @@ class TestBaseGenerator(TestCase):
         genAfoot[:,a:b] = gen.Afoot[:5,c:d]
         genAfoot = -1 * genAfoot
 
-        genBfoot = gen.Bfoot[:5]
+        genBfoot = gen.ubBfoot[:5]
 
 #        print "Afoot:\n", Afoot
 #        print "gen.Afoot:\n", genAfoot
 #        print "A-B:\n", genAfoot - Afoot
-#        print "A-B = 0\n", ((genAfoot.round(6) - Afoot.round(6)) == 0).all()
-#        assert_allclose(genAfoot.round(6), Afoot.round(6), atol=self.ATOL, rtol=self.RTOL)
+#        print "A-B = 0\n", ((genAfoot - Afoot) == 0).all()
+#        assert_allclose(genAfoot, Afoot, atol=self.ATOL, rtol=self.RTOL)
 
 #        print "Bfoot:\n", Bfoot
 #        print "gen.Bfoot:\n", genBfoot
 #        print "A-B:\n", genBfoot - Bfoot
-#        print "A-B = 0\n", ((genBfoot.round(6) - Bfoot.round(6)) == 0).all()
+#        print "A-B = 0\n", ((genBfoot - Bfoot) == 0).all()
         assert_allclose(genBfoot, Bfoot, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_matrices_cop(self):
@@ -280,14 +280,14 @@ class TestBaseGenerator(TestCase):
         #print "Acop:\n", Acop
         #print "\n\n genAcop:\n", genAcop
         #print "A-B:\n", genAcop - Acop
-        #print "A-B = 0\n", ((genAcop.round(6) - Acop.round(6)) == 0).all()
-        assert_allclose(genAcop.round(6), Acop.round(6), atol=self.ATOL, rtol=self.RTOL)
+        #print "A-B = 0\n", ((genAcop - Acop) == 0).all()
+        assert_allclose(genAcop, Acop, atol=self.ATOL, rtol=self.RTOL)
 
         #print "Bcop:\n", Bcop
         #print "gen.Bcop:\n", gen.ubBcop
         #print "A-B:\n", gen.ubBcop - Bcop
         #print "A-B = 0\n", ((gen.ubBcop - Bcop) == 0).all()
-        assert_allclose(gen.ubBcop.round(6), Bcop.round(6), atol=self.ATOL, rtol=self.RTOL)
+        assert_allclose(gen.ubBcop, Bcop, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_elemental_matrices_cop(self):
         gen = Generator()
@@ -305,13 +305,13 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.v_kp1.dot(gen.f_k_x).round(6), data_VcX.round(6))
 
         data_VcY = numpy.loadtxt(os.path.join(BASEDIR, "data", "VcY.dat"), skiprows=0)
-        assert_allclose(gen.v_kp1.dot(gen.f_k_y).round(6), data_VcY.round(6))
+        assert_allclose(gen.v_kp1.dot(gen.f_k_y), data_VcY)
         #print gen.c_k_x
         data_comx = numpy.loadtxt(os.path.join(BASEDIR, "data", "comX.dat"), skiprows=0)
-        assert_allclose(gen.c_k_x.round(6), data_comx.round(6))
+        assert_allclose(gen.c_k_x, data_comx)
 
         data_comy = numpy.loadtxt(os.path.join(BASEDIR, "data", "comY.dat"), skiprows=0)
-        assert_allclose(gen.c_k_y.round(6), data_comy.round(6))
+        assert_allclose(gen.c_k_y, data_comy)
 
         repos = numpy.DataSource()
 

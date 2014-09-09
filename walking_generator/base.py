@@ -192,18 +192,6 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         self.buildConstraints()
 
-        selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
-        selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )
-        selfA = numpy.concatenate( (selfA,-self.Afoot[0:self.A0l.shape[0] , 0:(2*self.N+self.nf)]) )
-        selfA = numpy.concatenate( (selfA,numpy.zeros( (1,2*self.N+self.nf) , dtype=float )) )
-
-        dimlbA = 129
-        selflbA = [0]
-        selflbA = numpy.concatenate( (selflbA,self.ubBcop) )
-        selflbA = numpy.concatenate( (selflbA,self.Bfoot[0:self.A0l.shape[0]]) )
-        selflbA = numpy.concatenate( (selflbA,numpy.zeros( (129-selflbA.shape[0]-1,) , dtype=float )) )
-
-
     def _initialize_matrices(self):
         """
         initializes the CoM state corresponding to the first step of the robot.
@@ -530,7 +518,7 @@ class BaseGenerator(object):
                                           A0x,\
                                           numpy.zeros((ncfoot,N),dtype=float),\
                                           A0y) , 1 )
-        self.Bfoot = B0
+        self.ubBfoot = B0
         self.nc = self.nc + ncfoot
 
     def solve(self):

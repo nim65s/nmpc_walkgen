@@ -242,11 +242,7 @@ class TestClassicGenerator(TestCase):
         # assemble pos_H and pos_g for our convention
         data_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
         pos_H  = numpy.zeros((data_H.shape))
-        gen_H_mask = numpy.ones(gen.pos_H.shape, dtype=bool)
-        gen_H_mask[gen.N+gen.nf-1, :] = False
-        gen_H_mask[            -1, :] = False
-        gen_H_mask[:,gen.N+gen.nf-1]  = False
-        gen_H_mask[:,            -1]  = False
+        gen_H_mask = numpy.zeros(gen.pos_H.shape, dtype=bool)
 
 
         # compare values for dddC_kp1_x
@@ -280,7 +276,6 @@ class TestClassicGenerator(TestCase):
         # NOTE the data is not saved in right precision, so rounding on python
         #      data structures hast to be applied
         assert_allclose(gen.pos_H[gen_H_mask].reshape(pos_H.shape).round(6), pos_H, rtol=self.RTOL, atol=self.ATOL)
-        assert_allclose(gen.pos_g[gen_g_mask], pos_g, rtol=self.RTOL, atol=self.ATOL)
 
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator

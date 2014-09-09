@@ -26,9 +26,10 @@ class TestBaseGenerator(TestCase):
         g = gen.g
 
         for i in range(gen.N):
-            assert_allclose(gen.Pzs[i,:], (1, i*T, i**2*T**2/2 - h_com/g))
-            assert_allclose(gen.Pps[i,:], (1, i*T, i**2*T**2/2))
-            assert_allclose(gen.Pvs[i,:], (0,       1, i*T))
+            j = i+1
+            assert_allclose(gen.Pzs[i,:], (1, j*T, j**2*T**2/2 - h_com/g))
+            assert_allclose(gen.Pps[i,:], (1, j*T, j**2*T**2/2))
+            assert_allclose(gen.Pvs[i,:], (0,       1, j*T))
             assert_allclose(gen.Pas[i,:], (0,       0,       1))
 
             for j in range(gen.N):

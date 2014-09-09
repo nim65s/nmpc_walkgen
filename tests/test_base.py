@@ -224,44 +224,79 @@ class TestBaseGenerator(TestCase):
         #     (  A_zmp )      (  B_zmp ) <- 64 ZMP constraints, i.e. 4*16
         #     ( A_foot )      ( B_foot ) <- 5 foot position constraints, i.e. nedges = 5
         #     (      0 )      (      0)  <- last rows are zero
-        data_A = data_A[1:70,:]
-        data_B = data_B[1:70]
+        data_A = data_A[1:65,:]
+        data_B = data_B[1:65]
 
         gen = Generator()
 
         # assemble Acop and Bcop using our convention
-        Acop = numpy.zeros(gen.Acop.shape)
-        Bcop = numpy.zeros(gen.ubBcop.shape)
+        Acop = numpy.zeros((gen.Acop.shape[0],gen.Acop.shape[1]-2),dtype=float)
+        Bcop = numpy.zeros(gen.ubBcop.shape,dtype=float)
 
         # dddC_x
         a = 0; b = gen.N; c = 0; d = gen.N
-        Acop[:,a:b] = data_A[:64, c:d]
+        Acop[:,a:b] = data_A[:, c:d]
 
         # F_x
-        a = gen.N; b = gen.N + gen.nf -1; c = 2*gen.N; d = 2*gen.N + 1
-        Acop[:,a:b] = data_A[:64, c:d]
+        a = gen.N ; b = gen.N + gen.nf-1 ; c = 2*gen.N ; d = 2*gen.N + 1
+        Acop[:,a:b] = data_A[:, c:d]
 
         # dddC_y
-        a = gen.N + gen.nf; b = 2*gen.N + gen.nf; c = gen.N; d = 2*gen.N
-        Acop[:,a:b] = data_A[:64, c:d]
+        a = gen.N+gen.nf-1 ; b = 2*gen.N+gen.nf-1 ; c = gen.N ; d = 2*gen.N
+        Acop[:,a:b] = data_A[:, c:d]
 
         # F_y
-        a = 2*gen.N + gen.nf; b = 2*gen.N + 2*gen.nf -1; c = 2*gen.N + 1; d = 2*gen.N + 2
-        Acop[:,a:b] = data_A[:64, c:d]
+        a = 2*gen.N+gen.nf-1 ; b = 2*(gen.N+gen.nf-1); c = 2*gen.N + 1; d = 2*gen.N + 2
+        Acop[:,a:b] = data_A[:, c:d]
 
-        Bcop = data_B[:64]
+        Bcop = -data_B[:]
 
+        genAcop = numpy.zeros((gen.Acop.shape[0],gen.Acop.shape[1]-2))
+        genBcop = numpy.zeros(gen.ubBcop.shape)
+
+        # dddC_x + F_x-1
+        a = gen.N + gen.nf-1
+        genAcop[:,:a] = gen.Acop[:,:a]
+
+        # dddC_y + F_y-1
+        a = gen.N + gen.nf-1 ; b = 2*(gen.N + gen.nf-1) ; c = gen.N + gen.nf ; d = 2*(gen.N + gen.nf)-1
+        genAcop[:,a:b] = gen.Acop[:,c:d]
+        genAcop = -1 * genAcop
         print "Acop:\n", Acop
-        print "gen.Acop:\n", gen.Acop
-        print "A-B:\n", gen.Acop - Acop
-        print "A-B = 0\n", ((gen.Acop - Acop) == 0).all()
-        assert_allclose(gen.Acop, Acop, atol=self.ATOL, rtol=self.RTOL)
+        print "\n\n genAcop:\n", genAcop
+        print "A-B:\n", genAcop - Acop
+        print "A-B = 0\n", ((genAcop.round(6) - Acop.round(6)) == 0).all()
+        assert_allclose(genAcop.round(6), Acop.round(6), atol=self.ATOL, rtol=self.RTOL)
 
         print "Bcop:\n", Bcop
         print "gen.Bcop:\n", gen.ubBcop
         print "A-B:\n", gen.ubBcop - Bcop
         print "A-B = 0\n", ((gen.ubBcop - Bcop) == 0).all()
         assert_allclose(gen.ubBcop, Bcop, atol=self.ATOL, rtol=self.RTOL)
+
+    def test_constraint_elemental_matrices_cop(self):
+        gen = Generator()
+
+        data_V = numpy.loadtxt(os.path.join(BASEDIR, "data", "V_kp1.dat"), skiprows=0)
+        assert_allclose(gen.V_kp1[:,0], data_V)
+
+        data_b_kp1 = numpy.loadtxt(os.path.join(BASEDIR, "data", "Bdxdy.dat"), skiprows=0)
+        assert_allclose(gen.b_kp1, data_b_kp1)
+
+        data_Pzs = numpy.loadtxt(os.path.join(BASEDIR, "data", "Pzs.dat"), skiprows=0)
+        assert_allclose(gen.Pzs, data_Pzs)
+
+        data_VcX = numpy.loadtxt(os.path.join(BASEDIR, "data", "VcX.dat"), skiprows=0)
+        assert_allclose(gen.v_kp1.dot(gen.f_k_x), data_VcX)
+
+        data_VcY = numpy.loadtxt(os.path.join(BASEDIR, "data", "VcY.dat"), skiprows=0)
+        assert_allclose(gen.v_kp1.dot(gen.f_k_y), data_VcY)
+
+        data_comx = numpy.loadtxt(os.path.join(BASEDIR, "data", "comX.dat"), skiprows=0)
+        assert_allclose(gen.c_k_x, data_comx)
+
+        data_comy = numpy.loadtxt(os.path.join(BASEDIR, "data", "comY.dat"), skiprows=0)
+        assert_allclose(gen.c_k_y, data_comy)
 
 
     def test_all_zero_when_idle(self):

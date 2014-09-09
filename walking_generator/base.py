@@ -61,6 +61,7 @@ class BaseGenerator(object):
         self.E[:, :self.N/self.nf] = -numpy.eye(self.N/self.nf)
         self.E[:,-self.N/self.nf:] =  numpy.eye(self.N/self.nf)
         self.E /= 2*self.T_step
+
         # center of mass initial values
 
         self.c_k_x = numpy.zeros((3,), dtype=float)

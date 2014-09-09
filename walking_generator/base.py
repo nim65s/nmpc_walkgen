@@ -61,6 +61,7 @@ class BaseGenerator(object):
         self.E[:, :self.N/self.nf] = -numpy.eye(self.N/self.nf)
         self.E[:,-self.N/self.nf:] =  numpy.eye(self.N/self.nf)
         self.E /= 2*self.T_step
+
         # center of mass initial values
 
         self.c_k_x = numpy.zeros((3,), dtype=float)
@@ -188,9 +189,6 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         self.buildConstraints()
 
-        # simulate initializes all states and ZMP values
-        self.simulate()
-
         selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
         selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )
         selfA = numpy.concatenate( (selfA,-self.Afoot[0:self.A0l.shape[0] , 0:(2*self.N+self.nf)]) )
@@ -204,6 +202,19 @@ class BaseGenerator(object):
 
 
     def _initialize_matrices(self):
+        """
+        initializes the CoM state corresponding to the first step of the robot.
+        WARNING the initial state should be different.
+        """
+        self.c_k_x[0] = 0.06591456
+        self.c_k_x[1] = 0.07638739
+        self.c_k_x[2] = -0.1467377
+        self.c_k_y[0] = 2.49008564e-02
+        self.c_k_y[1] = 6.61665254e-02
+        self.c_k_y[2] = 6.72712187e-01
+        if self.c_k_y[2] != 0:
+            print "WARNING, PLEASE verify the initiale state !!!!!"
+
         """
         initializes the transformation matrices according to the walking report
         """
@@ -378,7 +389,6 @@ class BaseGenerator(object):
         """
         integrates model for given jerks and feet positions and orientations
         """
-
         self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
         self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
         self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
@@ -452,7 +462,7 @@ class BaseGenerator(object):
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
 
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
         # B <= A x <= B
@@ -488,23 +498,29 @@ class BaseGenerator(object):
 
         A0lrot = self.A0l.dot(rotMat)
         A0rrot = self.A0r.dot(rotMat)
+
         if self.currentSupport.foot == "left":
-            tmp1 = numpy.array( [A0lrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
-            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0rrot[:,0]] )
-            tmp3 = numpy.array( [A0lrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
-            tmp4 = numpy.array( [numpy.zeros(nEdges,),A0rrot[:,1]] )
+            A_f1 = A0rrot
+            A_f2 = A0lrot
+            B_f1 = self.ubB0r
+            B_f2 = self.ubB0l
         else :
-            tmp1 = numpy.array( [A0rrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
-            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,0]] )
-            tmp3 = numpy.array( [A0rrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
-            tmp4 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,1]] )
+            A_f1 = A0lrot
+            A_f2 = A0rrot
+            B_f1 = self.ubB0l
+            B_f2 = self.ubB0r
+
+        tmp1 = numpy.array( [A_f1[:,0],numpy.zeros((nEdges,),dtype=float)] )
+        tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A_f2[:,0]] )
+        tmp3 = numpy.array( [A_f1[:,1],numpy.zeros((nEdges,),dtype=float)] )
+        tmp4 = numpy.array( [numpy.zeros(nEdges,),A_f2[:,1]] )
 
         X_mat = numpy.concatenate( (tmp1.T,tmp2.T) , 0)
         A0x = X_mat.dot(matSelec)
         Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
         A0y = Y_mat.dot(matSelec)
 
-        B0full = numpy.concatenate( (self.ubB0l, self.ubB0r) , 0 )
+        B0full = numpy.concatenate( (B_f1, B_f2) , 0 )
         B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
 
         self.Afoot = numpy.concatenate ( (numpy.zeros((ncfoot,N),dtype=float),\

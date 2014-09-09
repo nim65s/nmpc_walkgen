@@ -14,6 +14,8 @@ if __name__ == '__main__':
 
     gen.solve()
 
+    sys.exit()
+
     for i in range(1):
         print 'iteration: ', i
         gen.c_k_x[0] = gen.  C_kp1_x[0]

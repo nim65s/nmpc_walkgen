@@ -186,15 +186,15 @@ class ClassicGenerator(BaseGenerator):
         a = 0
         b = self.pos_nc_cop
         self.pos_A  [a:b] = self.Acop
-        self.pos_lbA[a:b] = self.ubBcop
-        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.ubBcop
 
         #foot inequality constraints
         a = self.pos_nc_cop
         b = self.pos_nc_cop + self.pos_nc_foot
         self.pos_A  [a:b] = self.Afoot
-        self.pos_lbA[a:b] = self.Bfoot
-        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.ubBfoot
 
         #foot equality constraints
         a = self.pos_nc_cop + self.pos_nc_foot

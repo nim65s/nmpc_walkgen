@@ -189,9 +189,6 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         self.buildConstraints()
 
-        # simulate initializes all states and ZMP values
-        self.simulate()
-
         selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
         selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )
         selfA = numpy.concatenate( (selfA,-self.Afoot[0:self.A0l.shape[0] , 0:(2*self.N+self.nf)]) )

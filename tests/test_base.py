@@ -340,6 +340,10 @@ class TestBaseGenerator(TestCase):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
 
+        gen.c_k_x[...] = 0.0
+        gen.c_k_y[...] = 0.0
+        gen.c_k_q[...] = 0.0
+
         assert_allclose(gen.c_k_x, 0.0)
         assert_allclose(gen.c_k_y, 0.0)
         assert_allclose(gen.c_k_q, 0.0)

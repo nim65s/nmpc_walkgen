@@ -203,14 +203,15 @@ class TestClassicGenerator(TestCase):
     def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
+        gen._preprocess_solution()
+
         N = gen.N
         nf = gen.nf
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
 
-        data_g = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"), skiprows=1)
-        pos_g  = numpy.zeros((data_g.shape))
+        pos_g = numpy.loadtxt(os.path.join(BASEDIR, "data", "P.dat"), skiprows=1)
         g_mask = numpy.zeros(gen.pos_g.shape, dtype=bool)
 
         # compare values for dddC_kp1_x
@@ -236,46 +237,53 @@ class TestClassicGenerator(TestCase):
     def test_qp_objective_hessian_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
+        gen._preprocess_solution()
+
         N = gen.N
         nf = gen.nf
 
-        # assemble pos_H and pos_g for our convention
-        data_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
-        pos_H  = numpy.zeros((data_H.shape))
+        # data follows other convention, i.e.
+        # U_k = (dddC_x, dddC_y, F_x, F_y)
 
-        gen_H_mask = numpy.zeros(gen.pos_H.shape, dtype=bool)
+        # assemble pos_H and pos_g for our convention
+        pos_H = numpy.loadtxt(os.path.join(BASEDIR, "data", "Q.dat"), skiprows=1)
+        H_mask = numpy.zeros(gen.pos_H.shape, dtype=bool)
 
         # compare values for dddC_kp1_x
-        a = 0; b = gen.N; e = 0; f = gen.N
-        c = 0; d = gen.N; g = 0; h = gen.N
-        pos_H[a:b,c:d] = data_H[e:f,g:h]
-        pos_g[a:b]     = data_g[e:f]
-
-        # compare values for F_k_x
-        a = gen.N; b = gen.N + gen.nf-1; e = 2*gen.N + 0; f = 2*gen.N + 1
-        c = gen.N; d = gen.N + gen.nf-1; g = 2*gen.N + 0; h = 2*gen.N + 1
-        pos_H[a:b,c:d] = data_H[e:f,g:h]
-        pos_g[a:b]     = data_g[e:f]
+        H_mask[...] = 0
+        H_mask[:N, :N] = 1
+        assert_allclose(
+            gen.pos_H[H_mask].reshape((N,N)),
+            pos_H    [:N, :N],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
         # compare values for dddC_kp1_y
-        a = gen.N + gen.nf; b = 2*gen.N+gen.nf; e = gen.N; f = 2*gen.N
-        c = gen.N + gen.nf; d = 2*gen.N+gen.nf; g = gen.N; h = 2*gen.N
-        pos_H[a:b,c:d] = data_H[e:f,g:h]
-        pos_g[a:b]     = data_g[e:f]
+        H_mask[...] = 0
+        H_mask[N+nf:-nf, N+nf:-nf] = 1
+        assert_allclose(
+            gen.pos_H[H_mask].reshape((N,N)),
+            pos_H    [N:2*N, N:2*N],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
         # compare values for F_k_x
-        a = 2*gen.N +gen.nf; b = 2*gen.N + 2*gen.nf - 1; e = 2*gen.N + 1; f = 2*gen.N + 2
-        c = 2*gen.N +gen.nf; d = 2*gen.N + 2*gen.nf - 1; g = 2*gen.N + 1; h = 2*gen.N + 2
-        pos_H[a:b,c:d] = data_H[e:f,g:h]
-        pos_g[a:b]     = data_g[e:f]
+        H_mask[...] = 0
+        H_mask[N:N+nf-1, N:N+nf-1] = 1
+        assert_allclose(
+            gen.pos_H[H_mask].reshape((1,1)),
+            pos_H    [2*N:2*N+1, 2*N:2*N+1],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
-        # setup QP matrices
-        gen._preprocess_solution()
-
-        # test Hessian and gradient
-        # NOTE the data is not saved in right precision, so rounding on python
-        #      data structures hast to be applied
-        assert_allclose(gen.pos_H[gen_H_mask].reshape(pos_H.shape).round(6), pos_H, rtol=self.RTOL, atol=self.ATOL)
+        # compare values for F_k_y
+        H_mask[...] = 0
+        H_mask[2*N+nf:-1, 2*N+nf:-1] = 1
+        assert_allclose(
+            gen.pos_H[H_mask].reshape((1,1)),
+            pos_H    [2*N+1:, 2*N+1:],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
@@ -284,22 +292,22 @@ class TestClassicGenerator(TestCase):
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
 
-        # get linear constraints from data
-        pos_lbA = numpy.loadtxt(os.path.join(BASEDIR, "data", "lbA.dat"), skiprows=1)
-
         # get box constraints from data
         pos_lb = numpy.loadtxt(os.path.join(BASEDIR, "data", "LB.dat"), skiprows=1)
         pos_ub = numpy.loadtxt(os.path.join(BASEDIR, "data", "UB.dat"), skiprows=1)
 
+        # get linear constraints from data
+        pos_lbA = numpy.loadtxt(os.path.join(BASEDIR, "data", "lbA.dat"), skiprows=1)[1:70]
+
         # setup QP matrices
         gen._preprocess_solution()
-
-        # test linear constraints
-        assert_allclose(gen.pos_lbA[:-gen.pos_nc_eqfoot-5], pos_lbA[1:70], rtol=self.RTOL, atol=self.ATOL)
 
         # test box constraints
         assert_allclose(gen.pos_lb[:34], pos_lb, rtol=self.RTOL, atol=self.ATOL)
         assert_allclose(gen.pos_ub[:34], pos_ub, rtol=self.RTOL, atol=self.ATOL)
+
+        # test linear constraints
+        assert_allclose(gen.pos_ubA[:-gen.pos_nc_eqfoot-gen.lfhull.shape[0]], pos_lbA, rtol=self.RTOL, atol=self.ATOL)
 
     def test_generator_with_zero_reference_velocity(self):
         gen = ClassicGenerator()

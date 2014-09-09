@@ -175,46 +175,57 @@ class TestBaseGenerator(TestCase):
         #     (  A_zmp )      (  B_zmp ) <- 64 ZMP constraints, i.e. 4*16
         #     ( A_foot )      ( B_foot ) <- 5 foot position constraints, i.e. nedges = 5
         #     (      0 )      (      0)  <- last rows are zero
-        data_A = data_A[1:70,:]
-        data_B = data_B[1:70]
+        data_A = data_A[65:70,:]
+        data_B = data_B[65:70]
 
         gen = Generator()
 
         # assemble Afoot and Bfoot using our convention
-        Afoot = numpy.zeros( (gen.Afoot.shape[0]-5,gen.Afoot.shape[1]) )
-        Bfoot = numpy.zeros( gen.Bfoot.shape[0] - 5)
+        Afoot = numpy.zeros( (gen.Afoot.shape[0]-5, gen.Afoot.shape[1]-2) )
+        Bfoot = numpy.zeros( gen.Bfoot.shape[0]-5)
 
         # dddC_x
         a = 0; b = gen.N; c = 0; d = gen.N
-        Afoot[:5,a:b] = data_A[64:69, c:d]
+        Afoot[:,a:b] = data_A[:, c:d]
 
         # F_x
-        a = gen.N; b = gen.N + gen.nf -1; c = 2*gen.N; d = 2*gen.N + 1
-        Afoot[:5,a:b] = data_A[64:69, c:d]
+        a = gen.N ; b = gen.N + gen.nf-1 ; c = 2*gen.N ; d = 2*gen.N + 1
+        Afoot[:,a:b] = data_A[:, c:d]
 
         # dddC_y
-        a = gen.N + gen.nf; b = 2*gen.N + gen.nf; c = gen.N; d = 2*gen.N
-        Afoot[:5,a:b] = data_A[64:69, c:d]
+        a = gen.N+gen.nf-1 ; b = 2*gen.N+gen.nf-1 ; c = gen.N ; d = 2*gen.N
+        Afoot[:,a:b] = data_A[:, c:d]
 
         # F_y
-        a = 2*gen.N + gen.nf; b = 2*(gen.N + gen.nf -1); c = 2*gen.N + 1; d = 2*gen.N + 2
-        Afoot[:5,a:b] = data_A[64:69, c:d]
+        a = 2*gen.N+gen.nf-1 ; b = 2*(gen.N+gen.nf-1); c = 2*gen.N + 1; d = 2*gen.N + 2
+        Afoot[:,a:b] = data_A[:, c:d]
 
-        Bfoot[:5] = data_B[64:69]
+        Bfoot[:] = data_B[:]
 
-        genAfoot = gen.Afoot[:5,:]
+        genAfoot = numpy.zeros(data_A.shape)
+        genBfoot = numpy.zeros(data_B.shape)
+
+        # dddC_x + F_x-1
+        a = gen.N + gen.nf-1
+        genAfoot[:,:a] = gen.Afoot[:5,:a]
+
+        # dddC_y + F_y-1
+        a = gen.N + gen.nf-1 ; b = 2*(gen.N + gen.nf-1) ; c = gen.N + gen.nf ; d = 2*(gen.N + gen.nf)-1
+        genAfoot[:,a:b] = gen.Afoot[:5,c:d]
+        genAfoot = -1 * genAfoot
+
         genBfoot = gen.Bfoot[:5]
 
-        print "Afoot:\n", Afoot
-        print "gen.Afoot:\n", genAfoot
-        print "A-B:\n", genAfoot - Afoot
-        print "A-B = 0\n", ((genAfoot - Afoot) == 0).all()
-        #assert_allclose(genAfoot, Afoot, atol=self.ATOL, rtol=self.RTOL)
+#        print "Afoot:\n", Afoot
+#        print "gen.Afoot:\n", genAfoot
+#        print "A-B:\n", genAfoot - Afoot
+#        print "A-B = 0\n", ((genAfoot.round(6) - Afoot.round(6)) == 0).all()
+#        assert_allclose(genAfoot.round(6), Afoot.round(6), atol=self.ATOL, rtol=self.RTOL)
 
-        print "Bfoot:\n", Bfoot
-        print "gen.Bfoot:\n", genBfoot
-        print "A-B:\n", genBfoot - Bfoot
-        print "A-B = 0\n", ((genBfoot - Bfoot) == 0).all()
+#        print "Bfoot:\n", Bfoot
+#        print "gen.Bfoot:\n", genBfoot
+#        print "A-B:\n", genBfoot - Bfoot
+#        print "A-B = 0\n", ((genBfoot.round(6) - Bfoot.round(6)) == 0).all()
         assert_allclose(genBfoot, Bfoot, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_matrices_cop(self):

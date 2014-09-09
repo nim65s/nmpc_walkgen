@@ -500,23 +500,29 @@ class BaseGenerator(object):
 
         A0lrot = self.A0l.dot(rotMat)
         A0rrot = self.A0r.dot(rotMat)
+
         if self.currentSupport.foot == "left":
-            tmp1 = numpy.array( [A0lrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
-            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0rrot[:,0]] )
-            tmp3 = numpy.array( [A0lrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
-            tmp4 = numpy.array( [numpy.zeros(nEdges,),A0rrot[:,1]] )
+            A_f1 = A0rrot
+            A_f2 = A0lrot
+            B_f1 = self.ubB0r
+            B_f2 = self.ubB0l
         else :
-            tmp1 = numpy.array( [A0rrot[:,0],numpy.zeros((nEdges,),dtype=float)] )
-            tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,0]] )
-            tmp3 = numpy.array( [A0rrot[:,1],numpy.zeros((nEdges,),dtype=float)] )
-            tmp4 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A0lrot[:,1]] )
+            A_f1 = A0lrot
+            A_f2 = A0rrot
+            B_f1 = self.ubB0l
+            B_f2 = self.ubB0r
+
+        tmp1 = numpy.array( [A_f1[:,0],numpy.zeros((nEdges,),dtype=float)] )
+        tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A_f2[:,0]] )
+        tmp3 = numpy.array( [A_f1[:,1],numpy.zeros((nEdges,),dtype=float)] )
+        tmp4 = numpy.array( [numpy.zeros(nEdges,),A_f2[:,1]] )
 
         X_mat = numpy.concatenate( (tmp1.T,tmp2.T) , 0)
         A0x = X_mat.dot(matSelec)
         Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
         A0y = Y_mat.dot(matSelec)
 
-        B0full = numpy.concatenate( (self.ubB0l, self.ubB0r) , 0 )
+        B0full = numpy.concatenate( (B_f1, B_f2) , 0 )
         B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
 
         self.Afoot = numpy.concatenate ( (numpy.zeros((ncfoot,N),dtype=float),\

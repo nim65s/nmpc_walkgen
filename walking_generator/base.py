@@ -205,6 +205,19 @@ class BaseGenerator(object):
 
     def _initialize_matrices(self):
         """
+        initializes the CoM state corresponding to the first step of the robot.
+        WARNING the initial state should be different.
+        """
+        self.c_k_x[0] = 0.06591456
+        self.c_k_x[1] = 0.07638739
+        self.c_k_x[2] = -0.1467377
+        self.c_k_y[0] = 2.49008564e-02
+        self.c_k_y[1] = 6.61665254e-02
+        self.c_k_y[2] = 6.72712187e-01
+        if self.c_k_y[2] != 0:
+            print "WARNING, PLEASE verify the initiale state !!!!!"
+
+        """
         initializes the transformation matrices according to the walking report
         """
         T_step = self.T_step
@@ -378,7 +391,6 @@ class BaseGenerator(object):
         """
         integrates model for given jerks and feet positions and orientations
         """
-
         self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
         self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
         self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
@@ -452,7 +464,7 @@ class BaseGenerator(object):
         PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
 
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC+v_kp1fc)
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
         # B <= A x <= B

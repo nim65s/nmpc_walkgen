@@ -29,8 +29,8 @@ class TestBaseGenerator(TestCase):
             j = i+1
             assert_allclose(gen.Pzs[i,:], (1, j*T, j**2*T**2/2 - h_com/g))
             assert_allclose(gen.Pps[i,:], (1, j*T, j**2*T**2/2))
-            assert_allclose(gen.Pvs[i,:], (0,       1, j*T))
-            assert_allclose(gen.Pas[i,:], (0,       0,       1))
+            assert_allclose(gen.Pvs[i,:], (0,   1, j*T))
+            assert_allclose(gen.Pas[i,:], (0,   0,       1))
 
             for j in range(gen.N):
                 if j <= i:
@@ -340,6 +340,10 @@ class TestBaseGenerator(TestCase):
     def test_all_zero_when_idle(self):
         gen = Generator()
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
+
+        gen.c_k_x[...] = 0.0
+        gen.c_k_y[...] = 0.0
+        gen.c_k_q[...] = 0.0
 
         assert_allclose(gen.c_k_x, 0.0)
         assert_allclose(gen.c_k_y, 0.0)

@@ -61,6 +61,7 @@ class BaseGenerator(object):
         self.E[:, :self.N/self.nf] = -numpy.eye(self.N/self.nf)
         self.E[:,-self.N/self.nf:] =  numpy.eye(self.N/self.nf)
         self.E /= 2*self.T_step
+
         # center of mass initial values
 
         self.c_k_x = numpy.zeros((3,), dtype=float)
@@ -190,9 +191,6 @@ class BaseGenerator(object):
         # build the constraints linked to
         # the foot step placement and to the cop
         self.buildConstraints()
-
-        # simulate initializes all states and ZMP values
-        self.simulate()
 
         selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
         selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )

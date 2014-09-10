@@ -166,7 +166,7 @@ class BaseGenerator(object):
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Current support state
-        self.currentSupport = BaseTypeFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
+        self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
@@ -290,7 +290,7 @@ class BaseGenerator(object):
         else :
             pair = "right"
             impair = "left"
-        timeLimit = self.supportDeque[i].timeLimit
+        timeLimit = self.supportDeque[0].timeLimit
         # define support feet for whole horizon
         for i in range(self.N):
             for j in range(self.nf):
@@ -556,32 +556,32 @@ class BaseTypeSupportFoot(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
- class BaseTypeFoot(object):
+class BaseTypeFoot(object):
 
-     def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
-         self.x = x
-         self.y = y
-         self.theta = theta
+    def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
+        self.x = x
+        self.y = y
+        self.theta = theta
 
-         self.dx = 0
-         self.dy = 0
-         self.dtheta = 0
+        self.dx = 0
+        self.dy = 0
+        self.dtheta = 0
 
-         self.ddx = 0
-         self.ddy = 0
-         self.ddtheta = 0
+        self.ddx = 0
+        self.ddy = 0
+        self.ddtheta = 0
 
-         self.supportFoot = supportFoot
+        self.supportFoot = supportFoot
 
-     def __eq__(self, other):
-         """ equality operator to check if A == B """
-         return (isinstance(other, self.__class__) # check for inheritance
-             or self.__dict__ == other.__dict__)  # check componentwise __dict__
-                                                   # __dict__ contains all
-                                                   # members and functions
+    def __eq__(self, other):
+        """ equality operator to check if A == B """
+        return (isinstance(other, self.__class__) # check for inheritance
+            or self.__dict__ == other.__dict__)  # check componentwise __dict__
+                                                  # __dict__ contains all
+                                                  # members and functions
 
-     def __ne__(self, other):
-         return not self.__eq__(other)
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 class CoMState(object):
 

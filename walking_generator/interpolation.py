@@ -47,7 +47,7 @@ class Interpolation(object):
         CoMbuffer = self.CoMbuffer[:self.interval-1].copy
 
 
-    def interpolate(self, F_k_x, F_k_y, jerkX, jerkY, SupportFootDeq\
+    def interpolate(self, F_k_x, F_k_y, jerkX, jerkY, SupportFootDeq,
                     CoMbuffer, ZMPbuffer, LeftFootBuffer, RightFootBuffer):
 
         self.lipm.interpolate( jerkX, jerkY )
@@ -143,7 +143,7 @@ class FootInterpolation(object):
         F_k_x, F_k_y, PreviewAngle,
         LeftFootBuffer, RightFootBuffer):
 
-        LeftFootBuffer.resize(
+        #LeftFootBuffer.resize(
 
         # Deal with the lift off time and the landing time. During those period
         # the foot do not move along the x and y axis.

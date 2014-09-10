@@ -5,7 +5,7 @@ from numpy.testing import *
 import numpy.testing.decorators as decorators
 
 from walking_generator.base import BaseGenerator as Generator
-from walking_generator.base import BaseTypeFoot
+from walking_generator.base import BaseTypeFoot, BaseTypeSupportFoot
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -91,10 +91,10 @@ class TestBaseGenerator(TestCase):
         gen._initState(comx,comy,comz,\
                 supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
-        currentSupport = BaseTypeFoot()
+        currentSupport = BaseTypeSupportFoot()
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeFoot()
+            supportDeque[i] = BaseTypeSupportFoot()
 
         U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))
 
@@ -132,7 +132,7 @@ class TestBaseGenerator(TestCase):
         gen._initState(comx,comy,comz,\
                 supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
-        currentSupport = BaseTypeFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
+        currentSupport = BaseTypeSupportFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
             supportDeque[i] = BaseTypeFoot()

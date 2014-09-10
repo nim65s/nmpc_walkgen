@@ -157,8 +157,8 @@ class BaseGenerator(object):
         self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
         self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
 
-        self.SecurityMarginX = 0.09
-        self.SecurityMarginY = 0.05
+        self.SecurityMarginX = 0.04
+        self.SecurityMarginY = 0.04
 
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
@@ -509,6 +509,15 @@ class BaseGenerator(object):
                                           A0y) , 1 )
         self.ubBfoot = B0
         self.nc = self.nc + ncfoot
+
+    def buildOriConstraints():
+
+        a= 2
+
+
+
+
+
 
     def solve(self):
         """

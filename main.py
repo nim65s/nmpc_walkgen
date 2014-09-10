@@ -7,7 +7,7 @@ if __name__ == '__main__':
     gen = ClassicGenerator()
     comx = [0.00124774,0.0,0.0]
     comy = [0.00157175,0.0,0.0]
-    comz = 0.08108886
+    comz = 0.814
     supportfootx = 0.00949035
     supportfooty = 0.095
     supportfootq = 0.0
@@ -15,14 +15,20 @@ if __name__ == '__main__':
     secmarginy = 0.05
     gen._initState(comx,comy,comz,\
             supportfootx,supportfooty,supportfootq,secmarginx,secmarginy)
-
-
     gen.simulate()
 
     # set reference velocities to zero
-    gen.dC_kp1_x_ref[...] = 0.1
-    gen.dC_kp1_y_ref[...] = 0.1
+    gen.dC_kp1_x_ref[...] = 0.2
+    gen.dC_kp1_y_ref[...] = 0.0
     gen.dC_kp1_q_ref[...] = 0.0
+
+    samplingPeriod = 0.005
+    inter = Interpolation(samplingPeriod, gen.T, gen.T_step,gen.h_com)
+
+    comTraj = numpy.empty( (,) , dtype=object )
+    zmpTraj = numpy.empty( (,) , dtype=object )
+    leftFootTraj = numpy.empty( (,) , dtype=object )
+    rightFootTraj = numpy.empty( (,) , dtype=object )
 
     gen.solve()
 
@@ -42,4 +48,6 @@ if __name__ == '__main__':
 
         gen.update()
         gen.solve()
+
+        interpolate
         #raw_input('press return to continue: ')

@@ -47,6 +47,7 @@ class BaseGenerator(object):
         self.T_step = T_step
         self.nf = (int)(self.T_window/T_step)
         self.h_com = h_com
+        self.currentTime = 0.0
 
         # objective weights
 
@@ -168,7 +169,7 @@ class BaseGenerator(object):
         self.currentSupport = BaseTypeFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
-            self.supportDeque[i] = BaseTypeFoot()
+            self.supportDeque[i] = BaseTypeSupportFoot()
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -289,7 +290,7 @@ class BaseGenerator(object):
         else :
             pair = "right"
             impair = "left"
-
+        timeLimit = self.supportDeque[i].timeLimit
         # define support feet for whole horizon
         for i in range(self.N):
             for j in range(self.nf):
@@ -299,10 +300,14 @@ class BaseGenerator(object):
                         self.supportDeque[i].foot = pair
                     else :
                         self.supportDeque[i].foot = impair
+
             if i > 0 :
                 self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
                                           self.supportDeque[i-1].stepNumber
+            if self.supportDeque[i].ds == 1 :
+                timeLimit = self.currentTime + self.T_step
 
+            self.supportDeque[i].timeLimit = timeLimit
     def update(self):
         """
         Update all interior matrices, vectors.
@@ -529,26 +534,16 @@ class BaseGenerator(object):
     def shift(self):
         pass
 
-class BaseTypeFoot(object):
+class BaseTypeSupportFoot(object):
 
     def __init__(self, x=0, y=0, theta=0, foot="left"):
         self.x = x
         self.y = y
         self.theta = theta
-
-        self.dx = 0
-        self.dy = 0
-        self.dtheta = 0
-
-        self.ddx = 0
-        self.ddy = 0
-        self.ddtheta = 0
-
         self.foot = foot
         self.ds = 0
         self.stepNumber = 0
         self.timeLimit = 0
-        self.supportFoot = 0
 
     def __eq__(self, other):
         """ equality operator to check if A == B """
@@ -559,6 +554,33 @@ class BaseTypeFoot(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+ class BaseTypeFoot(object):
+
+     def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
+         self.x = x
+         self.y = y
+         self.theta = theta
+
+         self.dx = 0
+         self.dy = 0
+         self.dtheta = 0
+
+         self.ddx = 0
+         self.ddy = 0
+         self.ddtheta = 0
+
+         self.supportFoot = supportFoot
+
+     def __eq__(self, other):
+         """ equality operator to check if A == B """
+         return (isinstance(other, self.__class__) # check for inheritance
+             or self.__dict__ == other.__dict__)  # check componentwise __dict__
+                                                   # __dict__ contains all
+                                                   # members and functions
+
+     def __ne__(self, other):
+         return not self.__eq__(other)
 
 class CoMState(object):
 

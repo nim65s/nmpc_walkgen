@@ -203,6 +203,23 @@ class TestClassicGenerator(TestCase):
     def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq,
+            secmargin,secmargin
+        )
+
+        # define reference velocity
+        gen.dC_kp1_x_ref[...] = 0.2
+        gen.dC_kp1_y_ref[...] = 0.0
+
         gen._preprocess_solution()
 
         N = gen.N
@@ -217,22 +234,38 @@ class TestClassicGenerator(TestCase):
         # compare values for dddC_kp1_x
         g_mask[...] = 0
         g_mask[:N] = 1
-        assert_allclose(gen.pos_g[g_mask], pos_g[:N] ,rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(
+            gen.pos_g[g_mask],
+            pos_g[:N],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
         # compare values for dddC_kp1_y
         g_mask[...] = 0
         g_mask[N+nf:-nf] = 1
-        assert_allclose(gen.pos_g[g_mask], pos_g[N:2*N] ,rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(
+            gen.pos_g[g_mask],
+            pos_g[N:2*N],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
         # compare values for F_k_x
         g_mask[...] = 0
         g_mask[N:N+nf-1] = 1
-        assert_allclose(gen.pos_g[g_mask], pos_g[2*N:2*N+1] ,rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(
+            gen.pos_g[g_mask],
+            pos_g[2*N:2*N+1],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
         # compare values for F_k_y
         g_mask[...] = 0
         g_mask[-nf:-1] = 1
-        assert_allclose(gen.pos_g[g_mask], pos_g[2*N+1:] ,rtol=self.RTOL, atol=self.ATOL)
+        assert_allclose(
+            gen.pos_g[g_mask],
+            pos_g[2*N+1:],
+            rtol=self.RTOL, atol=self.ATOL
+        )
 
     def test_qp_objective_hessian_against_real_pattern_generator(self):
         # instantiate pattern generator
@@ -288,6 +321,20 @@ class TestClassicGenerator(TestCase):
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator()
+
+        # define initial state
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq,
+            secmargin,secmargin
+        )
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)

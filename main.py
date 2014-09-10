@@ -49,5 +49,5 @@ if __name__ == '__main__':
         gen.update()
         gen.solve()
 
-        interpolate
+        inter.interpolateCoMZMP(gen.F_k_x,gen.F_k_y,jerkX, jerkY,comTraj, zmpTraj)
         #raw_input('press return to continue: ')

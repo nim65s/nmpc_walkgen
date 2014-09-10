@@ -396,8 +396,20 @@ class TestClassicGenerator(TestCase):
             "walkForward2m_s.dat")
         )
 
-        #
+        # instantiate pattern generator
         gen = ClassicGenerator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq,
+            secmargin,secmargin
+        )
 
         # define reference velocity
         dC_kp1_x_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
@@ -535,7 +547,6 @@ class TestClassicGenerator(TestCase):
         Fr_q   = data[:,19]
         dFr_q  = data[:,20]
         ddFr_q = data[:,21]
-
 
 if __name__ == '__main__':
     try:

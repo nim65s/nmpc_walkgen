@@ -26,8 +26,11 @@ class TestBaseGenerator(TestCase):
         supportfooty = 0.095
         supportfootq = 0.0
         secmargin = 0.04
-        gen._initState(comx,comy,comz,\
-                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq,
+            secmargin,secmargin
+        )
 
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
 

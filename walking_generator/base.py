@@ -274,8 +274,8 @@ class BaseGenerator(object):
         self.f_k_x = supportfootx
         self.f_k_y = supportfooty
         self.f_k_q = supportfootq
-        self.c_k_x = comx
-        self.c_k_y = comy
+        self.c_k_x[...] = comx
+        self.c_k_y[...] = comy
         self.h_com = comz
         self.SecurityMarginX = secmarginx
         self.SecurityMarginY = secmarginy

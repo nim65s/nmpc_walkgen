@@ -5,13 +5,19 @@ from walking_generator.interpolation import Interpolation
 
 if __name__ == '__main__':
     gen = ClassicGenerator()
+    # define initial state
+    comx = [0.06591456,0.07638739,-0.1467377]
+    comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+    comz = 0.814
+    supportfootx = 0.00949035
+    supportfooty = 0.095
+    supportfootq = 0.0
+    secmargin = 0.04
     gen._initState(
-    comx = [0.00124774,0.0,0.0]\
-    comy = [0.00157175,0.0,0.0]\
-    comz = 0.08108886\
-    supportfootx = 0.00949035\
-    supportfooty = 0.095\
-    supportfootq = 0.0)
+        comx,comy,comz,
+        supportfootx,supportfooty,supportfootq,
+        secmargin,secmargin
+    )
 
     gen.simulate()
 
@@ -22,9 +28,7 @@ if __name__ == '__main__':
 
     gen.solve()
 
-    sys.exit()
-
-    for i in range(1):
+    for i in range(100):
         print 'iteration: ', i
         gen.c_k_x[0] = gen.  C_kp1_x[0]
         gen.c_k_x[1] = gen. dC_kp1_x[0]
@@ -39,7 +43,5 @@ if __name__ == '__main__':
         gen.c_k_q[2] = gen.ddC_kp1_q[0]
 
         gen.update()
-        print 'gen.ori_H:\n', gen.ori_H
-        print 'gen.pos_H:\n', gen.pos_H
         gen.solve()
-        raw_input('press return to continue: ')
+        #raw_input('press return to continue: ')

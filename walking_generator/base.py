@@ -129,9 +129,24 @@ class BaseGenerator(object):
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
         # convex hulls used to bound the free placement of the foot
-            # set of points
-        self.lfhull = numpy.zeros((5,2), dtype=float)
-        self.rfhull = numpy.zeros((5,2), dtype=float)
+            # support foot : right
+        self.rfhull = numpy.array((
+                (-0.28, -0.2),
+                (-0.20, -0.3),
+                ( 0.00, -0.4),
+                ( 0.20, -0.3),
+                ( 0.28, -0.2),
+        ), dtype=float)
+
+            # support foot : left
+        self.lfhull = numpy.array((
+                (-0.28, 0.2),
+                (-0.20, 0.3),
+                ( 0.00, 0.4),
+                ( 0.20, 0.3),
+                ( 0.28, 0.2),
+        ), dtype=float)
+
             # set of Cartesian equalities
         self.A0r = numpy.zeros((5,2), dtype=float)
         self.ubB0r = numpy.zeros((5,), dtype=float)
@@ -148,18 +163,44 @@ class BaseGenerator(object):
         self.ubBcop = numpy.zeros((), dtype=float)
         self.eqBfoot = numpy.zeros((2,), dtype=float)
 
+        # security margins for CoP constraints
+        self.SecurityMarginX = SMx = 0.04
+        self.SecurityMarginY = SMy = 0.04
+
         # Position of the foot in the local foot frame
         self.nFootEdge = 4
-        self.lfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
-        self.rfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.footWidth  = fW = 0.2172
+        self.footHeigth = fH = 0.138
+        # position of the vertices of the feet in the foot coordinates.
+        #  #<---footWidht---># --- ---
+        #  #<>=SMx     SMx=<>#  |   |=SMy
+        #  #  *-----------*  #  |  ---
+        #  #  |           |  #  |=footHeight
+        #  #  *-----------*  #  |  ---
+        #  #                 #  |   |=SMy
+        #  #-----------------# --- ---
+
+        # left foot
+        self.lfoot = numpy.array((
+            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
+            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
+            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
+            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
+        ), dtype=float)
+
+        # right foot
+        self.rfoot = numpy.array((
+            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
+            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
+            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
+            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
+        ), dtype=float)
+
         # Corresponding linear system
         self.A0rf = numpy.zeros((self.nFootEdge,2), dtype=float)
         self.ubB0rf = numpy.zeros((self.nFootEdge,), dtype=float)
         self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
         self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
-
-        self.SecurityMarginX = 0.04
-        self.SecurityMarginY = 0.04
 
         self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
         self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
@@ -179,15 +220,11 @@ class BaseGenerator(object):
         self.v_kp1 = numpy.zeros((N,),   dtype=int)
         self.V_kp1 = numpy.zeros((N,self.nf), dtype=int)
 
-
-        """
-        NOTE Initialize all the base matrices of the QP.
-        """
-        # initialize transformation matrices
+        # initialize all elementary problem matrices, e.g.
+        # state transformation matrices, constraints, etc.
         self._initialize_matrices()
 
     def _initialize_matrices(self):
-
         """
         initializes the transformation matrices according to the walking report
         """
@@ -223,46 +260,15 @@ class BaseGenerator(object):
 
         self._calculate_support_order()
 
-        # support foot : right
-        self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
-        self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;
-        self.rfhull[2,0] =  0     ;  self.rfhull[2,1] = -0.4 ;
-        self.rfhull[3,0] =  0.2   ;  self.rfhull[3,1] = -0.3 ;
-        self.rfhull[4,0] =  0.28  ;  self.rfhull[4,1] = -0.2 ;
-        # support foot : left
-        self.lfhull[0,0] = -0.28  ;  self.lfhull[0,1] =  0.2 ;
-        self.lfhull[1,0] = -0.2   ;  self.lfhull[1,1] =  0.3 ;
-        self.lfhull[2,0] =  0     ;  self.lfhull[2,1] =  0.4 ;
-        self.lfhull[3,0] =  0.2   ;  self.lfhull[3,1] =  0.3 ;
-        self.lfhull[4,0] =  0.28  ;  self.lfhull[4,1] =  0.2 ;
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
 
-        # position of the vertices of the feet in the foot coordinates.
-        self.footWidth = 0.2172
-        self.footHeigth = 0.138
-        # left foot
-        self.lfoot[0,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[0,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.lfoot[1,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[1,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.lfoot[2,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[2,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.lfoot[3,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.lfoot[3,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
-        # right foot
-        self.rfoot[0,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[0,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.rfoot[1,0] =  (self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[1,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.rfoot[2,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[2,1] =  (self.footHeigth*0.5-self.SecurityMarginY) ;
-        self.rfoot[3,0] = -(self.footWidth*0.5-self.SecurityMarginX) ;  self.rfoot[3,1] = -(self.footHeigth*0.5-self.SecurityMarginY) ;
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
         self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
 
-        #print self.A0rf
-        #print self.ubB0rf
-
         self.updateD()
-        # Debug Output
-        #print '[v, V0, ...]'
-        #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
 
         # define initial support feet order
         self._calculate_support_order()

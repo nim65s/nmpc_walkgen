@@ -135,7 +135,7 @@ class TestBaseGenerator(TestCase):
         currentSupport = BaseTypeSupportFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeFoot()
+            supportDeque[i] = BaseTypeSupportFoot()
 
         for i in range(100):
             U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))
@@ -146,6 +146,8 @@ class TestBaseGenerator(TestCase):
             else :
                 pair = "right"
                 impair = "left"
+
+            timeLimit = gen.supportDeque[0].timeLimit
 
             for i in range(gen.N):
                 for j in range(U_kp1.shape[1]):
@@ -158,6 +160,10 @@ class TestBaseGenerator(TestCase):
                 if i > 0 :
                     supportDeque[i].ds = supportDeque[i].stepNumber -\
                                          supportDeque[i-1].stepNumber
+                if supportDeque[i].ds == 1 :
+                    timeLimit = gen.currentTime + gen.T_step
+
+                supportDeque[i].timeLimit = timeLimit
 
             assert_equal(gen.currentSupport, currentSupport)
             assert_array_equal(gen.supportDeque, supportDeque)

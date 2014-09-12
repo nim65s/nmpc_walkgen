@@ -60,14 +60,14 @@ if __name__ == '__main__':
     currentSupport.foot = "left"
     currentSupport.ds = 0
     currentSupport.stepNumber = 0
-    currentSupport.timeLimit = 0.8
+    currentSupport.timeLimit = 0.9
 
     supportFootDeque = numpy.empty( (9,) , dtype=object )
     for i in range (supportFootDeque.shape[0]):
         supportFootDeque[i] = deepcopy(currentSupport)
 
     supportFootDeque[0].ds=1
-    supportFootDeque[0].timeLimit = 0.0
+    supportFootDeque[0].timeLimit = 0.1
     supportFootDeque[8].ds=1
 
     FI = FootInterpolation()
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     PreviewAngle = 0.0
     F_k_x = 0.2
-    F_k_y = 0.0
+    F_k_y = 0.2
 
     LeftFootBuffer = numpy.empty( (20,) , dtype=object )
     for i in range(LeftFootBuffer.shape[0]):
@@ -111,36 +111,32 @@ if __name__ == '__main__':
 
     LeftFootTraj = numpy.empty( (0,) , dtype=object )
     RightFootTraj = numpy.empty( (0,) , dtype=object )
+    LFx = numpy.empty( (0,) , dtype=object )
+    RFx = numpy.empty( (0,) , dtype=object )
 
     for i in range(supportFootDeque.shape[0]):
         time = i * 0.1
-        print "time = ", time
         FI.interpolate(time, supportFootDeque[i],
         currentSwingFootPosition, currentNonSwingFootPosition ,
         F_k_x, F_k_y, PreviewAngle,
         LeftFootBuffer, RightFootBuffer)
 
-#        print currentSwingFootPosition.x
-#        print currentNonSwingFootPosition.x
+        LeftFootTrajX = numpy.zeros( LeftFootBuffer.shape , dtype=float)
+        RightFootTrajX = numpy.zeros( RightFootBuffer.shape , dtype=float)
+        for j in range(RightFootBuffer.shape[0]):
+            LeftFootTrajX[j] = LeftFootBuffer[j].z
+            RightFootTrajX[j] = RightFootBuffer[j].z
 
+        LeftFootTrajX.tofile("LeftFootBuffer"+format(i),sep="\n")
+        RightFootTrajX.tofile("RightFootBuffer"+format(i),sep="\n")
 
-        LeftFootTraj = numpy.append(LeftFootTraj,LeftFootBuffer)
-        RightFootTraj = numpy.append(RightFootTraj,RightFootBuffer)
+        LFx = numpy.append(LFx,LeftFootTrajX)
+        RFx = numpy.append(RFx,RightFootTrajX)
 
+    LFx.tofile("lfttraj.txt",sep="\n")
+    RFx.tofile("rfttraj.txt",sep="\n")
 
-
-
-
-
-    LeftFootTrajX = numpy.zeros( LeftFootTraj.shape , dtype=float)
-    RightFootTrajX = numpy.zeros( LeftFootTraj.shape , dtype=float)
-    print LeftFootTraj.shape
-    for i in range(LeftFootTraj.shape[0]):
-        LeftFootTrajX[i] = LeftFootTraj[i].x
-        RightFootTrajX[i] = RightFootTraj[i].x
-
-    LeftFootTrajX.tofile("lfttraj.txt",sep="\n")
-    RightFootTrajX.tofile("rfttraj.txt",sep="\n")
+    print "done"
 
 
 

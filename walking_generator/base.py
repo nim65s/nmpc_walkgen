@@ -454,16 +454,16 @@ class BaseGenerator(object):
         zeroDim = (self.N, self.N+self.nf)
 
         # ???
-        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
-        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
-        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
+        PzuVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
+        PzuVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
+        PzuV = numpy.concatenate( (PzuVx,PzuVy) , 0 )
 
-        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
+        PzsC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
 
         # build CoP linear constraints
-        self.Acop = D_kp1.dot(PZUV)
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC) + D_kp1.dot(v_kp1fc)
+        self.Acop = D_kp1.dot(PzuV)
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
         # B <= A x <= B

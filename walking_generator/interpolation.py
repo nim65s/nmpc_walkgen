@@ -15,14 +15,15 @@ class Interpolation(object):
         initCoM=CoMState(), initLeftFoot=BaseTypeFoot(),
         initRightFoot=BaseTypeFoot()):
 
-        self.T = T
-        self.Tc = Tcontrol
-        self.interval = int(self.Tc/self.T)+1
+        self.T = T # QP sampling period
+        self.Tc = Tcontrol # sampling period of the robot low level controller
+        self.interval = int(self.Tc/self.T)+1 # number of iteration in 100ms
+                                              # + the initial state of the next QP iteration
 
-        self.CoMbuffer = numpy.empty( (self.interval,) , dtype=object )
-        self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=object )
-        self.RFbuffer = numpy.empty( (self.interval,) , dtype=object )
-        self.LFbuffer = numpy.empty( (self.interval,) , dtype=object )
+        self.CoMbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the CoM trajectory over 100ms
+        self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the ZMP trajectory over 100ms
+        self.RFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the rigth foot trajectory over 100ms
+        self.LFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the left foot trajectory over 100ms
         for i in range(self.interval):
             self.CoMbuffer[i] = CoMState()
             self.ZMPbuffer[i] = ZMPState()
@@ -127,8 +128,6 @@ class FootInterpolation(object):
     def __init__(self, QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
         FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
 
-        print "initialize the foot interpolation"
-
         self.T = QPsamplingPeriod
         self.Tc = commandPeriod
         self.N = NbSamplingPreviewed
@@ -150,7 +149,6 @@ class FootInterpolation(object):
         CurrentSwingFootPosition,CurrentNonSwingFoot,
         F_k_x, F_k_y, PreviewAngle,
         LeftFootBuffer, RightFootBuffer):
-        print "Interpolate foot :"
 
         if time+1.5*self.T > currentSupport.timeLimit :
             if currentSupport.foot == "left" :
@@ -159,11 +157,10 @@ class FootInterpolation(object):
             else :
                 left = CurrentSwingFootPosition
                 right = CurrentNonSwingFoot
-#            for i in range(self.intervaleSize):
-#                LeftFootBuffer[i] = deepcopy(left)
-#                RightFootBuffer[i] = deepcopy(right)
+            for i in range(self.intervaleSize):
+                LeftFootBuffer[i] = deepcopy(left)
+                RightFootBuffer[i] = deepcopy(right)
 
-            print "SET POLYNOME Z"
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,
                         CurrentSwingFootPosition.z,CurrentSwingFootPosition.dz)
 
@@ -181,13 +178,10 @@ class FootInterpolation(object):
             timeInterval = UnlockedSwingPeriod - SwingTimePassed
             startLanding = endOfLiftoff + UnlockedSwingPeriod
 
-            print "timeInterval = " , timeInterval
-
             # Set the polynomes
             csf = CurrentSwingFootPosition
 
             self.polynomeX.setParameters(timeInterval,F_k_x,csf.x,csf.dx,csf.ddx)
-            print self.polynomeX.coef
             self.polynomeY.setParameters(timeInterval,F_k_y,csf.y,csf.dy,csf.ddy)
             self.polynomeTheta.setParameters(timeInterval,PreviewAngle,\
                                                 csf.theta,csf.dtheta,csf.ddtheta)
@@ -199,54 +193,49 @@ class FootInterpolation(object):
             for i in range(self.intervaleSize):
                 if currentSupport.foot == "left" :
                     # sf = swing foot ; nsf = non swinging foot
-                    sf = RightFootBuffer[i]
-                    nsf = LeftFootBuffer[i]
+                    sf = RightFootBuffer
+                    nsf = LeftFootBuffer
                 else :
-                    sf = LeftFootBuffer[i]
-                    nsf = RightFootBuffer[i]
+                    sf = LeftFootBuffer
+                    nsf = RightFootBuffer
 
-                print "before interpolation"
-                print RightFootBuffer[i].x, " ", sf.x
                 # the non swing foot stay still
-                nsf.supportFoot = 1
+                nsf[i].supportFoot = 1
 
                 Ti = self.Tc * i # interpolation time
                 Tlocal = localInterpolationStartTime + Ti
 
                 # if we are landing or lifting the foot, do not modify the x,y and theta
-                if Tlocal <= endOfLiftoff or Tlocal >= startLanding :
-                    sf.x = csf.x
-                    sf.y = csf.y
-                    sf.theta = csf.theta
-                elif localInterpolationStartTime < endOfLiftoff:
+                if localInterpolationStartTime < endOfLiftoff:
                     Tr = Ti - endOfLiftoff # Tr = remaining time
-                    self.computeXYTheta(sf,Tr)
+                    self.computeXYTheta(sf[i],Tr)
                 else:
-                    self.computeXYTheta(sf,Ti)
+                    self.computeXYTheta(sf[i],Ti)
 
-                sf.z = self.polynomeZ.compute(Tlocal)
-                sf.dz = self.polynomeZ.computeDerivative(Tlocal)
-                sf.ddz = self.polynomeZ.computeSecDerivative(Tlocal)
+                sf[i].z = self.polynomeZ.compute(Tlocal)
+                sf[i].dz = self.polynomeZ.computeDerivative(Tlocal)
+                sf[i].ddz = self.polynomeZ.computeSecDerivative(Tlocal)
 
-                print "after interpolation"
-                print RightFootBuffer[i].x, " ", sf.x
+            if localInterpolationStartTime < endOfLiftoff:
+                # Compute the next iteration state
+                self.computeXYTheta(csf,self.Tc*self.intervaleSize - endOfLiftoff)
+            else:
+                self.computeXYTheta(csf,self.Tc*self.intervaleSize)
 
-            # Compute the next iteration state
-            self.computeXYTheta(csf,self.Tc*(self.intervaleSize))
 
-    def computeXYTheta(self,sf,t):
+    def computeXYTheta(self,foot,t):
         # compute the foot states at time t
-        sf.  x = self.polynomeX.compute(t)
-        sf. dx = self.polynomeX.computeDerivative(t)
-        sf.ddx = self.polynomeX.computeSecDerivative(t)
+        foot.  x = self.polynomeX.compute(t)
+        foot. dx = self.polynomeX.computeDerivative(t)
+        foot.ddx = self.polynomeX.computeSecDerivative(t)
 
-        sf.  y = self.polynomeY.compute(t)
-        sf. dy = self.polynomeY.computeDerivative(t)
-        sf.ddy = self.polynomeY.computeSecDerivative(t)
+        foot.  y = self.polynomeY.compute(t)
+        foot. dy = self.polynomeY.computeDerivative(t)
+        foot.ddy = self.polynomeY.computeSecDerivative(t)
 
-        sf.  theta = self.polynomeTheta.compute(t)
-        sf. dtheta = self.polynomeTheta.computeDerivative(t)
-        sf.ddtheta = self.polynomeTheta.computeSecDerivative(t)
+        foot.  theta = self.polynomeTheta.compute(t)
+        foot. dtheta = self.polynomeTheta.computeDerivative(t)
+        foot.ddtheta = self.polynomeTheta.computeSecDerivative(t)
 
 class Polynome(object):
     """
@@ -262,6 +251,8 @@ class Polynome(object):
     def compute(self,time):
         if time > self.FT :
             time = self.FT
+        if time < 0 :
+            time = 0
         r = 0.0; t = 1.0
         for i in range(self.coef.shape[0]):
             r = r + self.coef[i] * t
@@ -271,6 +262,8 @@ class Polynome(object):
     def computeDerivative(self,time):
         if time > self.FT :
             time = self.FT
+        if time < 0 :
+            time = 0
         r = 0.0; t = 1.0
         for i in range(self.coef.shape[0])[1:]:
             r = r + i* self.coef[i] * t
@@ -280,6 +273,8 @@ class Polynome(object):
     def computeSecDerivative(self,time):
         if time > self.FT :
             time = self.FT
+        if time < 0 :
+            time = 0
         r = 0.0; t = 1.0
         for i in range(self.coef.shape[0])[2:]:
             r = r + i * (i-1) * self.coef[i] * t
@@ -323,8 +318,6 @@ class Polynome5(Polynome):
         self.coef[1] = IS
         self.coef[2] = IA*0.5
 
-        print "FT pol5 = " , FT
-
         T = FT*FT*FT
         if T == 0 :
             self.coef[3] = self.coef[4] = self.coef[5] = 0.0
@@ -359,7 +352,7 @@ class Polynome4(Polynome):
         IS = InitialSpeed
         self.coef[0] = deepcopy(IP)
         self.coef[1] = deepcopy(IS)
-        print "FT pol4 = " , FT
+
         T = FT*FT
         if T == 0 :
             self.coef[2] = self.coef[3] = self.coef[4] = 0.0

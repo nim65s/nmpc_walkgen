@@ -561,14 +561,17 @@ class BaseTypeFoot(object):
     def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
         self.x = x
         self.y = y
+        self.z = 0
         self.theta = theta
 
         self.dx = 0
         self.dy = 0
+        self.dz = 0
         self.dtheta = 0
 
         self.ddx = 0
         self.ddy = 0
+        self.ddz = 0
         self.ddtheta = 0
 
         self.supportFoot = supportFoot

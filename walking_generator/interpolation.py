@@ -1,8 +1,9 @@
 import numpy
 from copy import deepcopy
 from base import CoMState, ZMPState, BaseTypeFoot
+from base import BaseGenerator
 
-class Interpolation(object):
+class Interpolation(Object):
     """
     Interpolation class of walking pattern generator for humanoids, cf.
     LAAS-UHEI walking report.
@@ -11,60 +12,53 @@ class Interpolation(object):
     pattern generator. It interpolate the CoM, the ZMP and the Feet state along the
     whole trajectory with a given interpolation period (input)
     """
-    def __init__(self, T=0.005, Tcontrol=0.1, Tstep=0.8, h_com=0.814,
-        initCoM=CoMState(), initLeftFoot=BaseTypeFoot(),
-        initRightFoot=BaseTypeFoot()):
+    def __init__(self, T=0.005, BG=BaseGenerator() )
+
+        # the generator is supposed to have been initialized before
+        self.gen = BG
 
         self.T = T # QP sampling period
         self.Tc = Tcontrol # sampling period of the robot low level controller
         self.interval = int(self.Tc/self.T)+1 # number of iteration in 100ms
                                               # + the initial state of the next QP iteration
 
+        # initiale states used to interpolate (they should be intialized once ate the beginning of the qp
+        # and updated inside the class
+        self.curCoM = CoMState()
+        self.curCoM.x = self.gen.c_k_q
+        self.curCoM.y = self.gen.c_k_q
+        self.curCoM.theta = self.gen.c_k_q
+        self.curCoM.h_com = self.gen.h_com
+
+        self.curSupport = BaseTypeFoot()
+        curSupport.supportFoot = 1
+        self.curSwingFoot = BaseTypeFoot()
+
         self.CoMbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the CoM trajectory over 100ms
         self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the ZMP trajectory over 100ms
         self.RFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the rigth foot trajectory over 100ms
         self.LFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the left foot trajectory over 100ms
         for i in range(self.interval):
-            self.CoMbuffer[i] = CoMState()
+            self.CoMbuffer[i] = deepcopy(self.curCoM)
             self.ZMPbuffer[i] = ZMPState()
-            self.RFbuffer[i] = BaseTypeFoot()
-            self.LFbuffer[i] = BaseTypeFoot()
-
-
-        self.curCoM = initCoM
-        if initLeftFoot.supportFoot == 1:
-            self.curSupport = initLeftFoot
-            self.curSwingFoot = initRightFoot
-        else:
-            self.curSupport = initRightFoot
-            self.curSwingFoot = initLeftFoot
+            if gen.currentSupport = "left"
+                self.RFbuffer[i] = deepcopy(self.curSwingFoot)
+                self.LFbuffer[i] = deepcopy(self.curSupport)
+            else :
+                self.RFbuffer[i] = deepcopy(self.curSupport)
+                self.LFbuffer[i] = deepcopy(self.curSwingFoot)
 
         self.lipm = LIPM(Tcontrol,T,h_com)
         self.fi = FootInterpolation()
 
-    def interpolateCoMZMP(self, F_k_x, F_k_y, jerkX, jerkY,CoMbuffer, ZMPbuffer):
-        self.lipm.interpolate( jerkX, jerkY )
-        self.curCoM = self.CoMbuffer[-1:]
+    def interpolate(self):
 
-        CoMbuffer = self.CoMbuffer[:self.interval-1].copy
+        self.lipm.interpolate(self.curCoM, self.CoMbuffer, self.ZMPbuffer,
+                                self.gen.dddC_k_x[0], self.gen.dddC_k_x[1] )
 
-
-    def interpolate(self, F_k_x, F_k_y, jerkX, jerkY, SupportFootDeq,
-                    CoMbuffer, ZMPbuffer, LeftFootBuffer, RightFootBuffer):
-
-        self.lipm.interpolate(self.curCoM, CoMbuffer, ZMPbuffer, jerkX, jerkY )
-        self.curCoM = self.CoMbuffer[-1:]
-
-        self.fi.interpolate(time, self.curSupport, self.curSwingFoot,\
-                            F_k_x, F_k_y, PreviewAngle,LeftFootBuffer, RightFootBuffer)
-
-        if SupportFootDeq[1].Foot == "left" :
-            self.curSupport = LeftFootBuffer[-1:]
-            self.curSwingFoot = RightFootBuffer[-1:]
-        else:
-            self.curSupport = RightFootBuffer[-1:]
-            self.curSwingFoot = LeftFootBuffer[-1:]
-
+        self.fi.interpolate(time, self.curSupport, self.curSwingFoot,
+                            self.gen.f_k_x, self.gen.f_k_y,self.gen.f_k_q,
+                            self.LFbuffer, self.RFbuffer)
 
 class LIPM(object):
     """
@@ -116,6 +110,8 @@ class LIPM(object):
             ZMPbuffer[i].x = C.CoMbuffer[i].x
             ZMPbuffer[i].y = C.CoMbuffer[i].y
 
+        CoMinit = deepcopy(CoMbuffer[-1])
+
 class FootInterpolation(object):
     """
     footInterpolation class of walking pattern generator for humanoids, cf.
@@ -128,18 +124,17 @@ class FootInterpolation(object):
     def __init__(self, QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
         FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
 
-        self.T = QPsamplingPeriod
-        self.Tc = commandPeriod
-        self.N = NbSamplingPreviewed
-        self.feetDist = FeetDistance
-        self.stepHeigth = StepHeight
-        self.polynomeX     = Polynome5()
-        self.polynomeY     = Polynome5()
-        self.polynomeTheta = Polynome5()
-        self.polynomeZ     = Polynome4()
-        self.TSS = stepTime - doubleSupportTime
-        self.TDS = doubleSupportTime
-        self.intervaleSize = int(self.T/self.Tc)
+        self.T = QPsamplingPeriod # QP sampling period
+        self.Tc = commandPeriod # Low level control period
+        self.feetDist = FeetDistance # Normal Distance between both feet
+        self.stepHeigth = StepHeight # Standard maximal step height
+        self.polynomeX     = Polynome5() # order 5 polynome for continuity
+        self.polynomeY     = Polynome5() #  in position, velocity
+        self.polynomeTheta = Polynome5() #  and acceleration
+        self.polynomeZ     = Polynome4() # order 5 for a defined middle point
+        self.TSS = stepTime - doubleSupportTime # Time of single support
+        self.TDS = doubleSupportTime # Time of double support
+        self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
 
     '''
     Update the currentState to be valide at the next iteration
@@ -150,6 +145,15 @@ class FootInterpolation(object):
         F_k_x, F_k_y, PreviewAngle,
         LeftFootBuffer, RightFootBuffer):
 
+        '''
+        |---------------||-------|-----------------------------|-------|
+        |     DSP*      ||             single support phase            |
+        |               ||take   |      flying                 |landing|
+        |               || off   |       phase                 |       |
+
+        * DSP : Double Support Phase
+        '''
+        # in case of double support the policy is to stay still
         if time+1.5*self.T > currentSupport.timeLimit :
             if currentSupport.foot == "left" :
                 left = CurrentNonSwingFoot
@@ -160,7 +164,9 @@ class FootInterpolation(object):
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(left)
                 RightFootBuffer[i] = deepcopy(right)
-
+            # we define the z trajectory in the double support phase
+            # to allow the robot to take off and land
+            # during the whole singletime
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,
                         CurrentSwingFootPosition.z,CurrentSwingFootPosition.dz)
 
@@ -168,14 +174,25 @@ class FootInterpolation(object):
 
             # Deal with the lift off time and the landing time. During those period
             # the foot do not move along the x and y axis.
+
+            # this is counted from the last double support phase
             localInterpolationStartTime = time - (currentSupport.timeLimit -(self.TSS+self.TDS) )
+            # this coeffincient indicates how long you allow the foot
+            # to take off AND land (in %)
             moduleSupportCoefficient = 0.9
+            # this time indicates how long the foot will move in x, y and theta
             UnlockedSwingPeriod = self.TSS * moduleSupportCoefficient
+            # this time indicates the time limit where the foot should have reach
+            # lift off enough to move in x, y and theta
             endOfLiftoff = 0.5 * (self.TSS-UnlockedSwingPeriod)
+            # This time show the time where the foot has flight in the air
             SwingTimePassed = 0.0
             if localInterpolationStartTime > endOfLiftoff:
                 SwingTimePassed = localInterpolationStartTime - endOfLiftoff
+            # This time is the time remaining before the landing
             timeInterval = UnlockedSwingPeriod - SwingTimePassed
+            # this time indicates the time limit where the foot should have reach its goal
+            # and needs to land
             startLanding = endOfLiftoff + UnlockedSwingPeriod
 
             # Set the polynomes

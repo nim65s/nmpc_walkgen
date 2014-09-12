@@ -593,7 +593,7 @@ class BaseTypeFoot(object):
 
 class CoMState(object):
 
-    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
+    def __init__(self, x=0, y=0, theta=0, h_com=0.814):
         self.x = numpy.zeros( (3,) , dtype=float )
         self.y = numpy.zeros( (3,) , dtype=float )
         self.z = h_com

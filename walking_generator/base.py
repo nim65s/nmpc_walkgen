@@ -326,6 +326,18 @@ class BaseGenerator(object):
         # NOTE call updatev before updateD! The latter depends on support order
         self._updateD() # update constraint transformation matrix
 
+        self.c_k_x[0] = self.  C_kp1_x[0]
+        self.c_k_x[1] = self. dC_kp1_x[0]
+        self.c_k_x[2] = self.ddC_kp1_x[0]
+
+        self.c_k_y[0] = self.  C_kp1_y[0]
+        self.c_k_y[1] = self. dC_kp1_y[0]
+        self.c_k_y[2] = self.ddC_kp1_y[0]
+
+        self.c_k_q[0] = self.  C_kp1_q[0]
+        self.c_k_q[1] = self. dC_kp1_q[0]
+        self.c_k_q[2] = self.ddC_kp1_q[0]
+
     def _updatev(self):
         """
         Update selection vector v_kp1 and selection matrix V_kp1.

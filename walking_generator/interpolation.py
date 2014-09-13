@@ -3,7 +3,7 @@ from copy import deepcopy
 from base import CoMState, ZMPState, BaseTypeFoot
 from base import BaseGenerator
 
-class Interpolation(Object):
+class Interpolation(object):
     """
     Interpolation class of walking pattern generator for humanoids, cf.
     LAAS-UHEI walking report.
@@ -12,26 +12,26 @@ class Interpolation(Object):
     pattern generator. It interpolate the CoM, the ZMP and the Feet state along the
     whole trajectory with a given interpolation period (input)
     """
-    def __init__(self, T=0.005, BG=BaseGenerator() )
+    def __init__(self, Tc=0.005, BG=BaseGenerator() ):
 
         # the generator is supposed to have been initialized before
         self.gen = BG
 
-        self.T = T # QP sampling period
-        self.Tc = Tcontrol # sampling period of the robot low level controller
+        self.T = self.gen.T # QP sampling period
+        self.Tc = Tc # sampling period of the robot low level controller
         self.interval = int(self.Tc/self.T)+1 # number of iteration in 100ms
                                               # + the initial state of the next QP iteration
 
         # initiale states used to interpolate (they should be intialized once ate the beginning of the qp
         # and updated inside the class
         self.curCoM = CoMState()
-        self.curCoM.x = self.gen.c_k_q
-        self.curCoM.y = self.gen.c_k_q
+        self.curCoM.x = self.gen.c_k_x
+        self.curCoM.y = self.gen.c_k_y
         self.curCoM.theta = self.gen.c_k_q
         self.curCoM.h_com = self.gen.h_com
 
         self.curSupport = BaseTypeFoot()
-        curSupport.supportFoot = 1
+        self.curSupport.supportFoot = 1
         self.curSwingFoot = BaseTypeFoot()
 
         self.CoMbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the CoM trajectory over 100ms
@@ -41,24 +41,31 @@ class Interpolation(Object):
         for i in range(self.interval):
             self.CoMbuffer[i] = deepcopy(self.curCoM)
             self.ZMPbuffer[i] = ZMPState()
-            if gen.currentSupport = "left"
+            if self.gen.currentSupport.foot == "left" :
                 self.RFbuffer[i] = deepcopy(self.curSwingFoot)
                 self.LFbuffer[i] = deepcopy(self.curSupport)
             else :
                 self.RFbuffer[i] = deepcopy(self.curSupport)
                 self.LFbuffer[i] = deepcopy(self.curSwingFoot)
 
-        self.lipm = LIPM(Tcontrol,T,h_com)
+        self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
         self.fi = FootInterpolation()
 
-    def interpolate(self):
+    def interpolate(self, time, comTraj, zmpTraj, leftFootTraj, rightFootTraj):
 
         self.lipm.interpolate(self.curCoM, self.CoMbuffer, self.ZMPbuffer,
-                                self.gen.dddC_k_x[0], self.gen.dddC_k_x[1] )
+                                self.gen.dddC_k_x[0], self.gen.dddC_k_y[0] )
 
-        self.fi.interpolate(time, self.curSupport, self.curSwingFoot,
-                            self.gen.f_k_x, self.gen.f_k_y,self.gen.f_k_q,
+        self.fi.interpolate(time, self.gen.currentSupport,
+                            self.curSupport, self.curSwingFoot,
+                            self.gen.f_k_x, self.gen.f_k_y, self.gen.f_k_q,
                             self.LFbuffer, self.RFbuffer)
+
+        comTraj = numpy.append(comTraj, self.CoMbuffer)
+        zmpTraj = numpy.append(zmpTraj, self.ZMPbuffer)
+        leftFootTraj = numpy.append(leftFootTraj, self.LFbuffer)
+        rightFootTraj = numpy.append(rightFootTraj, self.RFbuffer)
+
 
 class LIPM(object):
     """
@@ -77,10 +84,17 @@ class LIPM(object):
         self.Tc=controlPeriod
         self.T=commandPeriod
         self.h_com=h_com
+        # for T sampling interpolation
         self.A = numpy.zeros( (3,3) , dtype=float )
         self.B = numpy.zeros( (3,) , dtype=float )
         self.C = numpy.zeros( (3,) , dtype=float )
-        self.intervaleSize = self.Tc/self.T+1
+
+        # for Tc sampling interpolation
+        self.Ac = numpy.zeros( (3,3) , dtype=float )
+        self.Bc = numpy.zeros( (3,) , dtype=float )
+        self.Cc = numpy.zeros( (3,) , dtype=float )
+
+        self.intervaleSize = int(self.Tc/self.T)
 
         self.initializeSystem()
 
@@ -101,16 +115,47 @@ class LIPM(object):
         C[1]= 0
         C[2]= -self.h_com/self.g
 
+        Tc = self.Tc
+        Ac = self.Ac
+        Ac[0][0] = 1 ; Ac[0][1] = Tc ; A[0][2] = Tc*Tc*0.5 ;
+        Ac[1][1] = 1 ; Ac[1][2] = Tc ;
+        Ac[2][2] = 1 ;
+
+        Bc = self.Bc
+        Bc[0]= Tc*Tc*Tc/6
+        Bc[1]= Tc*Tc/2
+        Bc[2]= Tc
+
+        Cc = self.Cc
+        Cc[0]= 1
+        Cc[1]= 0
+        Cc[2]= -self.h_com/self.g
+
     def interpolate(self, CoMinit, CoMbuffer, ZMPbuffer,\
                     jerkX, jerkY):
-        CoMbuffer.resize(self.intervaleSize)
-        for i in range(self.intervaleSize):
-            CoMbuffer[i].x = A.dot(CoMinit.x) + B.dot(jerkX)
-            CoMbuffer[i].y = A.dot(CoMinit.y) + B.dot(jerkY)
-            ZMPbuffer[i].x = C.CoMbuffer[i].x
-            ZMPbuffer[i].y = C.CoMbuffer[i].y
+        A = self.A
+        B = self.B
+        C = self.C
+        Ac = self.Ac
+        Bc = self.Bc
+        Cc = self.Cc
 
-        CoMinit = deepcopy(CoMbuffer[-1])
+        CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
+        ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
+
+        CoMbuffer[0].x = A.dot(CoMinit.x) + B.dot(jerkX)
+        CoMbuffer[0].y = A.dot(CoMinit.y) + B.dot(jerkY)
+        ZMPbuffer[0].x = C.dot(CoMbuffer[0].x)
+        ZMPbuffer[0].y = C.dot(CoMbuffer[0].y)
+
+        for i in range(self.intervaleSize):
+            CoMbuffer[i].x = A.dot(CoMbuffer[i-1].x) + B.dot(jerkX)
+            CoMbuffer[i].y = A.dot(CoMbuffer[i-1].y) + B.dot(jerkY)
+            ZMPbuffer[i].x = C.dot(CoMbuffer[i].x)
+            ZMPbuffer[i].y = C.dot(CoMbuffer[i].y)
+
+        CoMinit.x = Ac.dot(CoMinit.x) + Bc.dot(jerkX)
+        CoMinit.y = Ac.dot(CoMinit.y) + Bc.dot(jerkY)
 
 class FootInterpolation(object):
     """
@@ -153,6 +198,10 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
+        # begin the interpolation
+        LeftFootBuffer = numpy.resize(LeftFootBuffer, self.intervaleSize)
+        RightFootBuffer = numpy.resize(RightFootBuffer, self.intervaleSize)
+
         # in case of double support the policy is to stay still
         if time+1.5*self.T > currentSupport.timeLimit :
             if currentSupport.foot == "left" :
@@ -202,10 +251,6 @@ class FootInterpolation(object):
             self.polynomeY.setParameters(timeInterval,F_k_y,csf.y,csf.dy,csf.ddy)
             self.polynomeTheta.setParameters(timeInterval,PreviewAngle,\
                                                 csf.theta,csf.dtheta,csf.ddtheta)
-
-            # begin the interpolation
-            LeftFootBuffer = numpy.resize(LeftFootBuffer, self.intervaleSize)
-            RightFootBuffer = numpy.resize(RightFootBuffer, self.intervaleSize)
 
             for i in range(self.intervaleSize):
                 if currentSupport.foot == "left" :

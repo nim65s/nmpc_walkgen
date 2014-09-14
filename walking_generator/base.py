@@ -4,7 +4,6 @@ from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
 from helper import ZMPState, CoMState
-
 class BaseGenerator(object):
     """
     Base class of walking pattern generator for humanoids, cf.
@@ -46,14 +45,12 @@ class BaseGenerator(object):
 
         T_window : float
             Duration of the preview window of the controller
-
         fsm_state: str
             Initial state of the finite state machine for startin and stopping
             maneuvers.
 
         fsm_sl: int
             Number of steps in inplace stepping until stop
-
         """
         self.N = N
         self.T = T
@@ -62,7 +59,6 @@ class BaseGenerator(object):
         self.nf = (int)(self.T_window/T_step)
         self.h_com = h_com
         self.currentTime = 0.0
-
         # finite state machine for starting and landing maneuvers
         self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
 
@@ -281,13 +277,13 @@ class BaseGenerator(object):
             self.V_kp1[...] = 0 # selection matrix for future foot placement
         else:
             # if other state use normal walking initialization
-            nstep = int(self.T_step/T) # time span of single support phase
-            self.v_kp1[:nstep] = 1 # definitions of initial support leg
+        nstep = int(self.T_step/T) # time span of single support phase
+        self.v_kp1[:nstep] = 1 # definitions of initial support leg
 
-            for j in range (nf):
-                a = min((j+1)*nstep, N)
-                b = min((j+2)*nstep, N)
-                self.V_kp1[a:b,j] = 1
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
 
         self._calculate_support_order()
 
@@ -354,6 +350,17 @@ class BaseGenerator(object):
         self._updatev() # update selection matrix and determine support order
         # NOTE call updatev before updateD! The latter depends on support order
         self._updateD() # update constraint transformation matrix
+        self.c_k_x[0] = self.  C_kp1_x[0]
+        self.c_k_x[1] = self. dC_kp1_x[0]
+        self.c_k_x[2] = self.ddC_kp1_x[0]
+
+        self.c_k_y[0] = self.  C_kp1_y[0]
+        self.c_k_y[1] = self. dC_kp1_y[0]
+        self.c_k_y[2] = self.ddC_kp1_y[0]
+
+        self.c_k_q[0] = self.  C_kp1_q[0]
+        self.c_k_q[1] = self. dC_kp1_q[0]
+        self.c_k_q[2] = self.ddC_kp1_q[0]
 
     def _updatev(self):
         """
@@ -483,16 +490,16 @@ class BaseGenerator(object):
         zeroDim = (self.N, self.N+self.nf)
 
         # ???
-        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
-        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
-        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
+        PzuVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
+        PzuVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
+        PzuV = numpy.concatenate( (PzuVx,PzuVy) , 0 )
 
-        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
+        PzsC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
         v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
 
         # build CoP linear constraints
-        self.Acop = D_kp1.dot(PZUV)
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC) + D_kp1.dot(v_kp1fc)
+        self.Acop = D_kp1.dot(PzuV)
+        self.ubBcop = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
         # B <= A x <= B
@@ -572,3 +579,74 @@ class BaseGenerator(object):
         """
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
+
+class BaseTypeSupportFoot(object):
+
+    def __init__(self, x=0, y=0, theta=0, foot="left"):
+        self.x = x
+        self.y = y
+        self.theta = theta
+        self.foot = foot
+        self.ds = 0
+        self.stepNumber = 0
+        self.timeLimit = 0
+
+    def __eq__(self, other):
+        """ equality operator to check if A == B """
+        return (isinstance(other, self.__class__)
+            or self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+class BaseTypeFoot(object):
+
+    def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
+        self.x = x
+        self.y = y
+        self.z = 0
+        self.theta = theta
+
+        self.dx = 0
+        self.dy = 0
+        self.dz = 0
+        self.dtheta = 0
+
+        self.ddx = 0
+        self.ddy = 0
+        self.ddz = 0
+        self.ddtheta = 0
+
+        self.supportFoot = supportFoot
+
+    def __eq__(self, other):
+        """ equality operator to check if A == B """
+        return (isinstance(other, self.__class__)
+            or self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+class CoMState(object):
+
+    def __init__(self, x=0, y=0, theta=0, h_com=0.814):
+        self.x = numpy.zeros( (3,) , dtype=float )
+        self.y = numpy.zeros( (3,) , dtype=float )
+        self.z = h_com
+        self.theta = numpy.zeros( (3,) , dtype=float )
+
+class ZMPState(object):
+
+    def __init__(self, x=0, y=0, z=0):
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def __eq__(self, other):
+        """ equality operator to check if A == B """
+        return (isinstance(other, self.__class__)
+            or self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+

@@ -202,7 +202,7 @@ class TestClassicGenerator(TestCase):
 
     def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
-        gen = ClassicGenerator()
+        gen = ClassicGenerator(fsm_state='L/R')
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
@@ -269,7 +269,7 @@ class TestClassicGenerator(TestCase):
 
     def test_qp_objective_hessian_against_real_pattern_generator(self):
         # instantiate pattern generator
-        gen = ClassicGenerator()
+        gen = ClassicGenerator(fsm_state='L/R')
         gen._preprocess_solution()
 
         N = gen.N
@@ -320,7 +320,7 @@ class TestClassicGenerator(TestCase):
 
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
-        gen = ClassicGenerator()
+        gen = ClassicGenerator(fsm_state='L/R')
 
         # define initial state
         comx = [0.06591456,0.07638739,-0.1467377]

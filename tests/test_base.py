@@ -171,8 +171,23 @@ class TestBaseGenerator(TestCase):
             assert_equal(gen.currentSupport, currentSupport)
             assert_array_equal(gen.supportDeque, supportDeque)
 
+    def test_selection_matrix_initialization_double_support(self):
+        gen = Generator(fsm_state='D')
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
+
+        assert_array_equal(gen.v_kp1, 1)
+        assert_array_equal(gen.V_kp1, 0)
+
     def test_selection_matrix_initialization(self):
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
@@ -306,7 +321,7 @@ class TestBaseGenerator(TestCase):
         data_A = data_A[1:65,:]
         data_B = data_B[1:65]
 
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
@@ -363,7 +378,7 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.ubBcop, Bcop, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_elemental_matrices_cop(self):
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814

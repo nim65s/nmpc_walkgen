@@ -22,14 +22,19 @@ class ClassicGenerator(BaseGenerator):
     independently of each other in each timestep.
     First solve  for orientations, then solve for the postions.
     """
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
+    def __init__(
+        self, N=16, T=0.1, T_step=0.8, h_com=0.814,
+        fsm_state='D', fsm_sl=1
+    ):
         """
         Initialize pattern generator matrices through base class
         and allocate two QPs one for optimzation of orientation and
         one for position of CoM and feet.
 
         """
-        BaseGenerator.__init__(self, N, T, T_step, h_com)
+        super(ClassicGenerator, self).__init__(
+            N, T, T_step, h_com, fsm_state, fsm_sl
+        )
         # TODO for speed up one can define members of BaseGenerator as
         #      direct views of QP data structures according to walking report
         #      Maybe do that later!

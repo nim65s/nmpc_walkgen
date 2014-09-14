@@ -2,6 +2,9 @@ import numpy
 from math import cos, sin
 from copy import deepcopy
 
+from helper import BaseTypeFoot, BaseTypeSupportFoot
+from helper import ZMPState, CoMState
+
 class BaseGenerator(object):
     """
     Base class of walking pattern generator for humanoids, cf.
@@ -14,7 +17,10 @@ class BaseGenerator(object):
     # define some constants
     g = 9.81
 
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
+    def __init__(
+        self, N=16, T=0.1, T_step=0.8, h_com=0.814,
+        fsm_state='D', fsm_sl=1
+    ):
         """
         Initialize pattern generator, i.e.
         * allocate memory for matrices
@@ -40,6 +46,14 @@ class BaseGenerator(object):
 
         T_window : float
             Duration of the preview window of the controller
+
+        fsm_state: str
+            Initial state of the finite state machine for startin and stopping
+            maneuvers.
+
+        fsm_sl: int
+            Number of steps in inplace stepping until stop
+
         """
         self.N = N
         self.T = T
@@ -48,6 +62,14 @@ class BaseGenerator(object):
         self.nf = (int)(self.T_window/T_step)
         self.h_com = h_com
         self.currentTime = 0.0
+
+        # finite state machine for starting and landing maneuvers
+        self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
+
+        err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
+        assert fsm_state in self._fsm_states, err_str
+        self.fsm_state = fsm_state
+        self._fsm_sl = fsm_sl
 
         # objective weights
 
@@ -252,13 +274,20 @@ class BaseGenerator(object):
                     self.Pau[i, j] = T
 
         # initialize foot decision vector and matrix
-        nstep = int(self.T_step/T) # time span of single support phase
-        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+        if self.fsm_state == 'D':
+            # if initial state is double support only initialize support leg
+            # do not optimize for any foot position
+            self.v_kp1[...] = 1 # definitions of initial support leg
+            self.V_kp1[...] = 0 # selection matrix for future foot placement
+        else:
+            # if other state use normal walking initialization
+            nstep = int(self.T_step/T) # time span of single support phase
+            self.v_kp1[:nstep] = 1 # definitions of initial support leg
 
-        for j in range (nf):
-            a = min((j+1)*nstep, N)
-            b = min((j+2)*nstep, N)
-            self.V_kp1[a:b,j] = 1
+            for j in range (nf):
+                a = min((j+1)*nstep, N)
+                b = min((j+2)*nstep, N)
+                self.V_kp1[a:b,j] = 1
 
         self._calculate_support_order()
 
@@ -543,71 +572,3 @@ class BaseGenerator(object):
         """
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
-
-class BaseTypeSupportFoot(object):
-
-    def __init__(self, x=0, y=0, theta=0, foot="left"):
-        self.x = x
-        self.y = y
-        self.theta = theta
-        self.foot = foot
-        self.ds = 0
-        self.stepNumber = 0
-        self.timeLimit = 0
-
-    def __eq__(self, other):
-        """ equality operator to check if A == B """
-        return (isinstance(other, self.__class__)
-            or self.__dict__ == other.__dict__)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-class BaseTypeFoot(object):
-
-    def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
-        self.x = x
-        self.y = y
-        self.theta = theta
-
-        self.dx = 0
-        self.dy = 0
-        self.dtheta = 0
-
-        self.ddx = 0
-        self.ddy = 0
-        self.ddtheta = 0
-
-        self.supportFoot = supportFoot
-
-    def __eq__(self, other):
-        """ equality operator to check if A == B """
-        return (isinstance(other, self.__class__)
-            or self.__dict__ == other.__dict__)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-class CoMState(object):
-
-    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
-        self.x = numpy.zeros( (3,) , dtype=float )
-        self.y = numpy.zeros( (3,) , dtype=float )
-        self.z = h_com
-        self.theta = numpy.zeros( (3,) , dtype=float )
-
-class ZMPState(object):
-
-    def __init__(self, x=0, y=0, z=0):
-        self.x = x
-        self.y = y
-        self.z = z
-
-    def __eq__(self, other):
-        """ equality operator to check if A == B """
-        return (isinstance(other, self.__class__)
-            or self.__dict__ == other.__dict__)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-

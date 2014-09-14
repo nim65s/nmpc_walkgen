@@ -277,13 +277,13 @@ class BaseGenerator(object):
             self.V_kp1[...] = 0 # selection matrix for future foot placement
         else:
             # if other state use normal walking initialization
-        nstep = int(self.T_step/T) # time span of single support phase
-        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+            nstep = int(self.T_step/T) # time span of single support phase
+            self.v_kp1[:nstep] = 1 # definitions of initial support leg
 
-        for j in range (nf):
-            a = min((j+1)*nstep, N)
-            b = min((j+2)*nstep, N)
-            self.V_kp1[a:b,j] = 1
+            for j in range (nf):
+                a = min((j+1)*nstep, N)
+                b = min((j+2)*nstep, N)
+                self.V_kp1[a:b,j] = 1
 
         self._calculate_support_order()
 

@@ -38,6 +38,12 @@ class Interpolation(object):
         self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the ZMP trajectory over 100ms
         self.RFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the rigth foot trajectory over 100ms
         self.LFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the left foot trajectory over 100ms
+
+        self.comTraj = numpy.empty( (0,) , dtype=CoMState ) #buffer conatining the full CoM trajectory
+        self.zmpTraj = numpy.empty( (0,) , dtype=ZMPState ) #buffer conatining the full ZMP trajectory
+        self.leftFootTraj = numpy.empty( (0,) , dtype=BaseTypeFoot ) #buffer conatining the full rigth foot trajectory
+        self.rightFootTraj = numpy.empty( (0,) , dtype=BaseTypeFoot ) #buffer conatining the full left foot trajectory
+
         for i in range(self.interval):
             self.CoMbuffer[i] = deepcopy(self.curCoM)
             self.ZMPbuffer[i] = ZMPState()
@@ -49,22 +55,31 @@ class Interpolation(object):
                 self.LFbuffer[i] = deepcopy(self.curSwingFoot)
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
+        self.lipm.setCoMinit(self.curCoM)
         self.fi = FootInterpolation()
 
-    def interpolate(self, time, comTraj, zmpTraj, leftFootTraj, rightFootTraj):
+    def interpolate(self, time):
 
-        self.lipm.interpolate(self.curCoM, self.CoMbuffer, self.ZMPbuffer,
-                                self.gen.dddC_k_x[0], self.gen.dddC_k_y[0] )
+        self.lipm.interpolate( self.gen.dddC_k_x[0], self.gen.dddC_k_y[0] )
 
         self.fi.interpolate(time, self.gen.currentSupport,
                             self.curSupport, self.curSwingFoot,
                             self.gen.f_k_x, self.gen.f_k_y, self.gen.f_k_q,
                             self.LFbuffer, self.RFbuffer)
 
-        comTraj = numpy.append(comTraj, self.CoMbuffer)
-        zmpTraj = numpy.append(zmpTraj, self.ZMPbuffer)
-        leftFootTraj = numpy.append(leftFootTraj, self.LFbuffer)
-        rightFootTraj = numpy.append(rightFootTraj, self.RFbuffer)
+        self.comTraj = numpy.append(self.comTraj, self.CoMbuffer, axis=0)
+        self.zmpTraj = numpy.append(self.zmpTraj, self.ZMPbuffer, axis=0)
+        self.leftFootTraj = numpy.append(self.leftFootTraj, self.LFbuffer, axis=0)
+        self.rightFootTraj = numpy.append(self.rightFootTraj, self.RFbuffer, axis=0)
+
+    def getCoMtraj(self):
+        return self.comTraj
+    def getZMPtraj(self):
+        return self.zmpTraj
+    def getlftraj(self):
+        return self.leftFootTraj
+    def getrftraj(self):
+        return self.rightFootTraj
 
 
 class LIPM(object):
@@ -97,6 +112,14 @@ class LIPM(object):
         self.intervaleSize = int(self.Tc/self.T)
 
         self.initializeSystem()
+
+        self.CoMbuffer = numpy.empty( (self.intervaleSize,) , dtype=object )
+        self.ZMPbuffer = numpy.empty( (self.intervaleSize,) , dtype=object )
+        for i in range(self.intervaleSize):
+            self.CoMbuffer[i] = CoMState()
+            self.ZMPbuffer[i] = ZMPState()
+
+        self.curCOM = CoMState()
 
     def initializeSystem(self):
         T = self.T
@@ -131,8 +154,14 @@ class LIPM(object):
         Cc[1]= 0
         Cc[2]= -self.h_com/self.g
 
-    def interpolate(self, CoMinit, CoMbuffer, ZMPbuffer,\
-                    jerkX, jerkY):
+    def getZMP(self):
+        return self.CoMbuffer
+    def getCoM(self):
+        return self.ZMPbuffer
+    def setCoMinit(self,CoMinit = CoMState()):
+        self.curCoM = deepcopy(CoMinit)
+
+    def interpolate(self, jerkX, jerkY):
         A = self.A
         B = self.B
         C = self.C
@@ -140,22 +169,22 @@ class LIPM(object):
         Bc = self.Bc
         Cc = self.Cc
 
-        CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
-        ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
+        self.CoMbuffer = numpy.resize(self.CoMbuffer,(self.intervaleSize,))
+        self.ZMPbuffer = numpy.resize(self.ZMPbuffer,(self.intervaleSize,))
 
-        CoMbuffer[0].x = A.dot(CoMinit.x) + B.dot(jerkX)
-        CoMbuffer[0].y = A.dot(CoMinit.y) + B.dot(jerkY)
-        ZMPbuffer[0].x = C.dot(CoMbuffer[0].x)
-        ZMPbuffer[0].y = C.dot(CoMbuffer[0].y)
+        self.CoMbuffer[0].x = A.dot(self.curCoM.x) + B.dot(jerkX)
+        self.CoMbuffer[0].y = A.dot(self.curCoM.y) + B.dot(jerkY)
+        self.ZMPbuffer[0].x = C.dot(self.CoMbuffer[0].x)
+        self.ZMPbuffer[0].y = C.dot(self.CoMbuffer[0].y)
 
         for i in range(self.intervaleSize):
-            CoMbuffer[i].x = A.dot(CoMbuffer[i-1].x) + B.dot(jerkX)
-            CoMbuffer[i].y = A.dot(CoMbuffer[i-1].y) + B.dot(jerkY)
-            ZMPbuffer[i].x = C.dot(CoMbuffer[i].x)
-            ZMPbuffer[i].y = C.dot(CoMbuffer[i].y)
+            self.CoMbuffer[i].x = A.dot(self.CoMbuffer[i-1].x) + B.dot(jerkX)
+            self.CoMbuffer[i].y = A.dot(self.CoMbuffer[i-1].y) + B.dot(jerkY)
+            self.ZMPbuffer[i].x = C.dot(self.CoMbuffer[i].x)
+            self.ZMPbuffer[i].y = C.dot(self.CoMbuffer[i].y)
 
-        CoMinit.x = Ac.dot(CoMinit.x) + Bc.dot(jerkX)
-        CoMinit.y = Ac.dot(CoMinit.y) + Bc.dot(jerkY)
+        self.curCoM.x = Ac.dot(self.curCoM.x) + Bc.dot(jerkX)
+        self.curCoM.y = Ac.dot(self.curCoM.y) + Bc.dot(jerkY)
 
 class FootInterpolation(object):
     """

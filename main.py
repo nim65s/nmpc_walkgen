@@ -171,20 +171,23 @@ if __name__ == '__main__':
         time = i * 0.1
         gen.update()
         gen.solve()
-        inter.interpolate(time, comTraj, zmpTraj, leftFootTraj, rightFootTraj)
+        inter.interpolate(time)
 
 
 
+    comTraj = inter.getCoMtraj()
+    zmpTraj = inter.getZMPtraj()
+    leftFootTraj = inter.getlftraj()
+    rightFootTraj = inter.getrftraj()
 
+    LeftFootTrajX = numpy.zeros( leftFootTraj.shape , dtype=float)
+    RightFootTrajX = numpy.zeros( rightFootTraj.shape , dtype=float)
+    for j in range(leftFootTraj.shape[0]):
+        LeftFootTrajX[j] = leftFootTraj[j].x
+        RightFootTrajX[j] = rightFootTraj[j].x
 
-
-
-
-
-
-
-
-
+    LeftFootTrajX.tofile("LeftFootBuffer",sep="\n")
+    RightFootTrajX.tofile("RightFootBuffer",sep="\n")
 
 
 

@@ -446,7 +446,7 @@ class TestClassicGenerator(TestCase):
             os.path.join(BASEDIR, "data", "walkForward2m_sInterpolation.dat")
         )
 
-        if False:
+        if True:
             for i in range(interp_data.shape[0])[1:]:
                 print 'i = ', i
                 try:

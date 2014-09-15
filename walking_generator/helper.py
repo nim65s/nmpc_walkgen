@@ -31,6 +31,7 @@ class FiniteStateMachine(object):
 class BaseTypeSupportFoot(object):
     """
     """
+
     def __init__(self, x=0, y=0, theta=0, foot="left"):
         self.x = x
         self.y = y
@@ -55,14 +56,17 @@ class BaseTypeFoot(object):
     def __init__(self, x=0, y=0, theta=0, foot="left", supportFoot=0):
         self.x = x
         self.y = y
+        self.z = 0
         self.theta = theta
 
         self.dx = 0
         self.dy = 0
+        self.dz = 0
         self.dtheta = 0
 
         self.ddx = 0
         self.ddy = 0
+        self.ddz = 0
         self.ddtheta = 0
 
         self.supportFoot = supportFoot
@@ -77,9 +81,8 @@ class BaseTypeFoot(object):
 
 
 class CoMState(object):
-    """
-    """
-    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
+
+    def __init__(self, x=0, y=0, theta=0, h_com=0.814):
         self.x = numpy.zeros( (3,) , dtype=float )
         self.y = numpy.zeros( (3,) , dtype=float )
         self.z = h_com

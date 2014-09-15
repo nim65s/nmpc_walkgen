@@ -19,8 +19,8 @@ class Interpolation(object):
 
         self.T = self.gen.T # QP sampling period
         self.Tc = Tc # sampling period of the robot low level controller
-        self.interval = int(self.Tc/self.T)+1 # number of iteration in 100ms
-                                              # + the initial state of the next QP iteration
+        self.interval = int(self.Tc/self.T) # number of iteration in 100ms
+                                            # the initial state of the next QP iteration
 
         # initiale states used to interpolate (they should be intialized once ate the beginning of the qp
         # and updated inside the class
@@ -34,10 +34,10 @@ class Interpolation(object):
         self.curSupport.supportFoot = 1
         self.curSwingFoot = BaseTypeFoot()
 
-        self.CoMbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the CoM trajectory over 100ms
-        self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the ZMP trajectory over 100ms
-        self.RFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the rigth foot trajectory over 100ms
-        self.LFbuffer = numpy.empty( (self.interval,) , dtype=object ) #buffer conatining the left foot trajectory over 100ms
+        self.CoMbuffer = numpy.empty( (self.interval,) , dtype=CoMState ) #buffer conatining the CoM trajectory over 100ms
+        self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=ZMPState ) #buffer conatining the ZMP trajectory over 100ms
+        self.RFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer conatining the rigth foot trajectory over 100ms
+        self.LFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer conatining the left foot trajectory over 100ms
 
         self.comTraj = numpy.empty( (0,) , dtype=CoMState ) #buffer conatining the full CoM trajectory
         self.zmpTraj = numpy.empty( (0,) , dtype=ZMPState ) #buffer conatining the full ZMP trajectory
@@ -45,41 +45,30 @@ class Interpolation(object):
         self.rightFootTraj = numpy.empty( (0,) , dtype=BaseTypeFoot ) #buffer conatining the full left foot trajectory
 
         for i in range(self.interval):
-            self.CoMbuffer[i] = deepcopy(self.curCoM)
+            self.CoMbuffer[i] = CoMState()
             self.ZMPbuffer[i] = ZMPState()
-            if self.gen.currentSupport.foot == "left" :
-                self.RFbuffer[i] = deepcopy(self.curSwingFoot)
-                self.LFbuffer[i] = deepcopy(self.curSupport)
-            else :
-                self.RFbuffer[i] = deepcopy(self.curSupport)
-                self.LFbuffer[i] = deepcopy(self.curSwingFoot)
+            self.RFbuffer[i] = BaseTypeFoot()
+            self.LFbuffer[i] = BaseTypeFoot()
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
-        self.lipm.setCoMinit(self.curCoM)
         self.fi = FootInterpolation()
 
     def interpolate(self, time):
 
-        self.lipm.interpolate( self.gen.dddC_k_x[0], self.gen.dddC_k_y[0] )
+        self.curCoM, self.ZMPbuffer, self.CoMbuffer = self.lipm.interpolate(
+                                                            self.gen.dddC_k_x[0], self.gen.dddC_k_y[0],
+                                                            self.curCoM, self.ZMPbuffer, self.CoMbuffer)
 
-        self.fi.interpolate(time, self.gen.currentSupport,
-                            self.curSupport, self.curSwingFoot,
-                            self.gen.f_k_x, self.gen.f_k_y, self.gen.f_k_q,
-                            self.LFbuffer, self.RFbuffer)
+        self.curSupport, self.curSwingFoot, self.LFbuffer, self.RFbuffer =\
+                        self.fi.interpolate(time, self.gen.currentSupport,
+                                    self.curSupport, self.curSwingFoot,
+                                    self.gen.f_k_x, self.gen.f_k_y, self.gen.f_k_q,
+                                    self.LFbuffer, self.RFbuffer)
 
         self.comTraj = numpy.append(self.comTraj, self.CoMbuffer, axis=0)
         self.zmpTraj = numpy.append(self.zmpTraj, self.ZMPbuffer, axis=0)
         self.leftFootTraj = numpy.append(self.leftFootTraj, self.LFbuffer, axis=0)
         self.rightFootTraj = numpy.append(self.rightFootTraj, self.RFbuffer, axis=0)
-
-    def getCoMtraj(self):
-        return self.comTraj
-    def getZMPtraj(self):
-        return self.zmpTraj
-    def getlftraj(self):
-        return self.leftFootTraj
-    def getrftraj(self):
-        return self.rightFootTraj
 
 
 class LIPM(object):
@@ -112,14 +101,6 @@ class LIPM(object):
         self.intervaleSize = int(self.Tc/self.T)
 
         self.initializeSystem()
-
-        self.CoMbuffer = numpy.empty( (self.intervaleSize,) , dtype=object )
-        self.ZMPbuffer = numpy.empty( (self.intervaleSize,) , dtype=object )
-        for i in range(self.intervaleSize):
-            self.CoMbuffer[i] = CoMState()
-            self.ZMPbuffer[i] = ZMPState()
-
-        self.curCOM = CoMState()
 
     def initializeSystem(self):
         T = self.T
@@ -154,14 +135,7 @@ class LIPM(object):
         Cc[1]= 0
         Cc[2]= -self.h_com/self.g
 
-    def getZMP(self):
-        return self.CoMbuffer
-    def getCoM(self):
-        return self.ZMPbuffer
-    def setCoMinit(self,CoMinit = CoMState()):
-        self.curCoM = deepcopy(CoMinit)
-
-    def interpolate(self, jerkX, jerkY):
+    def interpolate(self, jerkX, jerkY, curCoM, ZMPbuffer, CoMbuffer):
         A = self.A
         B = self.B
         C = self.C
@@ -169,22 +143,28 @@ class LIPM(object):
         Bc = self.Bc
         Cc = self.Cc
 
-        self.CoMbuffer = numpy.resize(self.CoMbuffer,(self.intervaleSize,))
-        self.ZMPbuffer = numpy.resize(self.ZMPbuffer,(self.intervaleSize,))
-
-        self.CoMbuffer[0].x = A.dot(self.curCoM.x) + B.dot(jerkX)
-        self.CoMbuffer[0].y = A.dot(self.curCoM.y) + B.dot(jerkY)
-        self.ZMPbuffer[0].x = C.dot(self.CoMbuffer[0].x)
-        self.ZMPbuffer[0].y = C.dot(self.CoMbuffer[0].y)
+        CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
+        ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
 
         for i in range(self.intervaleSize):
-            self.CoMbuffer[i].x = A.dot(self.CoMbuffer[i-1].x) + B.dot(jerkX)
-            self.CoMbuffer[i].y = A.dot(self.CoMbuffer[i-1].y) + B.dot(jerkY)
-            self.ZMPbuffer[i].x = C.dot(self.CoMbuffer[i].x)
-            self.ZMPbuffer[i].y = C.dot(self.CoMbuffer[i].y)
+            CoMbuffer[i] = CoMState()
+            ZMPbuffer[i] = ZMPState()
 
-        self.curCoM.x = Ac.dot(self.curCoM.x) + Bc.dot(jerkX)
-        self.curCoM.y = Ac.dot(self.curCoM.y) + Bc.dot(jerkY)
+        CoMbuffer[0].x = A.dot(curCoM.x) + B.dot(jerkX)
+        CoMbuffer[0].y = A.dot(curCoM.y) + B.dot(jerkY)
+        ZMPbuffer[0].x = C.dot(CoMbuffer[0].x)
+        ZMPbuffer[0].y = C.dot(CoMbuffer[0].y)
+
+        for i in range(self.intervaleSize):
+            CoMbuffer[i].x = A.dot(CoMbuffer[i-1].x) + B.dot(jerkX)
+            CoMbuffer[i].y = A.dot(CoMbuffer[i-1].y) + B.dot(jerkY)
+            ZMPbuffer[i].x = C.dot(CoMbuffer[i].x)
+            ZMPbuffer[i].y = C.dot(CoMbuffer[i].y)
+
+        curCoM.x = Ac.dot(curCoM.x) + Bc.dot(jerkX)
+        curCoM.y = Ac.dot(curCoM.y) + Bc.dot(jerkY)
+
+        return curCoM, CoMbuffer, ZMPbuffer
 
 class FootInterpolation(object):
     """
@@ -230,6 +210,10 @@ class FootInterpolation(object):
         # begin the interpolation
         LeftFootBuffer = numpy.resize(LeftFootBuffer, self.intervaleSize)
         RightFootBuffer = numpy.resize(RightFootBuffer, self.intervaleSize)
+
+        for i in range(self.intervaleSize):
+            LeftFootBuffer[i] = BaseTypeFoot()
+            RightFootBuffer[i] = BaseTypeFoot()
 
         # in case of double support the policy is to stay still
         if time+1.5*self.T > currentSupport.timeLimit :
@@ -312,6 +296,8 @@ class FootInterpolation(object):
                 self.computeXYTheta(csf,self.Tc*self.intervaleSize - endOfLiftoff)
             else:
                 self.computeXYTheta(csf,self.Tc*self.intervaleSize)
+
+        return CurrentSwingFootPosition,CurrentNonSwingFoot,LeftFootBuffer, RightFootBuffer
 
 
     def computeXYTheta(self,foot,t):

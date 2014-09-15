@@ -175,10 +175,10 @@ if __name__ == '__main__':
 
 
 
-    comTraj = inter.getCoMtraj()
-    zmpTraj = inter.getZMPtraj()
-    leftFootTraj = inter.getlftraj()
-    rightFootTraj = inter.getrftraj()
+    comTraj = inter.comTraj
+    zmpTraj = inter.zmpTraj
+    leftFootTraj = inter.leftFootTraj
+    rightFootTraj = inter.rightFootTraj
 
     LeftFootTrajX = numpy.zeros( leftFootTraj.shape , dtype=float)
     RightFootTrajX = numpy.zeros( rightFootTraj.shape , dtype=float)

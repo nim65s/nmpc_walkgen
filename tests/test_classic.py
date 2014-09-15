@@ -18,6 +18,49 @@ except ImportError:
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
+# Interpolation Data Mapping
+names = {
+     0 : '     Time',
+     1 : '     CoMx',
+     2 : '     CoMy',
+     3 : '     CoMz',
+     4 : '     CoMq',
+     5 : '    dCoMx',
+     6 : '    dCoMy',
+     7 : '    dCoMz',
+     8 : '    dCoMq',
+     9 : '   ddCoMx',
+    10 : '   ddCoMy',
+    11 : '   ddCoMz',
+    12 : '   ddCoMq',
+    13 : ' CoPx_ref',
+    14 : ' CoPy_ref',
+    15 : '  LFoot_x',
+    16 : '  LFoot_y',
+    17 : '  LFoot_z',
+    18 : ' dLFoot_x',
+    19 : ' dLFoot_y',
+    20 : ' dLFoot_z',
+    21 : 'ddLFoot_x',
+    22 : 'ddLFoot_y',
+    23 : 'ddLFoot_z',
+    24 : '  LFoot_q',
+    25 : ' dLFoot_q',
+    26 : 'ddLFoot_q',
+    27 : '  RFoot_x',
+    28 : '  RFoot_y',
+    29 : '  RFoot_z',
+    30 : ' dRFoot_x',
+    31 : ' dRFoot_y',
+    32 : ' dRFoot_z',
+    33 : 'ddRFoot_x',
+    34 : 'ddRFoot_y',
+    35 : 'ddRFoot_z',
+    36 : '  RFoot_q',
+    37 : ' dRFoot_q',
+    38 : 'ddRFoot_q',
+}
+
 class TestClassicGenerator(TestCase):
     """
     Test classic pattern generator, also against results from LAAS
@@ -389,6 +432,87 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.F_k_x, 0.0, rtol=self.RTOL, atol=self.ATOL)
             assert_allclose(gen.F_k_y, 0.0, rtol=self.RTOL, atol=self.ATOL)
             assert_allclose(gen.F_k_q, 0.0, rtol=self.RTOL, atol=self.ATOL)
+
+    def test_against_real_pattern_genererator_walkForward2m_s_while_walking(self):
+        """
+        Take data where robot is walking with constant CoM velocity and start
+        test from there. This surpasses FSM implementation and starting and
+        stopping maneuvers.
+        """
+        qp_data = numpy.loadtxt(
+            os.path.join(BASEDIR, "data", "walkForward2m_s.dat")
+        )
+        interp_data = numpy.loadtxt(
+            os.path.join(BASEDIR, "data", "walkForward2m_sInterpolation.dat")
+        )
+
+        if False:
+            for i in range(interp_data.shape[0])[1:]:
+                print 'i = ', i
+                try:
+                    assert_allclose(interp_data[i+1,1:], interp_data[i,1:])
+                except:
+                    print 'time: ', interp_data[i,0]
+                    for j in range(interp_data.shape[1])[1:]:
+                        try:
+                            assert_allclose(interp_data[i+1,j], interp_data[i,j])
+                        except:
+                            print names[j], ' : ', interp_data[i,j]
+                    raw_input('press key: ')
+
+        # instantiate pattern generator in walking mode,
+        # i.e. in single support mode
+        gen = ClassicGenerator(fsm_state='R/L')
+
+        # take walking initial state from interpolation data
+        # NOTE we take the second step as initial state for the test, because
+        #      this is a nearly periodic solution
+
+        # TODO: WTF?
+        # idx is index on states used from interpolation data
+        idx = 0
+        comx = (interp_data[idx,1], interp_data[idx,5], interp_data[idx, 9])
+        comy = (interp_data[idx,2], interp_data[idx,6], interp_data[idx,10])
+        comz = interp_data[idx,3]
+        supportfootx = interp_data[idx, 15]
+        supportfooty = interp_data[idx, 16]
+        supportfootq = interp_data[idx, 24]
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq
+        )
+
+        # define constant x CoM velocity to track
+        gen.dC_kp1_x_ref[...] = 0.2
+        gen.dC_kp1_y_ref[...] = 0.0
+        gen.dC_kp1_q_ref[...] = 0.0
+
+        for i in range(10):
+            gen.solve()
+            gen.simulate()
+            print gen.C_kp1_x[0]
+            print gen.C_kp1_y[0]
+            print gen.C_kp1_q[0]
+            # TODO shifting do I use interpolation or just take the value from
+            #      simulation
+
+            # get reference values
+            dddC_k_x_ref = qp_data[idx+i,      :  gen.N]
+            dddC_k_y_ref = qp_data[idx+i, gen.N:2*gen.N]
+
+            F_k_x_ref = qp_data[idx+i,-2*gen.nf:-gen.nf]
+            F_k_y_ref = qp_data[idx+i,-  gen.nf:       ]
+
+            # check orientation values, should be constant zero, because we
+            # assume that robot does not rotate
+            assert_allclose(gen.dddC_k_q, 0.0)
+            assert_allclose(gen.F_k_q, 0.0)
+
+            # check position DoFs against data from C++ implementation
+            assert_allclose(gen.dddC_k_x, dddC_k_x_ref)
+            assert_allclose(gen.dddC_k_y, dddC_k_y_ref)
+            assert_allclose(gen.F_k_x,    F_k_x_ref)
+            assert_allclose(gen.F_k_y,    F_k_y_ref)
 
     def test_against_real_pattern_genererator_walkForward2m_s(self):
         # get test data

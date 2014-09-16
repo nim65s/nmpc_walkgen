@@ -2,5 +2,9 @@
 *.fuse_hidden*
 *.pyc
 *.orig
+*~
+
+LeftFootBuffer
+RightFootBuffer
 
 !*.py

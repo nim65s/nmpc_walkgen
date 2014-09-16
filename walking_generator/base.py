@@ -2,6 +2,10 @@ import numpy
 from math import cos, sin
 from copy import deepcopy
 
+from helper import BaseTypeFoot, BaseTypeSupportFoot
+from helper import ZMPState, CoMState
+from helper import PlotData
+
 class BaseGenerator(object):
     """
     Base class of walking pattern generator for humanoids, cf.
@@ -14,7 +18,47 @@ class BaseGenerator(object):
     # define some constants
     g = 9.81
 
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
+    # define list of members for plotting
+    plot_data = (
+        'time',
+        'c_k_x',
+        'c_k_y',
+        'c_k_q',
+        'h_com',
+        'C_kp1_x',
+        'dC_kp1_x',
+        'ddC_kp1_x',
+        'C_kp1_y',
+        'dC_kp1_y',
+        'ddC_kp1_y',
+        'C_kp1_q',
+        'dC_kp1_q',
+        'ddC_kp1_q',
+        'dddC_k_x',
+        'dddC_k_y',
+        'dddC_k_q',
+        'dC_kp1_x_ref',
+        'dC_kp1_y_ref',
+        'dC_kp1_q_ref',
+        'F_kp1_x',
+        'F_kp1_y',
+        'F_kp1_q',
+        'f_k_x',
+        'f_k_y',
+        'f_k_q',
+        'F_k_x',
+        'F_k_y',
+        'F_k_q',
+        'Z_kp1_x',
+        'Z_kp1_y',
+        'fsm_state',
+        'fsm_states',
+        )
+
+    def __init__(
+        self, N=16, T=0.1, T_step=0.8,
+        fsm_state='D', fsm_sl=1
+    ):
         """
         Initialize pattern generator, i.e.
         * allocate memory for matrices
@@ -32,21 +76,33 @@ class BaseGenerator(object):
         nf : int
             Number of foot steps planned in advance (default: 2 [footsteps])
 
-        h_com: float
-            Height of center of mass for the LIPM (default: 0.81 [m])
-
         T_step : float
             Time for the robot to make 1 step
 
         T_window : float
             Duration of the preview window of the controller
+        fsm_state: str
+            Initial state of the finite state machine for startin and stopping
+            maneuvers.
+
+        fsm_sl: int
+            Number of steps in inplace stepping until stop
         """
         self.N = N
         self.T = T
         self.T_window = N*T
         self.T_step = T_step
         self.nf = (int)(self.T_window/T_step)
-        self.h_com = h_com
+        self.currentTime = 0.0
+        self.time = 0.0
+        # finite state machine for starting and landing maneuvers
+        self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
+
+        err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
+        assert fsm_state in self._fsm_states, err_str
+        self.fsm_state = fsm_state
+        self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype=str)
+        self._fsm_sl = fsm_sl
 
         # objective weights
 
@@ -63,10 +119,20 @@ class BaseGenerator(object):
         self.E /= 2*self.T_step
 
         # center of mass initial values
+        # NOTE they are not all equal to zero, because of half-sitting initial
+        #      position of HRP-2 and the case, that its hip is not equal to its
+        #      center of mass. z position is fixed because of LIPM approximation.
 
-        self.c_k_x = numpy.zeros((3,), dtype=float)
-        self.c_k_y = numpy.zeros((3,), dtype=float)
+        self.c_k_x = numpy.array(
+            (0.00124774, 0.0, 0.0),
+            dtype=float
+        )
+        self.c_k_y = numpy.array(
+            (0.00157175, 0.0, 0.0),
+            dtype=float
+        )
         self.c_k_q = numpy.zeros((3,), dtype=float)
+        self.h_com = 0.814
 
         # center of mass matrices
 
@@ -100,6 +166,8 @@ class BaseGenerator(object):
         self.F_kp1_y = numpy.zeros((N,), dtype=float)
         self.F_kp1_q = numpy.zeros((N,), dtype=float)
 
+        # initial support foot positions and orientation
+        # NOTE we assume the left foot to be the initial support foot
         self.f_k_x = 0.00949035
         self.f_k_y = 0.095
         self.f_k_q = 0.0
@@ -128,9 +196,24 @@ class BaseGenerator(object):
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
         # convex hulls used to bound the free placement of the foot
-            # set of points
-        self.lfhull = numpy.zeros((5,2), dtype=float)
-        self.rfhull = numpy.zeros((5,2), dtype=float)
+            # support foot : right
+        self.rfhull = numpy.array((
+                (-0.28, -0.2),
+                (-0.20, -0.3),
+                ( 0.00, -0.4),
+                ( 0.20, -0.3),
+                ( 0.28, -0.2),
+        ), dtype=float)
+
+            # support foot : left
+        self.lfhull = numpy.array((
+                (-0.28, 0.2),
+                (-0.20, 0.3),
+                ( 0.00, 0.4),
+                ( 0.20, 0.3),
+                ( 0.28, 0.2),
+        ), dtype=float)
+
             # set of Cartesian equalities
         self.A0r = numpy.zeros((5,2), dtype=float)
         self.ubB0r = numpy.zeros((5,), dtype=float)
@@ -138,34 +221,119 @@ class BaseGenerator(object):
         self.ubB0l = numpy.zeros((5,), dtype=float)
 
         # Linear constraints matrix
-        self.Acop = numpy.zeros((), dtype=float)
         self.Afoot = numpy.zeros((), dtype=float)
         self.eqAfoot = numpy.zeros( (2,2*(self.N+self.nf)), dtype=float)
 
         # Linear constraints vector
         self.ubBfoot = numpy.zeros((), dtype=float)
-        self.ubBcop = numpy.zeros((), dtype=float)
         self.eqBfoot = numpy.zeros((2,), dtype=float)
+
+        # security margins for CoP constraints
+        self.SecurityMarginX = SMx = 0.04
+        self.SecurityMarginY = SMy = 0.04
 
         # Position of the foot in the local foot frame
         self.nFootEdge = 4
-        self.lfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
-        self.rfoot = numpy.zeros((self.nFootEdge,2), dtype=float)
-        # Corresponding linear system
-        self.A0rf = numpy.zeros((self.nFootEdge,2), dtype=float)
-        self.ubB0rf = numpy.zeros((self.nFootEdge,), dtype=float)
-        self.A0lf = numpy.zeros((self.nFootEdge,2), dtype=float)
-        self.ubB0lf = numpy.zeros((self.nFootEdge,), dtype=float)
+        self.footWidth    = fW = 0.2172
+        self.footHeigth   = fH = 0.1380
+        self.footDistance = fD = 0.2000
 
-        self.D_kp1x = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
-        self.D_kp1y = numpy.zeros( (self.nFootEdge*self.N, N), dtype=float )
+        # position of the vertices of the feet in the foot coordinates.
+        #  #<---footWidht---># --- ---
+        #  #<>=SMx     SMx=<>#  |   |=SMy
+        #  #  *-----------*  #  |  ---
+        #  #  |           |  #  |=footHeight
+        #  #  *-----------*  #  |  ---
+        #  #                 #  |   |=SMy
+        #  #-----------------# --- ---
+
+        # left foot
+        self.lfoot = numpy.array((
+            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
+            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
+            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
+            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
+        ), dtype=float)
+
+        # right foot
+        self.rfoot = numpy.array((
+            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
+            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
+            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
+            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
+        ), dtype=float)
+
+        # double support
+        # |<----d---->| d = 2*footHeight + footDistance
+        # |-----------|
+        # | *   *   * |
+        # |-^-------^-|
+        # left     right
+        # foot     foot
+        self.dshull = numpy.array((
+            ( (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
+            ( (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
+            (-(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
+            (-(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
+        ), dtype=float)
+
+        # Corresponding linear system from polygonal set
+            # right foot
+        self.A0rf   = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0rf = numpy.zeros((self.nFootEdge,),  dtype=float)
+            # left foot
+        self.A0lf   = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0lf = numpy.zeros((self.nFootEdge,),  dtype=float)
+            # double support
+        self.A0drf   = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0drf = numpy.zeros((self.nFootEdge,),  dtype=float)
+        self.A0dlf   = numpy.zeros((self.nFootEdge,2), dtype=float)
+        self.ubB0dlf = numpy.zeros((self.nFootEdge,),  dtype=float)
+
+        # transformation matrix for the constraints in buildCoPconstraint()
+        # constant in variables but varying in time, because of V_kp1
+        # PzuV = ( PzuVx )
+        #        ( PzuVy )
+        #      = ( Pzu | -V_kp1 |   0 |      0 )
+        #        (   0 |      0 | Pzu | -V_kp1 )
+
+        self.PzuV  = numpy.zeros((2*self.N, 2*(self.N + self.nf)), dtype=float )
+        self.PzuVx = self.PzuV[:self.N,:]
+        self.PzuVy = self.PzuV[self.N:,:]
+
+        # TODO tidy this up, because lots of redundant matrices
+        # PzsC = ( PzsCx )
+        #        ( PzsCy )
+        #      = ( Pzs*c_k_x + v_kp1*f_k_x )
+        #      = ( Pzs*c_k_y + v_kp1*f_k_y )
+        self.PzsC  = numpy.zeros((2*self.N,), dtype=float )
+        self.PzsCx = self.PzsC[:self.N]
+        self.PzsCy = self.PzsC[self.N:]
+
+        # v_kp1fc = ( v_kp1fc_x ) = ( v_kp1 * f_k_x)
+        #           ( v_kp1fc_y )   ( v_kp1 * f_k_y)
+        self.v_kp1fc = numpy.zeros((2*self.N,), dtype=float)
+        self.v_kp1fc_x = self.v_kp1fc[:self.N]
+        self.v_kp1fc_y = self.v_kp1fc[self.N:]
+
+        # D_kp1 = (D_kp1x, Dkp1_y)
+        self.D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
+        self.D_kp1x = self.D_kp1[:, :N] # view on big matrix
+        self.D_kp1y = self.D_kp1[:,-N:] # view on big matrix
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
+        # Constraint matrices
+        self.Acop = numpy.zeros(
+            (self.N*self.nFootEdge, 2*(self.N+self.nf)),
+             dtype=float
+        )
+        self.ubBcop = numpy.zeros((self.N*self.nFootEdge), dtype=float)
+
         # Current support state
-        self.currentSupport = BaseTypeFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
+        self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
-            self.supportDeque[i] = BaseTypeFoot()
+            self.supportDeque[i] = BaseTypeSupportFoot()
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -175,46 +343,13 @@ class BaseGenerator(object):
         self.v_kp1 = numpy.zeros((N,),   dtype=int)
         self.V_kp1 = numpy.zeros((N,self.nf), dtype=int)
 
-
-        """
-        NOTE Initialize all the base matrices of the QP.
-        """
-        # initialize transformation matrices
+        # initialize all elementary problem matrices, e.g.
+        # state transformation matrices, constraints, etc.
         self._initialize_matrices()
 
-        # define initial support feet order
-        self._calculate_support_order()
-
-        # build the constraints linked to
-        # the foot step placement and to the cop
-        self.buildConstraints()
-
-        selfA = numpy.zeros( (1,2*self.N+self.nf) , dtype=float )
-        selfA = numpy.concatenate( (selfA,-self.Acop[: , 0:(2*self.N+self.nf)]) )
-        selfA = numpy.concatenate( (selfA,-self.Afoot[0:self.A0l.shape[0] , 0:(2*self.N+self.nf)]) )
-        selfA = numpy.concatenate( (selfA,numpy.zeros( (1,2*self.N+self.nf) , dtype=float )) )
-
-        dimlbA = 129
-        selflbA = [0]
-        selflbA = numpy.concatenate( (selflbA,self.ubBcop) )
-        selflbA = numpy.concatenate( (selflbA,self.Bfoot[0:self.A0l.shape[0]]) )
-        selflbA = numpy.concatenate( (selflbA,numpy.zeros( (129-selflbA.shape[0]-1,) , dtype=float )) )
-
+        self.data = PlotData(self, self.plot_data)
 
     def _initialize_matrices(self):
-        """
-        initializes the CoM state corresponding to the first step of the robot.
-        WARNING the initial state should be different.
-        """
-        self.c_k_x[0] = 0.06591456
-        self.c_k_x[1] = 0.07638739
-        self.c_k_x[2] = -0.1467377
-        self.c_k_y[0] = 2.49008564e-02
-        self.c_k_y[1] = 6.61665254e-02
-        self.c_k_y[2] = 6.72712187e-01
-        if self.c_k_y[2] != 0:
-            print "WARNING, PLEASE verify the initiale state !!!!!"
-
         """
         initializes the transformation matrices according to the walking report
         """
@@ -250,44 +385,44 @@ class BaseGenerator(object):
 
         self._calculate_support_order()
 
-        # support foot : right
-        self.rfhull[0,0] = -0.28  ;  self.rfhull[0,1] = -0.2 ;
-        self.rfhull[1,0] = -0.2   ;  self.rfhull[1,1] = -0.3 ;
-        self.rfhull[2,0] =  0     ;  self.rfhull[2,1] = -0.4 ;
-        self.rfhull[3,0] =  0.2   ;  self.rfhull[3,1] = -0.3 ;
-        self.rfhull[4,0] =  0.28  ;  self.rfhull[4,1] = -0.2 ;
-        # support foot : left
-        self.lfhull[0,0] = -0.28  ;  self.lfhull[0,1] =  0.2 ;
-        self.lfhull[1,0] = -0.2   ;  self.lfhull[1,1] =  0.3 ;
-        self.lfhull[2,0] =  0     ;  self.lfhull[2,1] =  0.4 ;
-        self.lfhull[3,0] =  0.2   ;  self.lfhull[3,1] =  0.3 ;
-        self.lfhull[4,0] =  0.28  ;  self.lfhull[4,1] =  0.2 ;
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
         self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
 
-        # position of the vertices of the feet in the foot coordinates.
-        # left foot
-        self.lfoot[0,0] =  0.0686   ;  self.lfoot[0,1] =  0.029 ;
-        self.lfoot[1,0] =  0.0686   ;  self.lfoot[1,1] = -0.029 ;
-        self.lfoot[2,0] = -0.0686   ;  self.lfoot[2,1] = -0.029 ;
-        self.lfoot[3,0] = -0.0686   ;  self.lfoot[3,1] =  0.029 ;
-        # right foot
-        self.rfoot[0,0] =  0.0686   ;  self.rfoot[0,1] = -0.029 ;
-        self.rfoot[1,0] =  0.0686   ;  self.rfoot[1,1] =  0.029 ;
-        self.rfoot[2,0] = -0.0686   ;  self.rfoot[2,1] =  0.029 ;
-        self.rfoot[3,0] = -0.0686   ;  self.rfoot[3,1] = -0.029 ;
         # linear system corresponding to the convex hulls
-        self.ComputeLinearSystem( self.rfoot, "right", self.A0rf, self.ubB0rf)
-        self.ComputeLinearSystem( self.lfoot, "left", self.A0lf, self.ubB0lf)
+            # right foot
+        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
+            # left foot
+        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
+            # double support
+            # NOTE hull has to be shifted by half of feet distance in y direction
+        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
 
-        #print self.A0rf
-        #print self.ubB0rf
+        self._updateD()
 
-        self.updateD()
-        # Debug Output
-        #print '[v, V0, ...]'
-        #print numpy.hstack((self.v_kp1.reshape(self.v_kp1.shape[0],1), self.V_kp1))
+        # define initial support feet order
+        self._calculate_support_order()
+
+        # build the constraints linked to
+        # the foot step placement and to the cop
+        self.buildConstraints()
+
+    def _initState(self,
+        comx, comy , comz, #initial com state, i.e. com_x = [c_x, dc_x, ddc_x]
+        supportfootx, supportfooty, supportfootq, # initials support foot setup
+        secmarginx = 0.04, secmarginy=0.04 # security margin narrowing CoP constraints
+    ):
+        self.f_k_x = supportfootx
+        self.f_k_y = supportfooty
+        self.f_k_q = supportfootq
+        self.c_k_x[...] = comx
+        self.c_k_y[...] = comy
+        self.h_com = comz
+        self.SecurityMarginX = secmarginx
+        self.SecurityMarginY = secmarginy
+        self._initialize_matrices()
+        self._updateD()
 
     def _calculate_support_order(self):
         # find correct initial support foot
@@ -298,6 +433,8 @@ class BaseGenerator(object):
             pair = "right"
             impair = "left"
 
+        timeLimit = self.supportDeque[0].timeLimit
+
         # define support feet for whole horizon
         for i in range(self.N):
             for j in range(self.nf):
@@ -307,19 +444,29 @@ class BaseGenerator(object):
                         self.supportDeque[i].foot = pair
                     else :
                         self.supportDeque[i].foot = impair
+
             if i > 0 :
                 self.supportDeque[i].ds = self.supportDeque[i].stepNumber -\
                                           self.supportDeque[i-1].stepNumber
+            if self.supportDeque[i].ds == 1 :
+                timeLimit = self.currentTime + self.T_step
+
+            self.supportDeque[i].timeLimit = timeLimit
 
     def update(self):
         """
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
-        self.updatev()
-        self.updateD()
+        self._updatev() # update selection matrix and determine support order
 
-    def updatev(self):
+        # NOTE call updatev before updateD! The latter depends on support order
+        self._updateD() # update constraint transformation matrix
+
+        # update internal time
+        self.time += self.T
+
+    def _updatev(self):
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
 
@@ -352,42 +499,76 @@ class BaseGenerator(object):
             self.V_kp1[:,-1] = 0
 
             # this way also the current support foot changes
-            self.currentSupport.foot       = deepcopy(self.supportDeque[0].foot)
-            self.currentSupport.ds         = deepcopy(self.supportDeque[0].ds)
+            self.currentSupport.foot = deepcopy(self.supportDeque[0].foot)
+            self.currentSupport.ds   = deepcopy(self.supportDeque[0].ds)
 
-            # @Max do I need the stuff?
-            #currentSupport.x          = deepcopy(supportDeque[0].x)
-            #currentSupport.y          = deepcopy(supportDeque[0].y)
-            #currentSupport.theta      = deepcopy(supportDeque[0].theta)
-            #currentSupport.dx         = deepcopy(supportDeque[0].dx)
-            #currentSupport.dy         = deepcopy(supportDeque[0].dy)
-            #currentSupport.dtheta     = deepcopy(supportDeque[0].dtheta)
-            #currentSupport.ddx        = deepcopy(supportDeque[0].ddx)
-            #currentSupport.ddy        = deepcopy(supportDeque[0].ddy)
-            #currentSupport.ddtheta    = deepcopy(supportDeque[0].ddtheta)
-            #currentSupport.stepNumber = deepcopy(supportDeque[0].stepNumber)
             # supportDeque is then calculated from
             # from current support in the following
 
-        self._calculate_support_order()
+            self._calculate_support_order()
 
-    def updateD(self):
-    # need updatev to be run before
+            # also update finite state machine
+            self.fsm_state = self.fsm_states[0].copy()
+            self.fsm_states[:-1] = self.fsm_states[1:]
+
+            # TODO How to update last entry in FSM?
+            # if any reference velocity is given and the CoM is moving then
+            # the next step last optimized step should be moving
+            if (self.dC_kp1_x_ref != 0.0).any() \
+            or (self.dC_kp1_y_ref != 0.0).any() \
+            or (self.dC_kp1_q_ref != 0.0).any():
+                if (self.c_k_x[1:] != 0.0).any() \
+                or (self.c_k_y[1:] != 0.0).any() \
+                or (self.c_k_q[1:] != 0.0).any():
+                    if self.supportDeque[-1].foot == 'right':
+                        self.fsm_states[-1] = 'L/R'
+                    else:
+                        self.fsm_states[-1] = 'R/L'
+            # else stay in double support
+            else:
+                self.fsm_states[-1] = 'D'
+
+    def _updateD(self):
+        """
+        update foot constraint transformation matrices
+
+        NOTE: call updatev beforehand for actual support order!
+        """
+        # for every time instant in the pattern generator constraints
+        # depend on the
         for i in range(self.N):
             if self.supportDeque[i].foot == "left" :
                 A0 = self.A0lf
                 B0 = self.ubB0lf
+                D0 = self.A0dlf
+                d0 = self.ubB0dlf
             else :
                 A0 = self.A0rf
                 B0 = self.ubB0rf
-            for j in range(self.nFootEdge):
-                self.D_kp1x[i*self.nFootEdge+j][i] = A0[j][0]
-                self.D_kp1y[i*self.nFootEdge+j][i] = A0[j][1]
-                self.b_kp1 [i*self.nFootEdge+j]    = B0[j]
+                D0 = self.A0drf
+                d0 = self.ubB0drf
+
+            # get support foot and check if it is double support
+            for j in range(self.nf):
+                if self.V_kp1[i,j] == 1:
+                    if self.fsm_states[j] == 'D':
+                        A0 = D0
+                        B0 = d0
+                else:
+                    pass
+
+            for k in range(self.nFootEdge):
+                # get d_i+1^x(f^theta)
+                self.D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
+                # get d_i+1^y(f^theta)
+                self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
+                # get right hand side of equation
+                self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
 
     def simulate(self):
         """
-        integrates model for given jerks and feet positions and orientations
+        integrates model for given initial CoM states, jerks and feet positions
+        and orientations by applying the linear time stepping scheme
         """
         self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
         self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
@@ -405,23 +586,36 @@ class BaseGenerator(object):
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
-
+        """
+        automatically calculate linear constraints from polygon description
+        """
+        # get number of edged from the hull specification, e.g.
+        # single and double support polygon, foot position hull
         nEdges = hull.shape[0]
+
+        # get sign for hull from given foot
         if foot == "left" :
             sign = 1
         else :
             sign = -1
+
+        # calculate linear constraints from hull
+        # walk around polygon and calculate coordinate representation of
+        # constraints
         for i in range(nEdges):
+            # special case for first and last entry in hull
             if i == nEdges-1 :
                 k = 0
             else :
                 k = i + 1
 
+            # rename point coordinates for convenience
             x1 = hull[i,0]
             y1 = hull[i,1]
             x2 = hull[k,0]
             y2 = hull[k,1]
 
+            # calculate support vectors
             dx = y1 - y2
             dy = x2 - x1
             dc = dx*x1 + dy*y1
@@ -432,39 +626,65 @@ class BaseGenerator(object):
             B0[i] =   sign * dc
 
     def buildConstraints(self):
-        self.nc = 0
+        """
+        builds constraint matrices for solver
+
+        NOTE problems are assembled in the solver implementations
+        """
         self.buildCoPconstraint()
         self.buildFootEqConstraint()
         self.buildFootIneqConstraint()
 
-        repos = numpy.DataSource()
-        A = numpy.genfromtxt("./tests/data/A.dat",skip_header=1)
-        lbA = numpy.genfromtxt("./tests/data/lbA.dat",skip_header=1)
-
-        data_A_jx = A[ 1:(A.shape[0]-1) , 0:self.N ]
-        gen_A_jx = -self.Acop[ : , 0:self.N ]
-        gen_A_jx = numpy.concatenate( (gen_A_jx , -self.Afoot[0:self.A0l.shape[0] , 0:self.N]) )
-
-        #numpy.savetxt( "./data_A_jx.txt" , data_A_jx )
-        #numpy.savetxt( "./gen_A_jx.txt" , gen_A_jx )
-
     def buildCoPconstraint(self):
-        zeroDim = (self.N, self.N+self.nf)
+        """
+        build the constraint enforcing the center of pressure to stay inside
+        the support polygon given through the convex hull of the foot.
+        """
 
-        PZUVx = numpy.concatenate( (self.Pzu,-self.V_kp1,numpy.zeros(zeroDim,dtype=float)) , 1 )
-        PZUVy = numpy.concatenate( (numpy.zeros(zeroDim,dtype=float),self.Pzu,-self.V_kp1) , 1 )
-        PZUV = numpy.concatenate( (PZUVx,PZUVy) , 0 )
-        D_kp1 = numpy.concatenate( (self.D_kp1x,self.D_kp1y) , 1 )
-        self.Acop = D_kp1.dot(PZUV)
-        #print self.Pzu.shape
-        #print self.D_kp1x
+        #rename for convenience
+        D_kp1 = self.D_kp1
+        PzuV  = self.PzuV
+        PzuVx = self.PzuVx
+        PzuVy = self.PzuVy
+        PzsC  = self.PzsC
+        PzsCx = self.PzsCx
+        PzsCy = self.PzsCy
+        v_kp1fc   = self.v_kp1fc
+        v_kp1fc_x = self.v_kp1fc_x
+        v_kp1fc_y = self.v_kp1fc_y
 
-        PZSC = numpy.concatenate( (self.Pzs.dot(self.c_k_x),self.Pzs.dot(self.c_k_y)) , 0 )
-        v_kp1fc = numpy.concatenate( (self.v_kp1.dot(self.f_k_x), self.v_kp1.dot(self.f_k_y) ) , 0 )
+        # build constraint transformation matrices
+        # PzuV = ( PzuVx )
+        #        ( PzuVy )
 
-        self.ubBcop = self.b_kp1 - D_kp1.dot(PZSC) + D_kp1.dot(v_kp1fc)
+        # PzuVx = ( Pzu | -V_kp1 |   0 |      0 )
+        PzuVx[:,      :self.N        ] =  self.Pzu # TODO this is constant in matrix and should go into the build up matrice part
+        PzuVx[:,self.N:self.N+self.nf] = -self.V_kp1
+
+        # PzuVy = (   0 |      0 | Pzu | -V_kp1 )
+        PzuVy[:,-self.N-self.nf:-self.nf] =  self.Pzu # TODO this is constant in matrix and should go into the build up matrice part
+        PzuVy[:,       -self.nf:       ] = -self.V_kp1
+
+        # PzuV = ( PzsCx ) = ( Pzs * c_k_x)
+        #        ( PzsCy )   ( Pzs * c_k_y)
+        PzsCx[...] = self.Pzs.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
+        PzsCy[...] = self.Pzs.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
+
+        # v_kp1fc = ( v_kp1fc_x ) = ( v_kp1 * f_k_x)
+        #           ( v_kp1fc_y )   ( v_kp1 * f_k_y)
+        v_kp1fc_x[...] = self.v_kp1.dot(self.f_k_x)
+        v_kp1fc_y[...] = self.v_kp1.dot(self.f_k_y)
+
+        # build CoP linear constraints
+        # NOTE D_kp1 is member and D_kp1 = ( D_kp1x | D_kp1y )
+        #      D_kp1x,y contains entries from support polygon
+        self.Acop[...]   = D_kp1.dot(PzuV)
+        self.ubBcop[...] = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
+        """
+        @MAX: Please add a description
+        """
         # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)
@@ -476,19 +696,21 @@ class BaseGenerator(object):
             self.eqBfoot[0][self.N] = self.F_k_x[0]
             self.eqBfoot[1][self.N] = self.F_k_y[0]
 
-
     def buildFootIneqConstraint(self):
-        # need the self.currentSupport to be updated
-        #               before calling this function
+        """
+        build linear inequality constraints for the placement of the feet
+
+        NOTE: needs actual self.supportFoot to work properly
+        """
 
         # inequality constraint on both feet A u + B <= 0
         # A0 R(theta) [Fx_k+1 - Fx_k] <= ubB0
         #             [Fy_k+1 - Fy_k]
-        self.Afoot.resize(2*(self.N+self.nf,2*self.nf))
 
         matSelec = numpy.array([ [1, 0],[-1, 1] ])
         footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])
         theta = self.currentSupport.theta
+
         # rotation matrice from F_k+1 to F_k
         rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
         nf = self.nf
@@ -527,8 +749,10 @@ class BaseGenerator(object):
                                           A0x,\
                                           numpy.zeros((ncfoot,N),dtype=float),\
                                           A0y) , 1 )
-        self.Bfoot = B0
-        self.nc = self.nc + ncfoot
+        self.ubBfoot = B0
+
+    def buildOriConstraints():
+        raise NotImplementedError
 
     def solve(self):
         """
@@ -536,52 +760,3 @@ class BaseGenerator(object):
         """
         err_str = 'Please derive from this class to implement your problem and solver'
         raise NotImplementedError(err_str)
-
-    def shift(self):
-        pass
-
-class BaseTypeFoot(object):
-
-    def __init__(self, x=0, y=0, theta=0, foot="left"):
-        self.x = x
-        self.y = y
-        self.theta = theta
-
-        self.dx = 0
-        self.dy = 0
-        self.dtheta = 0
-
-        self.ddx = 0
-        self.ddy = 0
-        self.ddtheta = 0
-
-        self.foot = foot
-        self.ds = 0
-        self.stepNumber = 0
-        self.timeLimit = 0
-        self.supportFoot = 0
-
-    def __eq__(self, other):
-        """ equality operator to check if A == B """
-        return (isinstance(other, self.__class__) # check for inheritance
-            or self.__dict__ == other.__dict__)  # check componentwise __dict__
-                                                  # __dict__ contains all
-                                                  # members and functions
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-class CoMState(object):
-
-    def __init__(self, x=0, y=0, theta=0, h_com=0.81):
-        self.x = numpy.zeros( (3,) , dtype=float )
-        self.y = numpy.zeros( (3,) , dtype=float )
-        self.z = h_com
-        self.theta = numpy.zeros( (3,) , dtype=float )
-
-class ZMPState(object):
-
-    def __init__(self, x=0, y=0, z=0):
-        self.x = x
-        self.y = y
-        self.z = z

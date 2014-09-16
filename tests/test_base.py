@@ -5,7 +5,7 @@ from numpy.testing import *
 import numpy.testing.decorators as decorators
 
 from walking_generator.base import BaseGenerator as Generator
-from walking_generator.base import BaseTypeFoot
+from walking_generator.base import BaseTypeFoot, BaseTypeSupportFoot
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -19,6 +19,19 @@ class TestBaseGenerator(TestCase):
 
     def test_fixed_model_matrices(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(
+            comx,comy,comz,
+            supportfootx,supportfooty,supportfootq,
+            secmargin,secmargin
+        )
+
         # NOTE usage: assert_allclose(actual, desired, rtol, atol, err_msg, verbose)
 
         T = gen.T
@@ -30,7 +43,7 @@ class TestBaseGenerator(TestCase):
             assert_allclose(gen.Pzs[i,:], (1, j*T, j**2*T**2/2 - h_com/g))
             assert_allclose(gen.Pps[i,:], (1, j*T, j**2*T**2/2))
             assert_allclose(gen.Pvs[i,:], (0,   1, j*T))
-            assert_allclose(gen.Pas[i,:], (0,   0,       1))
+            assert_allclose(gen.Pas[i,:], (0,   0,   1))
 
             for j in range(gen.N):
                 if j <= i:
@@ -46,6 +59,15 @@ class TestBaseGenerator(TestCase):
 
     def test_fixed_ZMP_matrices(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         T = gen.T
         h_com = gen.h_com
@@ -59,11 +81,20 @@ class TestBaseGenerator(TestCase):
 
     def test_basetypefoot_initialization(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
-        currentSupport = BaseTypeFoot()
+        currentSupport = BaseTypeSupportFoot()
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeFoot()
+            supportDeque[i] = BaseTypeSupportFoot()
 
         U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))
 
@@ -91,11 +122,20 @@ class TestBaseGenerator(TestCase):
 
     def test_BaseTypeFoot_update(self):
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
-        currentSupport = BaseTypeFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
+        currentSupport = BaseTypeSupportFoot(gen.f_k_x, gen.f_k_y, gen.f_k_q, "left")
         supportDeque = numpy.empty( (gen.N,) , dtype=object )
         for i in range(gen.N):
-            supportDeque[i] = BaseTypeFoot()
+            supportDeque[i] = BaseTypeSupportFoot()
 
         for i in range(100):
             U_kp1 =  numpy.hstack((gen.v_kp1.reshape(gen.v_kp1.size,1), gen.V_kp1))
@@ -106,6 +146,8 @@ class TestBaseGenerator(TestCase):
             else :
                 pair = "right"
                 impair = "left"
+
+            timeLimit = gen.supportDeque[0].timeLimit
 
             for i in range(gen.N):
                 for j in range(U_kp1.shape[1]):
@@ -118,6 +160,10 @@ class TestBaseGenerator(TestCase):
                 if i > 0 :
                     supportDeque[i].ds = supportDeque[i].stepNumber -\
                                          supportDeque[i-1].stepNumber
+                if supportDeque[i].ds == 1 :
+                    timeLimit = gen.currentTime + gen.T_step
+
+                supportDeque[i].timeLimit = timeLimit
 
             assert_equal(gen.currentSupport, currentSupport)
             assert_array_equal(gen.supportDeque, supportDeque)
@@ -126,7 +172,16 @@ class TestBaseGenerator(TestCase):
             assert_array_equal(gen.supportDeque, supportDeque)
 
     def test_selection_matrix_initialization(self):
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         nf = gen.nf
         N = gen.N
@@ -180,10 +235,19 @@ class TestBaseGenerator(TestCase):
         data_B = data_B[65:70]
 
         gen = Generator()
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         # assemble Afoot and Bfoot using our convention
         Afoot = numpy.zeros( (gen.Afoot.shape[0]-5, gen.Afoot.shape[1]-2) )
-        Bfoot = numpy.zeros( gen.Bfoot.shape[0]-5)
+        Bfoot = numpy.zeros( gen.ubBfoot.shape[0]-5)
 
         # dddC_x
         a = 0; b = gen.N; c = 0; d = gen.N
@@ -215,18 +279,18 @@ class TestBaseGenerator(TestCase):
         genAfoot[:,a:b] = gen.Afoot[:5,c:d]
         genAfoot = -1 * genAfoot
 
-        genBfoot = gen.Bfoot[:5]
+        genBfoot = gen.ubBfoot[:5]
 
 #        print "Afoot:\n", Afoot
 #        print "gen.Afoot:\n", genAfoot
 #        print "A-B:\n", genAfoot - Afoot
-#        print "A-B = 0\n", ((genAfoot.round(6) - Afoot.round(6)) == 0).all()
-#        assert_allclose(genAfoot.round(6), Afoot.round(6), atol=self.ATOL, rtol=self.RTOL)
+#        print "A-B = 0\n", ((genAfoot - Afoot) == 0).all()
+#        assert_allclose(genAfoot, Afoot, atol=self.ATOL, rtol=self.RTOL)
 
 #        print "Bfoot:\n", Bfoot
 #        print "gen.Bfoot:\n", genBfoot
 #        print "A-B:\n", genBfoot - Bfoot
-#        print "A-B = 0\n", ((genBfoot.round(6) - Bfoot.round(6)) == 0).all()
+#        print "A-B = 0\n", ((genBfoot - Bfoot) == 0).all()
         assert_allclose(genBfoot, Bfoot, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_matrices_cop(self):
@@ -242,7 +306,16 @@ class TestBaseGenerator(TestCase):
         data_A = data_A[1:65,:]
         data_B = data_B[1:65]
 
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         # assemble Acop and Bcop using our convention
         Acop = numpy.zeros((gen.Acop.shape[0],gen.Acop.shape[1]-2),dtype=float)
@@ -280,17 +353,26 @@ class TestBaseGenerator(TestCase):
         #print "Acop:\n", Acop
         #print "\n\n genAcop:\n", genAcop
         #print "A-B:\n", genAcop - Acop
-        #print "A-B = 0\n", ((genAcop.round(6) - Acop.round(6)) == 0).all()
-        assert_allclose(genAcop.round(6), Acop.round(6), atol=self.ATOL, rtol=self.RTOL)
+        #print "A-B = 0\n", ((genAcop - Acop) == 0).all()
+        assert_allclose(genAcop, Acop, atol=self.ATOL, rtol=self.RTOL)
 
-        #print "Bcop:\n", Bcop
-        #print "gen.Bcop:\n", gen.ubBcop
-        #print "A-B:\n", gen.ubBcop - Bcop
-        #print "A-B = 0\n", ((gen.ubBcop - Bcop) == 0).all()
-        assert_allclose(gen.ubBcop.round(6), Bcop.round(6), atol=self.ATOL, rtol=self.RTOL)
+        print "Bcop:\n", Bcop
+        print "gen.Bcop:\n", gen.ubBcop
+        print "A-B:\n", gen.ubBcop - Bcop
+        print "A-B = 0\n", ((gen.ubBcop - Bcop) == 0).all()
+        assert_allclose(gen.ubBcop, Bcop, atol=self.ATOL, rtol=self.RTOL)
 
     def test_constraint_elemental_matrices_cop(self):
-        gen = Generator()
+        gen = Generator(fsm_state='L/R')
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        supportfootx = 0.00949035
+        supportfooty = 0.095
+        supportfootq = 0.0
+        secmargin = 0.04
+        gen._initState(comx,comy,comz,\
+                supportfootx,supportfooty,supportfootq,secmargin,secmargin)
 
         data_V = numpy.loadtxt(os.path.join(BASEDIR, "data", "V_kp1.dat"), skiprows=0)
         assert_allclose(gen.V_kp1[:,0], data_V)
@@ -305,13 +387,13 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.v_kp1.dot(gen.f_k_x).round(6), data_VcX.round(6))
 
         data_VcY = numpy.loadtxt(os.path.join(BASEDIR, "data", "VcY.dat"), skiprows=0)
-        assert_allclose(gen.v_kp1.dot(gen.f_k_y).round(6), data_VcY.round(6))
+        assert_allclose(gen.v_kp1.dot(gen.f_k_y), data_VcY)
         #print gen.c_k_x
         data_comx = numpy.loadtxt(os.path.join(BASEDIR, "data", "comX.dat"), skiprows=0)
-        assert_allclose(gen.c_k_x.round(6), data_comx.round(6))
+        assert_allclose(gen.c_k_x, data_comx)
 
         data_comy = numpy.loadtxt(os.path.join(BASEDIR, "data", "comY.dat"), skiprows=0)
-        assert_allclose(gen.c_k_y.round(6), data_comy.round(6))
+        assert_allclose(gen.c_k_y, data_comy)
 
         repos = numpy.DataSource()
 
@@ -335,7 +417,6 @@ class TestBaseGenerator(TestCase):
 #        print "A-B:\n",((data_Pzu - gen.Pzu) == 0).all()
         #print "A-B:\n",data_DY - gen.D_kp1y
         assert_allclose(data_Pzu,gen.Pzu)
-
 
     def test_all_zero_when_idle(self):
         gen = Generator()
@@ -378,8 +459,6 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_x, 0.0)
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
-
-
 
 if __name__ == '__main__':
     try:

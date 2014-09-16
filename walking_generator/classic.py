@@ -2,6 +2,7 @@ import sys
 import numpy
 import utility
 
+from helper import PlotData
 from base import BaseGenerator
 # Try to get qpOASES SQP Problem class
 try:
@@ -22,14 +23,19 @@ class ClassicGenerator(BaseGenerator):
     independently of each other in each timestep.
     First solve  for orientations, then solve for the postions.
     """
-    def __init__(self, N=16, T=0.1, T_step=0.8, h_com=0.814):
+    def __init__(
+        self, N=16, T=0.1, T_step=0.8,
+        fsm_state='D', fsm_sl=1
+    ):
         """
         Initialize pattern generator matrices through base class
         and allocate two QPs one for optimzation of orientation and
         one for position of CoM and feet.
 
         """
-        BaseGenerator.__init__(self, N, T, T_step, h_com)
+        super(ClassicGenerator, self).__init__(
+            N, T, T_step, fsm_state, fsm_sl
+        )
         # TODO for speed up one can define members of BaseGenerator as
         #      direct views of QP data structures according to walking report
         #      Maybe do that later!
@@ -186,15 +192,15 @@ class ClassicGenerator(BaseGenerator):
         a = 0
         b = self.pos_nc_cop
         self.pos_A  [a:b] = self.Acop
-        self.pos_lbA[a:b] = self.ubBcop
-        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.ubBcop
 
         #foot inequality constraints
         a = self.pos_nc_cop
         b = self.pos_nc_cop + self.pos_nc_foot
         self.pos_A  [a:b] = self.Afoot
-        self.pos_lbA[a:b] = self.Bfoot
-        self.pos_ubA[a:b] = self.pos_ubA[a:b]
+        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_ubA[a:b] = self.ubBfoot
 
         #foot equality constraints
         a = self.pos_nc_cop + self.pos_nc_foot

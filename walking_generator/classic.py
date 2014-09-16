@@ -2,6 +2,7 @@ import sys
 import numpy
 import utility
 
+from helper import PlotData
 from base import BaseGenerator
 # Try to get qpOASES SQP Problem class
 try:
@@ -23,7 +24,7 @@ class ClassicGenerator(BaseGenerator):
     First solve  for orientations, then solve for the postions.
     """
     def __init__(
-        self, N=16, T=0.1, T_step=0.8, h_com=0.814,
+        self, N=16, T=0.1, T_step=0.8,
         fsm_state='D', fsm_sl=1
     ):
         """
@@ -33,7 +34,7 @@ class ClassicGenerator(BaseGenerator):
 
         """
         super(ClassicGenerator, self).__init__(
-            N, T, T_step, h_com, fsm_state, fsm_sl
+            N, T, T_step, fsm_state, fsm_sl
         )
         # TODO for speed up one can define members of BaseGenerator as
         #      direct views of QP data structures according to walking report

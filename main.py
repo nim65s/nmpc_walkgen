@@ -165,6 +165,8 @@ if __name__ == '__main__':
     leftFootTraj = numpy.empty( (0,) , dtype=object )
     rightFootTraj = numpy.empty( (0,) , dtype=object )
 
+    sys.exit()
+
     gen.solve()
 
     for i in range(100):

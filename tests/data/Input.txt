@@ -25,3 +25,13 @@ second   consigne       detail
 2       [0.2 0.0 -0.2]  startTurningRight2
 3       [0.0 0.0 0.0]   stop
 4       [0.0 0.0 0.0]   stopOnLineWalking
+
+
+Test walkForward
+
+second   consigne       detail
+
+0       [0.0 0.0 0.0]   stop
+5       [0.2 0.0 0.0]   walkForward
+15      [0.0 0.0 0.0]   stop
+20      [0.0 0.0 0.0]   stopOnLineWalking

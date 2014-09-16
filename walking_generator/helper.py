@@ -55,6 +55,7 @@ class PlotData(object):
         with open(filename, 'w') as f:
             json.dump(self.data, f, sort_keys=True, indent=2)
 
+
 class Plotter(object):
     """
     class that generates trajectories from pattern generator json data.
@@ -66,6 +67,8 @@ class Plotter(object):
 
         print self.data
 
+    def _generate_consistent_data(self):
+        pass
 
 
 class FiniteStateMachine(object):

@@ -589,8 +589,8 @@ class TestClassicGenerator(TestCase):
         for i in range(10):
             print 'iteration = ', i
 
+            # solve QP for solution
             gen.solve()
-            gen.simulate()
 
             # get reference values
             dddC_k_x_ref = qp_data[idx+i,            :gen.N       ]
@@ -609,6 +609,9 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.dddC_k_y, dddC_k_y_ref)
             assert_allclose(gen.F_k_x,    F_k_x_ref)
             assert_allclose(gen.F_k_y,    F_k_y_ref)
+
+            # simulate to get new values
+            gen.simulate()
 
             # TODO shifting do I use interpolation or just take the value from
             #      simulation

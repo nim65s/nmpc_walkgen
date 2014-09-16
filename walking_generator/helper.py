@@ -5,6 +5,15 @@ import json
 from math import cos, sin
 from time import gmtime, strftime
 
+import matplotlib
+from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
+
+matplotlib.rc('xtick', labelsize=6)
+matplotlib.rc('ytick', labelsize=6)
+matplotlib.rc('font', size=10)
+matplotlib.rc('text', usetex=True)
+
 class PlotData(object):
     """
     Smart data container for saving plotting relevant data.
@@ -55,7 +64,9 @@ class Plotter(object):
         with open(filename, 'r') as f:
             self.data = json.load(f)
 
-        print data
+        print self.data
+
+
 
 class FiniteStateMachine(object):
     """

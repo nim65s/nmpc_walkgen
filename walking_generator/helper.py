@@ -1,5 +1,61 @@
+import os
+import sys
 import numpy
+import json
 from math import cos, sin
+from time import gmtime, strftime
+
+class PlotData(object):
+    """
+    Smart data container for saving plotting relevant data.
+    """
+
+    def __init__(self, generator, member=()):
+        """ build data structures """
+        self.generator = generator
+        self.data = {'time' : []}
+
+        if not member:
+            err_str = 'please provide member list, else nothing can be saved.'
+            sys.stderr.write(err_str + '\n')
+        else:
+            for key in member:
+                if not type(key) == str:
+                    err_str = 'please provide only member names, {} is not a string'.format(key)
+                    raise AttributeError
+                self.data[key] = []
+
+            self.member = self.data.keys()
+
+    def update(self):
+        """ update internal data from generator """
+        for key in self.data.keys():
+            val = self.generator.__dict__[key]
+            # when numpy array convert it to list
+            if isinstance(val, numpy.ndarray):
+                val = val.tolist()
+            self.data[key].append(val)
+
+    def save_to_file(self, filename=None):
+        """ save data in json format to file """
+        # generate general filename
+        if not filename:
+            timestamp = strftime("%Y-%m-%d-%H-%M-%S")
+            filename = '{stamp}_generator_data.json'.format(stamp=timestamp)
+
+        with open(filename, 'w') as f:
+            json.dump(self.data, f, sort_keys=True, indent=2)
+
+class Plotter(object):
+    """
+    class that generates trajectories from pattern generator json data.
+    """
+    def __init__(self, filename):
+        # try to read data
+        with open(filename, 'r') as f:
+            self.data = json.load(f)
+
+        print data
 
 class FiniteStateMachine(object):
     """

@@ -4,6 +4,8 @@ from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
 from helper import ZMPState, CoMState
+from helper import PlotData
+
 class BaseGenerator(object):
     """
     Base class of walking pattern generator for humanoids, cf.
@@ -15,6 +17,43 @@ class BaseGenerator(object):
     """
     # define some constants
     g = 9.81
+
+    # define list of members for plotting
+    plot_data = (
+        'time',
+        'c_k_x',
+        'c_k_y',
+        'c_k_q',
+        'h_com',
+        'C_kp1_x',
+        'dC_kp1_x',
+        'ddC_kp1_x',
+        'C_kp1_y',
+        'dC_kp1_y',
+        'ddC_kp1_y',
+        'C_kp1_q',
+        'dC_kp1_q',
+        'ddC_kp1_q',
+        'dddC_k_x',
+        'dddC_k_y',
+        'dddC_k_q',
+        'dC_kp1_x_ref',
+        'dC_kp1_y_ref',
+        'dC_kp1_q_ref',
+        'F_kp1_x',
+        'F_kp1_y',
+        'F_kp1_q',
+        'f_k_x',
+        'f_k_y',
+        'f_k_q',
+        'F_k_x',
+        'F_k_y',
+        'F_k_q',
+        'Z_kp1_x',
+        'Z_kp1_y',
+        'fsm_state',
+        'fsm_states',
+        )
 
     def __init__(
         self, N=16, T=0.1, T_step=0.8,
@@ -55,6 +94,7 @@ class BaseGenerator(object):
         self.T_step = T_step
         self.nf = (int)(self.T_window/T_step)
         self.currentTime = 0.0
+        self.time = 0.0
         # finite state machine for starting and landing maneuvers
         self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
 
@@ -224,11 +264,17 @@ class BaseGenerator(object):
         ), dtype=float)
 
         # double support
+        # |<----d---->| d = 2*footHeight + footDistance
+        # |-----------|
+        # | *   *   * |
+        # |-^-------^-|
+        # left     right
+        # foot     foot
         self.dshull = numpy.array((
-            ( (0.5*(fD + fH) - SMx), (0.5*fW - SMy)),
-            (-(0.5*(fD + fH) - SMx), (0.5*fW - SMy)),
-            (-(0.5*(fD + fH) - SMx),-(0.5*fW - SMy)),
-            ( (0.5*(fD + fH) - SMx),-(0.5*fW - SMy)),
+            ( (0.5*fW - SMx), (0.5*fD + fH - SMy)),
+            (-(0.5*fW - SMx), (0.5*fD + fH - SMy)),
+            (-(0.5*fW - SMx),-(0.5*fD + fH - SMy)),
+            ( (0.5*fW - SMx),-(0.5*fD + fH - SMy)),
         ), dtype=float)
 
         # Corresponding linear system from polygonal set
@@ -301,6 +347,8 @@ class BaseGenerator(object):
         # state transformation matrices, constraints, etc.
         self._initialize_matrices()
 
+        self.data = PlotData(self, self.plot_data)
+
     def _initialize_matrices(self):
         """
         initializes the transformation matrices according to the walking report
@@ -347,8 +395,10 @@ class BaseGenerator(object):
             # left foot
         self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
             # double support
-        self.ComputeLinearSystem( self.dshull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem( self.dshull, "right", self.A0drf, self.ubB0drf)
+            # NOTE hull has to be shifted by half of feet distance in y direction
+        transv = numpy.asarray((0.0, 0.5*self.footDistance), dtype=float)
+        self.ComputeLinearSystem(self.dshull + transv, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dshull - transv, "right", self.A0drf, self.ubB0drf)
 
         self._updateD()
 
@@ -414,6 +464,9 @@ class BaseGenerator(object):
         # NOTE call updatev before updateD! The latter depends on support order
         self._updateD() # update constraint transformation matrix
 
+        # update internal time
+        self.time += self.T
+
     def _updatev(self):
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
@@ -447,8 +500,8 @@ class BaseGenerator(object):
             self.V_kp1[:,-1] = 0
 
             # this way also the current support foot changes
-            self.currentSupport.foot       = deepcopy(self.supportDeque[0].foot)
-            self.currentSupport.ds         = deepcopy(self.supportDeque[0].ds)
+            self.currentSupport.foot = deepcopy(self.supportDeque[0].foot)
+            self.currentSupport.ds   = deepcopy(self.supportDeque[0].ds)
 
             # supportDeque is then calculated from
             # from current support in the following
@@ -630,6 +683,9 @@ class BaseGenerator(object):
         self.ubBcop[...] = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
     def buildFootEqConstraint(self):
+        """
+        @MAX: Please add a description
+        """
         # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)

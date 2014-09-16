@@ -489,20 +489,21 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.f_k_q, supportfootq, atol=ATOL, rtol=RTOL)
 
             # get controls from QP data
-            gen.dddC_k_x[...] = qp_data[i,     :  gen.N]
-            gen.dddC_k_y[...] = qp_data[i,gen.N:2*gen.N]
-            gen.dddC_k_q[...] = 0.0 # is not yet used
+            gen.dddC_k_x[...] = qp_data[i,            :gen.N         ]
+            gen.F_k_x[...]    = qp_data[i,gen.N       :gen.N+gen.nf]
 
-            gen.F_k_x[...] = qp_data[i, -2*gen.nf:-gen.nf]
-            gen.F_k_y[...] = qp_data[i, -  gen.nf:       ]
-            gen.F_k_q[...] = 0.0 # is not yet used
+            gen.dddC_k_y[...] = qp_data[i,gen.N+gen.nf:2*gen.N+gen.nf]
+            gen.F_k_y[...]    = qp_data[i,     -gen.nf:              ]
+
+            gen.dddC_k_q[...] = 0.0 # is not yet used
+            gen.F_k_q[...]    = 0.0 # is not yet used
 
             # check if controls are probably set
-            assert_allclose( gen.dddC_k_x, qp_data[i,     :  gen.N])
-            assert_allclose( gen.dddC_k_y, qp_data[i,gen.N:2*gen.N])
+            assert_allclose( gen.dddC_k_x, qp_data[i,            :gen.N         ])
+            assert_allclose( gen.dddC_k_y, qp_data[i,gen.N+gen.nf:2*gen.N+gen.nf])
             assert_allclose( gen.dddC_k_q, 0.0 )
-            assert_allclose( gen.F_k_x, qp_data[i, -2*gen.nf:-gen.nf])
-            assert_allclose( gen.F_k_y, qp_data[i, -  gen.nf:       ])
+            assert_allclose( gen.F_k_x, qp_data[i,gen.N       :gen.N+gen.nf])
+            assert_allclose( gen.F_k_y, qp_data[i,     -gen.nf:            ])
             assert_allclose( gen.F_k_q, 0.0 )
 
             # simulate for trajectory using initial value and controls
@@ -517,11 +518,11 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.f_k_q, supportfootq, atol=ATOL, rtol=RTOL)
 
             # check if controls have changed
-            assert_allclose( gen.dddC_k_x, qp_data[i,     :  gen.N])
-            assert_allclose( gen.dddC_k_y, qp_data[i,gen.N:2*gen.N])
+            assert_allclose( gen.dddC_k_x, qp_data[i,            :gen.N         ])
+            assert_allclose( gen.dddC_k_y, qp_data[i,gen.N+gen.nf:2*gen.N+gen.nf])
             assert_allclose( gen.dddC_k_q, 0.0 )
-            assert_allclose( gen.F_k_x, qp_data[i, -2*gen.nf:-gen.nf])
-            assert_allclose( gen.F_k_y, qp_data[i, -  gen.nf:       ])
+            assert_allclose( gen.F_k_x, qp_data[i,gen.N       :gen.N+gen.nf])
+            assert_allclose( gen.F_k_y, qp_data[i,     -gen.nf:            ])
             assert_allclose( gen.F_k_q, 0.0 )
 
             # check simulation result against interpolation data

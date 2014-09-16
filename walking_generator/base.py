@@ -271,10 +271,10 @@ class BaseGenerator(object):
         # left     right
         # foot     foot
         self.dshull = numpy.array((
-            ( (0.5*fW - SMx), (0.5*fD + fH - SMy)),
-            (-(0.5*fW - SMx), (0.5*fD + fH - SMy)),
-            (-(0.5*fW - SMx),-(0.5*fD + fH - SMy)),
-            ( (0.5*fW - SMx),-(0.5*fD + fH - SMy)),
+            ( (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
+            ( (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
+            (-(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
+            (-(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
         ), dtype=float)
 
         # Corresponding linear system from polygonal set
@@ -396,9 +396,8 @@ class BaseGenerator(object):
         self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
-        transv = numpy.asarray((0.0, 0.5*self.footDistance), dtype=float)
-        self.ComputeLinearSystem(self.dshull + transv, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dshull - transv, "right", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
 
         self._updateD()
 

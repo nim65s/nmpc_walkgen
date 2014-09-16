@@ -448,29 +448,24 @@ class TestClassicGenerator(TestCase):
 
         if True:
             for i in range(interp_data.shape[0])[1:]:
-                print 'i = ', i
-                try:
-                    assert_allclose(interp_data[i+1,1:], interp_data[i,1:])
-                except:
-                    print 'time: ', interp_data[i,0]
-                    for j in range(interp_data.shape[1])[1:]:
-                        try:
-                            assert_allclose(interp_data[i+1,j], interp_data[i,j])
-                        except:
-                            print names[j], ' : ', interp_data[i,j]
-                    raw_input('press key: ')
+                if interp_data[i,0] == 7.4:
+                    print 'i = ', i
 
         # instantiate pattern generator in walking mode,
         # i.e. in single support mode
         gen = ClassicGenerator(fsm_state='R/L')
 
+        # define constant x CoM velocity to track
+        gen.dC_kp1_x_ref[...] = 0.2
+        gen.dC_kp1_y_ref[...] = 0.0
+        gen.dC_kp1_q_ref[...] = 0.0
+
         # take walking initial state from interpolation data
         # NOTE we take the second step as initial state for the test, because
         #      this is a nearly periodic solution
 
-        # TODO: WTF?
         # idx is index on states used from interpolation data
-        idx = 0
+        idx = 1479
         comx = (interp_data[idx,1], interp_data[idx,5], interp_data[idx, 9])
         comy = (interp_data[idx,2], interp_data[idx,6], interp_data[idx,10])
         comz = interp_data[idx,3]
@@ -482,19 +477,12 @@ class TestClassicGenerator(TestCase):
             supportfootx,supportfooty,supportfootq
         )
 
-        # define constant x CoM velocity to track
-        gen.dC_kp1_x_ref[...] = 0.2
-        gen.dC_kp1_y_ref[...] = 0.0
-        gen.dC_kp1_q_ref[...] = 0.0
-
+        idx = 69
         for i in range(10):
+            print 'iteration = ', i
+
             gen.solve()
             gen.simulate()
-            print gen.C_kp1_x[0]
-            print gen.C_kp1_y[0]
-            print gen.C_kp1_q[0]
-            # TODO shifting do I use interpolation or just take the value from
-            #      simulation
 
             # get reference values
             dddC_k_x_ref = qp_data[idx+i,      :  gen.N]
@@ -513,6 +501,14 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.dddC_k_y, dddC_k_y_ref)
             assert_allclose(gen.F_k_x,    F_k_x_ref)
             assert_allclose(gen.F_k_y,    F_k_y_ref)
+
+            # TODO shifting do I use interpolation or just take the value from
+            #      simulation
+            gen.c_k_x = gen.C_kp1_x[0]
+            gen.c_k_y = gen.C_kp1_y[0]
+            gen.c_k_q = gen.C_kp1_q[0]
+
+            gen.update()
 
     def test_against_real_pattern_genererator_walkForward2m_s(self):
         # get test data

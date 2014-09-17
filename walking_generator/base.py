@@ -347,7 +347,7 @@ class BaseGenerator(object):
         # state transformation matrices, constraints, etc.
         self._initialize_matrices()
 
-        self.data = PlotData(self, self.plot_data)
+        self.data = PlotData(self)
 
     def _initialize_matrices(self):
         """

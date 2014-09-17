@@ -247,18 +247,16 @@ class TestClassicGenerator(TestCase):
     def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator(fsm_state='L/R')
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
+
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # define reference velocity
         gen.dC_kp1_x_ref[...] = 0.2
@@ -365,20 +363,17 @@ class TestClassicGenerator(TestCase):
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator(fsm_state='L/R')
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
 
         # define initial state
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
@@ -478,7 +473,7 @@ class TestClassicGenerator(TestCase):
             supportfootx = interp_data[idx, 15]
             supportfooty = interp_data[idx, 16]
             supportfootq = interp_data[idx, 24]
-            gen._initState(comx,comy,comz, supportfootx,supportfooty,supportfootq )
+            gen.set_initial_values(comx,comy,comz, supportfootx,supportfooty,supportfootq )
 
             # check if values are entered correctly
             assert_allclose(gen.c_k_x, comx, atol=ATOL, rtol=RTOL)
@@ -581,7 +576,7 @@ class TestClassicGenerator(TestCase):
         supportfootx = interp_data[idx, 15]
         supportfooty = interp_data[idx, 16]
         supportfootq = interp_data[idx, 24]
-        gen._initState(
+        gen.set_initial_values(
             comx,comy,comz,
             supportfootx,supportfooty,supportfootq
         )
@@ -630,18 +625,16 @@ class TestClassicGenerator(TestCase):
 
         # instantiate pattern generator
         gen = ClassicGenerator()
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
+
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # define reference velocity
         dC_kp1_x_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)

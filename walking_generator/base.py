@@ -349,6 +349,21 @@ class BaseGenerator(object):
 
         self.data = PlotData(self)
 
+    def _initialize_convex_hull_systems(self):
+        # linear system corresponding to the convex hulls
+        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
+        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
+
+        # linear system corresponding to the convex hulls
+            # right foot
+        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
+            # left foot
+        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
+            # double support
+            # NOTE hull has to be shifted by half of feet distance in y direction
+        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
+
     def _initialize_matrices(self):
         """
         initializes the transformation matrices according to the walking report
@@ -408,19 +423,39 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         self.buildConstraints()
 
-    def _initState(self,
+    def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
+        """
+        define security margins for constraints CoP constraints
+
+        .. NOTE: Will recreate constraint matrices
+
+        Parameters
+        ----------
+
+        margin_x: 0 < float < footWidht
+            security margin to narrow center of pressure constraints in x direction
+
+        margin_y: 0 < float < footWidht
+            security margin to narrow center of pressure constraints in x direction
+        """
+        self.SecurityMarginX = margin_x
+        self.SecurityMarginY = margin_y
+
+        # rebuild cop constraints
+        self._initialize_convex_hull_systems()
+
+    def set_initial_values(self,
         comx, comy , comz, #initial com state, i.e. com_x = [c_x, dc_x, ddc_x]
-        supportfootx, supportfooty, supportfootq, # initials support foot setup
-        secmarginx = 0.04, secmarginy=0.04 # security margin narrowing CoP constraints
+        supportfootx, supportfooty, supportfootq # initials support foot setup
     ):
         self.f_k_x = supportfootx
         self.f_k_y = supportfooty
         self.f_k_q = supportfootq
         self.c_k_x[...] = comx
         self.c_k_y[...] = comy
+
         self.h_com = comz
-        self.SecurityMarginX = secmarginx
-        self.SecurityMarginY = secmarginy
+
         self._initialize_matrices()
         self._updateD()
 

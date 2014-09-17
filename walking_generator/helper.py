@@ -14,11 +14,12 @@ class PlotData(object):
     Smart data container for saving plotting relevant data.
     """
 
-    def __init__(self, generator, member=()):
+    def __init__(self, generator):
         """ build data structures """
         self.generator = generator
         self.data = {'time' : []}
 
+        member = generator.plot_data
         if not member:
             err_str = 'please provide member list, else nothing can be saved.'
             sys.stderr.write(err_str + '\n')
@@ -49,8 +50,9 @@ class PlotData(object):
             val = self.generator.__dict__[key]
             if isinstance(val, numpy.ndarray):
                 val = val.tolist()
-            self.data[key].append(val)
+            self.data[key] = val
 
+        # save data to file in json format
         with open(filename, 'w') as f:
             json.dump(self.data, f, sort_keys=True, indent=2)
 
@@ -83,10 +85,6 @@ class Plotter(object):
         # initialize plotter
         self.waterfall_fig = plt.figure()
         self.reference_fig = plt.figure()
-
-        # use interactive mode for "real time" plotting
-        if self.show_canvas:
-            plt.interactive(True)
 
     def update_data_from_generator(self):
         """ update plots from generator internal data """
@@ -284,6 +282,11 @@ class Plotter(object):
         if self.show_canvas:
             self.waterfall_fig.show()
             plt.pause(1e-8)
+
+        def show(self):
+            # use interactive mode for "real time" plotting
+            if self.show_canvas:
+                plt.interactive(True)
 
 
 class FiniteStateMachine(object):

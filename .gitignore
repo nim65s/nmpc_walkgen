@@ -3,6 +3,7 @@
 *.pyc
 *.orig
 *~
+*.json
 
 LeftFootBuffer
 RightFootBuffer

@@ -1,0 +1,1 @@
+from walking_generator.classic import ClassicGenerator

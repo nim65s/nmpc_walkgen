@@ -247,18 +247,16 @@ class TestClassicGenerator(TestCase):
     def test_qp_objective_gradient_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator(fsm_state='L/R')
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
+
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # define reference velocity
         gen.dC_kp1_x_ref[...] = 0.2
@@ -365,20 +363,17 @@ class TestClassicGenerator(TestCase):
     def test_qp_constraint_setup_against_real_pattern_generator(self):
         # instantiate pattern generator
         gen = ClassicGenerator(fsm_state='L/R')
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
 
         # define initial state
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # data follows other convention, i.e.
         # U_k = (dddC_x, dddC_y, F_x, F_y)
@@ -478,7 +473,7 @@ class TestClassicGenerator(TestCase):
             supportfootx = interp_data[idx, 15]
             supportfooty = interp_data[idx, 16]
             supportfootq = interp_data[idx, 24]
-            gen._initState(comx,comy,comz, supportfootx,supportfooty,supportfootq )
+            gen.set_initial_values(comx,comy,comz, supportfootx,supportfooty,supportfootq )
 
             # check if values are entered correctly
             assert_allclose(gen.c_k_x, comx, atol=ATOL, rtol=RTOL)
@@ -581,7 +576,7 @@ class TestClassicGenerator(TestCase):
         supportfootx = interp_data[idx, 15]
         supportfooty = interp_data[idx, 16]
         supportfootq = interp_data[idx, 24]
-        gen._initState(
+        gen.set_initial_values(
             comx,comy,comz,
             supportfootx,supportfooty,supportfootq
         )
@@ -630,18 +625,16 @@ class TestClassicGenerator(TestCase):
 
         # instantiate pattern generator
         gen = ClassicGenerator()
+        secmargin = 0.04
+        gen.set_security_margin(secmargin, secmargin)
+
         comx = [0.06591456,0.07638739,-0.1467377]
         comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
         comz = 0.814
-        supportfootx = 0.00949035
-        supportfooty = 0.095
-        supportfootq = 0.0
-        secmargin = 0.04
-        gen._initState(
-            comx,comy,comz,
-            supportfootx,supportfooty,supportfootq,
-            secmargin,secmargin
-        )
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq)
 
         # define reference velocity
         dC_kp1_x_ref = numpy.zeros((data.shape[0], gen.N), dtype=float)
@@ -689,96 +682,6 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.F_k_x, F_k_x, rtol=RTOL, atol=ATOL)
             assert_allclose(gen.F_k_y, F_k_y, rtol=RTOL, atol=ATOL)
             assert_allclose(gen.F_k_q, 0.0, rtol=RTOL, atol=ATOL)
-
-    def test_against_real_pattern_genererator_walk_forward_interpolation(self):
-         # get test data
-         data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-             "walkForward2m_sInterpolation.dat")
-         )
-
-         time   = data[:, 0]
-         C_x    = data[:, 1]
-         C_y    = data[:, 2]
-         C_z    = data[:, 3]
-         C_q    = data[:, 4]
-         dC_x   = data[:, 5]
-         dC_y   = data[:, 6]
-         dC_z   = data[:, 7]
-         Z_x    = data[:, 8]
-         Z_y    = data[:, 9]
-         Fl_x   = data[:,10]
-         Fl_y   = data[:,11]
-         Fl_z   = data[:,12]
-         dFl_x  = data[:,13]
-         dFl_y  = data[:,14]
-         dFl_z  = data[:,15]
-         ddFl_x = data[:,16]
-         ddFl_y = data[:,17]
-         ddFl_z = data[:,18]
-         Fl_q   = data[:,19]
-         dFl_q  = data[:,20]
-         ddFl_q = data[:,21]
-         Fr_x   = data[:,10]
-         Fr_y   = data[:,11]
-         Fr_z   = data[:,12]
-         dFr_x  = data[:,13]
-         dFr_y  = data[:,14]
-         dFr_z  = data[:,15]
-         ddFr_x = data[:,16]
-         ddFr_y = data[:,17]
-         ddFr_z = data[:,18]
-         Fr_q   = data[:,19]
-         dFr_q  = data[:,20]
-         ddFr_q = data[:,21]
-
-         gen = ClassicGenerator()
-
-    def test_against_real_pattern_genererator_walkSideward2m_s(self):
-        # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "walkSideward2m_s.dat")
-        )
-
-    def test_against_real_pattern_genererator_walk_sideward_interpolation(self):
-        # get test data
-        data = numpy.loadtxt(os.path.join(BASEDIR, "data",
-            "walkSideward2m_sInterpolation.dat")
-        )
-
-        time   = data[:, 0]
-        C_x    = data[:, 1]
-        C_y    = data[:, 2]
-        C_z    = data[:, 3]
-        C_q    = data[:, 4]
-        dC_x   = data[:, 5]
-        dC_y   = data[:, 6]
-        dC_z   = data[:, 7]
-        Z_x    = data[:, 8]
-        Z_y    = data[:, 9]
-        Fl_x   = data[:,10]
-        Fl_y   = data[:,11]
-        Fl_z   = data[:,12]
-        dFl_x  = data[:,13]
-        dFl_y  = data[:,14]
-        dFl_z  = data[:,15]
-        ddFl_x = data[:,16]
-        ddFl_y = data[:,17]
-        ddFl_z = data[:,18]
-        Fl_q   = data[:,19]
-        dFl_q  = data[:,20]
-        ddFl_q = data[:,21]
-        Fr_x   = data[:,10]
-        Fr_y   = data[:,11]
-        Fr_z   = data[:,12]
-        dFr_x  = data[:,13]
-        dFr_y  = data[:,14]
-        dFr_z  = data[:,15]
-        ddFr_x = data[:,16]
-        ddFr_y = data[:,17]
-        ddFr_z = data[:,18]
-        Fr_q   = data[:,19]
-        dFr_q  = data[:,20]
-        ddFr_q = data[:,21]
 
 if __name__ == '__main__':
     try:

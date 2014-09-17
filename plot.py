@@ -6,7 +6,7 @@ show_canvas=True
 save2file=False
 
 plotter = Plotter(gen, show_canvas, save2file)
-plotter.load_from_file('./data.json')
+#plotter.load_from_file('./data.json')
 #plotter.create_waterfall_plot()
 plotter.create_reference_plot()
 

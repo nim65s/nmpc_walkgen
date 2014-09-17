@@ -345,9 +345,105 @@ class BaseGenerator(object):
 
         # initialize all elementary problem matrices, e.g.
         # state transformation matrices, constraints, etc.
-        self._initialize_matrices()
+        self._initialize_constant_matrices()
+        self._initialize_cop_matrices()
+        self._initialize_selection_matrix()
+        self._initialize_convex_hull_systems()
 
         self.data = PlotData(self)
+
+    def _initialize_constant_matrices(self):
+        """
+        Initializes the constant transformation matrices, e.g. Pps, Ppu, Pvs,
+        Pvu, Pas, Pau.
+        """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+
+        for i in range(N):
+            j = i+1
+            self.Pps[i, :] = (1.,   j*T,           (j**2*T**2)/2.)
+            self.Pvs[i, :] = (0.,    1.,                      j*T)
+            self.Pas[i, :] = (0.,    0.,                       1.)
+
+            for j in range(N):
+                if j <= i:
+                    self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
+                    self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
+                    self.Pau[i, j] = T
+
+    def _initialize_cop_matrices(self):
+        """
+        Initialize center of pressure matrices, which are dependent on current
+        height of center of mass (self.h_com).
+        """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+        h_com = self.h_com
+        g = self.g
+
+        for i in range(N):
+            j = i+1
+            self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
+
+            for j in range(N):
+                if j <= i:
+                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
+
+    def _initialize_selection_matrix(self):
+        """ Initialize selection vector and matrix. """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+
+        # initialize foot decision vector and matrix
+        nstep = int(self.T_step/T) # time span of single support phase
+        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
+
+    def _update_selection_matrices(self):
+        """
+        Update selection vector v_kp1 and selection matrix V_kp1.
+
+        Therefore shift foot decision vector and matrix by one row up,
+        i.e. the first entry in the selection vector and the first row in the
+        selection matrix drops out and selection vector's dropped first value
+        becomes the last entry in the decision matrix
+        """
+        nf = self.nf
+        nstep = int(self.T_step/self.T)
+        N = self.N
+
+        # save first value for concatenation
+        first_entry_v_kp1 = self.v_kp1[0].copy()
+
+        self.v_kp1[:-1]   = self.v_kp1[1:]
+        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+
+        # clear last row
+        self.V_kp1[-1,:] = 0
+
+        # concatenate last entry
+        self.V_kp1[-1, -1] = first_entry_v_kp1
+
+        # when first column of selection matrix becomes zero,
+        # then shift columns by one to the front
+        if (self.v_kp1 == 0).all():
+            self.v_kp1[:] = self.V_kp1[:,0]
+            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
+            self.V_kp1[:,-1] = 0
 
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls

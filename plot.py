@@ -1,14 +1,14 @@
 from walking_generator.classic import ClassicGenerator
-from walking_generator.helper import Plotter
+from walking_generator.visualization import Plotter
 
 gen = ClassicGenerator()
+gen = None
 show_canvas=True
-save2file=False
+save_to_file=False
 
-plotter = Plotter(gen, show_canvas, save2file)
-#plotter.load_from_file('./data.json')
-#plotter.create_waterfall_plot()
-plotter.create_reference_plot()
+plotter = Plotter(generator=gen, show_canvas=show_canvas, save_to_file=save_to_file)
+plotter.load_from_file('./data.json')
+plotter.update()
 
 if __name__=='__main__':
     raw_input('press key: ')

@@ -2,7 +2,6 @@ import sys
 import numpy
 import utility
 
-from helper import PlotData
 from base import BaseGenerator
 # Try to get qpOASES SQP Problem class
 try:

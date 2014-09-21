@@ -59,11 +59,13 @@ class BaseGenerator(object):
 
     # define hull names for plotting
     _hull_keys = (
-        'rfhull',
-        'lfhull',
+        'rfposhull',
+        'lfposhull',
         'lfoot',
         'rfoot',
-        'dshull',
+        'lfcophull',
+        'rfcophull',
+        'dscophull',
     )
 
     # define values needed for calculations
@@ -221,8 +223,9 @@ class BaseGenerator(object):
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
         # convex hulls used to bound the free placement of the foot
+        self.nFootPosHullEdges = 5
             # support foot : right
-        self.rfhull = numpy.array((
+        self.rfposhull = numpy.array((
                 (-0.28, -0.2),
                 (-0.20, -0.3),
                 ( 0.00, -0.4),
@@ -231,7 +234,7 @@ class BaseGenerator(object):
         ), dtype=float)
 
             # support foot : left
-        self.lfhull = numpy.array((
+        self.lfposhull = numpy.array((
                 (-0.28, 0.2),
                 (-0.20, 0.3),
                 ( 0.00, 0.4),
@@ -274,6 +277,22 @@ class BaseGenerator(object):
 
         # left foot
         self.lfoot = numpy.array((
+            ( 0.5*fW,  0.5*fH),
+            ( 0.5*fW, -0.5*fH),
+            (-0.5*fW, -0.5*fH),
+            (-0.5*fW,  0.5*fH),
+        ), dtype=float)
+
+        # right foot
+        self.rfoot = numpy.array((
+            ( 0.5*fW, -0.5*fH),
+            ( 0.5*fW,  0.5*fH),
+            (-0.5*fW,  0.5*fH),
+            (-0.5*fW, -0.5*fH),
+        ), dtype=float)
+
+        # left foot
+        self.lfcophull = numpy.array((
             ( (0.5*fW - SMx),  (0.5*fH - SMy)),
             ( (0.5*fW - SMx), -(0.5*fH - SMy)),
             (-(0.5*fW - SMx), -(0.5*fH - SMy)),
@@ -281,7 +300,7 @@ class BaseGenerator(object):
         ), dtype=float)
 
         # right foot
-        self.rfoot = numpy.array((
+        self.rfcophull = numpy.array((
             ( (0.5*fW - SMx), -(0.5*fH - SMy)),
             ( (0.5*fW - SMx),  (0.5*fH - SMy)),
             (-(0.5*fW - SMx),  (0.5*fH - SMy)),
@@ -295,7 +314,7 @@ class BaseGenerator(object):
         # |-^-------^-|
         # left     right
         # foot     foot
-        self.dshull = numpy.array((
+        self.dscophull = numpy.array((
             ( (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
             ( (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
             (-(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
@@ -472,18 +491,18 @@ class BaseGenerator(object):
 
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
-        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
-        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
+        self.ComputeLinearSystem( self.rfposhull, "right", self.A0r, self.ubB0r)
+        self.ComputeLinearSystem( self.lfposhull, "left", self.A0l, self.ubB0l)
 
         # linear system corresponding to the convex hulls
             # right foot
-        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
+        self.ComputeLinearSystem( self.rfcophull,  "right", self.A0rf, self.ubB0rf)
             # left foot
-        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
+        self.ComputeLinearSystem( self.lfcophull,  "left",  self.A0lf, self.ubB0lf)
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
-        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dscophull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dscophull, "right", self.A0drf, self.ubB0drf)
 
     def _initialize_matrices(self):
         """
@@ -522,18 +541,18 @@ class BaseGenerator(object):
         self._calculate_support_order()
 
         # linear system corresponding to the convex hulls
-        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
-        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
+        self.ComputeLinearSystem( self.rfposhull, "right", self.A0r, self.ubB0r)
+        self.ComputeLinearSystem( self.lfposhull, "left", self.A0l, self.ubB0l)
 
         # linear system corresponding to the convex hulls
             # right foot
-        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
+        self.ComputeLinearSystem( self.rfcophull,  "right", self.A0rf, self.ubB0rf)
             # left foot
-        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
+        self.ComputeLinearSystem( self.lfcophull,  "left",  self.A0lf, self.ubB0lf)
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
-        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dscophull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dscophull, "right", self.A0drf, self.ubB0drf)
 
         self._updateD()
 
@@ -661,8 +680,10 @@ class BaseGenerator(object):
         self._updateD() # update constraint transformation matrix
 
         # update internal time
-        self.time += self.T
         self.simulate()
+        self.time += self.T
+
+    def _update_data(self):
         self.data.update()
 
     def _updatev(self):

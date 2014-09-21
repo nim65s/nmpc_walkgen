@@ -5,7 +5,6 @@ import json
 
 import matplotlib
 from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
 
 class PlotData(object):
     """
@@ -78,6 +77,35 @@ class Plotter(object):
     # counter for pictures
     picture_cnt = 0
 
+    # polygons that should be plotted
+    polygons_mapping = {
+        'f_k_x' : {
+            'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+            #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        },
+        'f_k_y' : {
+            'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+            #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        },
+        #'F_k_x' : {
+        #    'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+        #    #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+        #    'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        #    #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        #},
+        #'F_k_y' : {
+        #    'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+        #    #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+        #    'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        #    #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        #},
+        #'f_k_x' : ('lfposhull', 'rfposhull'),
+        }
+
     # general mapping for the bird's eye plots
     bird_view_mapping = (
         # CoM
@@ -89,7 +117,7 @@ class Plotter(object):
         ),
         # Feet
         (
-            ('f_k_x',   {'lw':'1', 'ls':'-', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}^{x}$'}),
+            ('f_k_x',   {'lw':'1', 'ls':'-', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}$'}),
             ('f_k_y',   {}),
             # for rotation
             ('f_k_q',   {}),
@@ -97,7 +125,7 @@ class Plotter(object):
         # ZMP
         # TODO how to get current ZMP state?
         (
-            ('z_k_x',   {'lw':'1', 'ls':'-', 'marker':'.', 'ms':4, 'c':'b', 'label':'$f_{k}^{x}$'}),
+            ('z_k_x',   {'lw':'1', 'ls':'-', 'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}$'}),
             ('z_k_y',   {}),
         ),
     )
@@ -302,10 +330,6 @@ class Plotter(object):
             x_data = numpy.ones(time.shape[0])*numpy.nan
             y_data = numpy.ones(time.shape[0])*numpy.nan
 
-            # get hull data
-            # TODO add more
-            points = self.data.get('rfoot', numpy.zeros(0))
-
             # assemble data
             for i in range(time.shape[0]):
                 # x value
@@ -324,8 +348,8 @@ class Plotter(object):
                     val = val[i]
                 y_data[i] = val
 
-                # if we plot foot positions draw also foot hull
-                if 'f_k' in x_name or 'f_k' in y_name:
+                # draw CoP and foot position hull
+                for poly_name, poly_map in self.polygons_mapping.get(x_name, {}).iteritems():
                     add_poly = False
                     if i == 0:
                         add_poly = True
@@ -335,6 +359,7 @@ class Plotter(object):
                             add_poly = True
 
                     if add_poly:
+                        q = 0.0
                         if q_name:
                             val = numpy.asarray(self.data[q_name])
                             if len(val.shape) > 1:
@@ -349,20 +374,14 @@ class Plotter(object):
                         T[0,0] = c; T[0,1] = -s
                         T[1,0] = s; T[1,1] =  c
 
-                        lfoot = numpy.asarray(self.data['lfoot'][i])
+                        hull = numpy.asarray(self.data[poly_name][i])
                         points = numpy.asarray((x_data[i], y_data[i]))
 
                         # first rotate
-                        hull = T.dot(lfoot.transpose()).transpose()
-                        hull =hull + points
+                        hull = T.dot(hull.transpose()).transpose()
+                        hull = hull + points
 
-                        settings = {
-                            #'closed'    : None,
-                            'fill'      : None,
-                            'edgecolor' : 'gray',
-                            #'hatch'     : '/',
-                        }
-                        poly = plt.Polygon(hull, **settings)
+                        poly = plt.Polygon(hull, **poly_map)
                         self.bird_view_axis.add_patch(poly)
 
             line.set_xdata(x_data)
@@ -398,38 +417,36 @@ class Plotter(object):
             else:
                 q_data = numpy.zeros(x_data.shape[0])
 
-            print 'x_data', x_data
-            print 'y_data', y_data
-            print 'q_data', q_data
-
             # assemble and transform polygons
             points = numpy.asarray(zip(x_data, y_data))
             rfoot = numpy.asarray(self.data['rfoot'][-1])
 
             # if we plot foot positions draw also foot hull
-            if 'F_k' in x_name or 'F_k' in y_name:
-                for i in range(points.shape[0]):
-                    # update transformation matrix
-                    q = q_data[i]
-                    T = self.T
-                    c = numpy.cos(q); s = numpy.sin(q)
-                    T[0,0] = c; T[0,1] = -s
-                    T[1,0] = s; T[1,1] =  c
+            for poly_name, poly_map in self.polygons_mapping.get(x_name, {}).iteritems():
+                q = 0.0
+                if q_name:
+                    val = numpy.asarray(self.data[q_name])
+                    if len(val.shape) > 1:
+                        val = val[i,0]
+                    else:
+                        val = val[i]
+                    q = val
 
-                    # first rotate
-                    hull = T.dot(rfoot.transpose()).transpose()
+                # update transformation matrix
+                T = self.T
+                c = numpy.cos(q); s = numpy.sin(q)
+                T[0,0] = c; T[0,1] = -s
+                T[1,0] = s; T[1,1] =  c
 
-                    # perform translation afterwards
-                    hull = hull + points[i]
+                hull = numpy.asarray(self.data[poly_name][i])
+                points = numpy.asarray((x_data[i], y_data[i]))
 
-                    settings = {
-                        #'closed'    : None,
-                        'fill'      : None,
-                        'edgecolor' : 'gray',
-                        #'hatch'     : '/',
-                    }
-                    poly = plt.Polygon(hull, **settings)
-                    self.bird_view_axis.add_patch(poly)
+                # first rotate
+                hull = T.dot(hull.transpose()).transpose()
+                hull = hull + points
+
+                poly = plt.Polygon(hull, **poly_map)
+                self.bird_view_axis.add_patch(poly)
 
             line.set_xdata(x_data)
             line.set_ydata(y_data)

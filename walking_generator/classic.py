@@ -81,7 +81,7 @@ class ClassicGenerator(BaseGenerator):
         self.pos_nv = 2*(self.N + self.nf)
         self.pos_nc_cop    = self.nFootEdge*(self.N)      # ZMP constraints
         self.pos_nc_eqfoot = self.nf                      # foot equality constraints
-        self.pos_nc_foot   = self.lfhull.shape[0]*self.nf # foot position constraints
+        self.pos_nc_foot   = self.nFootPosHullEdges*self.nf # foot position constraints
         self.pos_nc = self.pos_nc_cop + self.pos_nc_eqfoot + self.pos_nc_foot
 
         # setup problem

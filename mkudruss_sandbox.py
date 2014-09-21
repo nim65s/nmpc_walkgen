@@ -25,7 +25,7 @@ footq = 0.0
 gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 gen.simulate()
-gen.update()
+gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(20):
@@ -34,7 +34,7 @@ for i in range(20):
     gen.solve()
 
     # initial value embedding by internal states and simulation
-    gen.update()
+    #gen.update()
     plot.update()
 
     raw_input('press key:')

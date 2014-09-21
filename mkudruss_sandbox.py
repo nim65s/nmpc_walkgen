@@ -1,4 +1,4 @@
-from walking_generator.helper import Plotter
+from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
 
 # instantiate pattern generator
@@ -6,9 +6,8 @@ gen = ClassicGenerator(fsm_state='L/R')
 
 # instantiate plotter
 show_canvas = True
-save2file = False
-plot = Plotter(gen, show_canvas, save2file)
-
+save_to_file = False
+plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
@@ -25,16 +24,19 @@ footy = 0.095
 footq = 0.0
 gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
+gen.simulate()
+gen.update()
 
 # Pattern Generator Event Loop
-for i in range(10):
+for i in range(20):
     print 'iteration: ', i
     # solve QP
     gen.solve()
 
     # initial value embedding by internal states and simulation
     gen.update()
+    plot.update()
 
+    raw_input('press key:')
 
-    raw_input('press return to continue: ')
-
+gen.data.save_to_file('./data.json')

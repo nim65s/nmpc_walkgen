@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
 from helper import ZMPState, CoMState
-from helper import PlotData
+from visualization import PlotData
 
 class BaseGenerator(object):
     """
@@ -19,11 +19,16 @@ class BaseGenerator(object):
     g = 9.81
 
     # define list of members for plotting
-    plot_data = (
+    _plot_keys = (
         'time',
         'c_k_x',
         'c_k_y',
         'c_k_q',
+        'f_k_x',
+        'f_k_y',
+        'f_k_q',
+        'z_k_x',
+        'z_k_y',
         'h_com',
         'C_kp1_x',
         'dC_kp1_x',
@@ -43,9 +48,6 @@ class BaseGenerator(object):
         'F_kp1_x',
         'F_kp1_y',
         'F_kp1_q',
-        'f_k_x',
-        'f_k_y',
-        'f_k_q',
         'F_k_x',
         'F_k_y',
         'F_k_q',
@@ -54,6 +56,26 @@ class BaseGenerator(object):
         'fsm_state',
         'fsm_states',
         )
+
+    # define hull names for plotting
+    _hull_keys = (
+        'rfhull',
+        'lfhull',
+        'lfoot',
+        'rfoot',
+        'dshull',
+    )
+
+    # define values needed for calculations
+    _data_keys = (
+        'N',
+        'nf',
+        'T',
+        'T_step',
+        'footWidth',
+        'footHeight',
+        'footDistance',
+    )
 
     def __init__(
         self, N=16, T=0.1, T_step=0.8,
@@ -177,6 +199,9 @@ class BaseGenerator(object):
         self.F_k_q = numpy.zeros((self.nf,), dtype=float)
 
         # zero moment point matrices
+
+        self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
+        self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
 
         self.Z_kp1_x = numpy.zeros((N,), dtype=float)
         self.Z_kp1_y = numpy.zeros((N,), dtype=float)
@@ -345,9 +370,105 @@ class BaseGenerator(object):
 
         # initialize all elementary problem matrices, e.g.
         # state transformation matrices, constraints, etc.
-        self._initialize_matrices()
+        self._initialize_constant_matrices()
+        self._initialize_cop_matrices()
+        self._initialize_selection_matrix()
+        self._initialize_convex_hull_systems()
 
         self.data = PlotData(self)
+
+    def _initialize_constant_matrices(self):
+        """
+        Initializes the constant transformation matrices, e.g. Pps, Ppu, Pvs,
+        Pvu, Pas, Pau.
+        """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+
+        for i in range(N):
+            j = i+1
+            self.Pps[i, :] = (1.,   j*T,           (j**2*T**2)/2.)
+            self.Pvs[i, :] = (0.,    1.,                      j*T)
+            self.Pas[i, :] = (0.,    0.,                       1.)
+
+            for j in range(N):
+                if j <= i:
+                    self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
+                    self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
+                    self.Pau[i, j] = T
+
+    def _initialize_cop_matrices(self):
+        """
+        Initialize center of pressure matrices, which are dependent on current
+        height of center of mass (self.h_com).
+        """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+        h_com = self.h_com
+        g = self.g
+
+        for i in range(N):
+            j = i+1
+            self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
+
+            for j in range(N):
+                if j <= i:
+                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
+
+    def _initialize_selection_matrix(self):
+        """ Initialize selection vector and matrix. """
+        # renaming for convenience
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+
+        # initialize foot decision vector and matrix
+        nstep = int(self.T_step/T) # time span of single support phase
+        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+
+        for j in range (nf):
+            a = min((j+1)*nstep, N)
+            b = min((j+2)*nstep, N)
+            self.V_kp1[a:b,j] = 1
+
+    def _update_selection_matrices(self):
+        """
+        Update selection vector v_kp1 and selection matrix V_kp1.
+
+        Therefore shift foot decision vector and matrix by one row up,
+        i.e. the first entry in the selection vector and the first row in the
+        selection matrix drops out and selection vector's dropped first value
+        becomes the last entry in the decision matrix
+        """
+        nf = self.nf
+        nstep = int(self.T_step/self.T)
+        N = self.N
+
+        # save first value for concatenation
+        first_entry_v_kp1 = self.v_kp1[0].copy()
+
+        self.v_kp1[:-1]   = self.v_kp1[1:]
+        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+
+        # clear last row
+        self.V_kp1[-1,:] = 0
+
+        # concatenate last entry
+        self.V_kp1[-1, -1] = first_entry_v_kp1
+
+        # when first column of selection matrix becomes zero,
+        # then shift columns by one to the front
+        if (self.v_kp1 == 0).all():
+            self.v_kp1[:] = self.V_kp1[:,0]
+            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
+            self.V_kp1[:,-1] = 0
 
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
@@ -423,42 +544,6 @@ class BaseGenerator(object):
         # the foot step placement and to the cop
         self.buildConstraints()
 
-    def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
-        """
-        define security margins for constraints CoP constraints
-
-        .. NOTE: Will recreate constraint matrices
-
-        Parameters
-        ----------
-
-        margin_x: 0 < float < footWidht
-            security margin to narrow center of pressure constraints in x direction
-
-        margin_y: 0 < float < footWidht
-            security margin to narrow center of pressure constraints in x direction
-        """
-        self.SecurityMarginX = margin_x
-        self.SecurityMarginY = margin_y
-
-        # rebuild cop constraints
-        self._initialize_convex_hull_systems()
-
-    def set_initial_values(self,
-        comx, comy , comz, #initial com state, i.e. com_x = [c_x, dc_x, ddc_x]
-        supportfootx, supportfooty, supportfootq # initials support foot setup
-    ):
-        self.f_k_x = supportfootx
-        self.f_k_y = supportfooty
-        self.f_k_q = supportfootq
-        self.c_k_x[...] = comx
-        self.c_k_y[...] = comy
-
-        self.h_com = comz
-
-        self._initialize_matrices()
-        self._updateD()
-
     def _calculate_support_order(self):
         # find correct initial support foot
         if (self.currentSupport.foot == "left" ) :
@@ -488,6 +573,83 @@ class BaseGenerator(object):
 
             self.supportDeque[i].timeLimit = timeLimit
 
+    def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
+        """
+        define security margins for constraints CoP constraints
+
+        .. NOTE: Will recreate constraint matrices
+
+        Parameters
+        ----------
+
+        margin_x: 0 < float < footWidht
+            security margin to narrow center of pressure constraints in x direction
+
+        margin_y: 0 < float < footWidht
+            security margin to narrow center of pressure constraints in x direction
+        """
+        self.SecurityMarginX = margin_x
+        self.SecurityMarginY = margin_y
+
+        # rebuild cop constraints
+        self._initialize_convex_hull_systems()
+
+    def set_initial_values(self,
+        com_x, com_y , com_z,
+        foot_x, foot_y, foot_q, foot='left',
+        com_q=(0,0,0)
+    ):
+        """
+        initial value embedding for pattern generator, i.e. each iteration of
+        pattern generator differs in:
+
+        * initial com state, i.e. com_a = [c_a, dc_a, ddc_a], a in {x,y,q}
+        * initials support foot setup, i.e.
+
+        .. NOTE: Will recreate constraint matrices, support order and
+                 transformation matrices.
+
+        Parameters
+        ----------
+
+        com_x: [pos, vec, acc]
+            current x position, velocity and acceleration of center of mass
+
+        com_y: [pos, vec, acc]
+            current y position, velocity and acceleration of center of mass
+
+        com_z: float
+            current z position of center of mass
+
+        foot_x: float
+            current x position of support foot
+
+        foot_y: float
+            current y position of support foot
+
+        foot_y: float
+            current orientation of support foot
+
+        com_q: [ang, vec, acc]
+            current orientation, angular velocity and acceleration of center of mass
+
+        """
+        self.f_k_x = foot_x
+        self.f_k_y = foot_y
+        self.f_k_q = foot_q
+        self.c_k_x[...] = com_x
+        self.c_k_y[...] = com_y
+
+        self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
+        self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
+
+        if not self.h_com == com_z:
+            self.h_com = com_z
+            self._initialize_cop_matrices()
+
+        self._initialize_matrices()
+        self._updateD()
+
     def update(self):
         """
         Update all interior matrices, vectors.
@@ -500,6 +662,8 @@ class BaseGenerator(object):
 
         # update internal time
         self.time += self.T
+        self.simulate()
+        self.data.update()
 
     def _updatev(self):
         """

@@ -114,22 +114,22 @@ class Plotter(object):
         # CoM
         (
             ('c_k_x',   {'lw':'1', 'ls':'-',  'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{x}$'}),
-            ('c_k_y',   {'lw':'1', 'ls':'', 'marker':'', 'ms':4, 'c':'r', 'label':'$c_{k}^{y}$'}),
+            ('c_k_y',   {'lw':'1', 'ls':'-.', 'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{y}$'}),
             # for rotation
-            ('c_k_q',   {'lw':'1', 'ls':'.', 'marker':'', 'ms':4, 'c':'r', 'label':'$c_{k}^{\\theta}$'}),
+            ('c_k_q',   {'lw':'1', 'ls':'', 'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{\\theta}$'}),
         ),
         # Feet
         (
             ('f_k_x',   {'lw':'1', 'ls':'-',  'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}^{x}$'}),
-            ('f_k_y',   {'lw':'1', 'ls':'', 'marker':'', 'ms':4, 'c':'g', 'label':'$f_{k}^{y}$'}),
+            ('f_k_y',   {'lw':'1', 'ls':'-.', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}^{y}$'}),
             # for rotation
-            ('f_k_q',   {'lw':'1', 'ls':'', 'marker':'', 'ms':4, 'c':'g', 'label':'$f_{k}_{\\theta}$'}),
+            ('f_k_q',   {'lw':'1', 'ls':'',  'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}_{\\theta}$'}),
         ),
         # ZMP
         # TODO how to get current ZMP state?
         (
             ('z_k_x',   {'lw':'1', 'ls':'-',  'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}^{x}$'}),
-            ('z_k_y',   {'lw':'1', 'ls':'', 'marker':'', 'ms':4, 'c':'b', 'label':'$z_{k}^{y}$'}),
+            ('z_k_y',   {'lw':'1', 'ls':'-.', 'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}^{y}$'}),
         ),
     )
 

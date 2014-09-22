@@ -262,65 +262,29 @@ class BaseGenerator(object):
         self.SecurityMarginY = SMy = 0.04
 
         # Position of the foot in the local foot frame
-        self.nFootEdge = 4
-        self.footWidth    = fW = 0.2172
-        self.footHeigth   = fH = 0.1380
-        self.footDistance = fD = 0.2000
+        self.nFootEdge    = 4
+        self.footWidth    = 0.2172
+        self.footHeight   = 0.1380
+        self.footDistance = 0.2000
 
         # position of the vertices of the feet in the foot coordinates.
-        #  #<---footWidht---># --- ---
-        #  #<>=SMx     SMx=<>#  |   |=SMy
-        #  #  *-----------*  #  |  ---
-        #  #  |           |  #  |=footHeight
-        #  #  *-----------*  #  |  ---
-        #  #                 #  |   |=SMy
-        #  #-----------------# --- ---
-
         # left foot
-        self.lfoot = numpy.array((
-            ( 0.5*fW,  0.5*fH),
-            ( 0.5*fW, -0.5*fH),
-            (-0.5*fW, -0.5*fH),
-            (-0.5*fW,  0.5*fH),
-        ), dtype=float)
+        self.lfoot = numpy.zeros((self.nFootEdge, 2), dtype=float)
 
         # right foot
-        self.rfoot = numpy.array((
-            ( 0.5*fW, -0.5*fH),
-            ( 0.5*fW,  0.5*fH),
-            (-0.5*fW,  0.5*fH),
-            (-0.5*fW, -0.5*fH),
-        ), dtype=float)
+        self.rfoot = numpy.zeros((self.nFootEdge, 2), dtype=float)
 
         # left foot
-        self.lfcophull = numpy.array((
-            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
-            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
-            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
-            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
-        ), dtype=float)
+        self.lfcophull = numpy.zeros((self.nFootEdge, 2), dtype=float)
 
         # right foot
-        self.rfcophull = numpy.array((
-            ( (0.5*fW - SMx), -(0.5*fH - SMy)),
-            ( (0.5*fW - SMx),  (0.5*fH - SMy)),
-            (-(0.5*fW - SMx),  (0.5*fH - SMy)),
-            (-(0.5*fW - SMx), -(0.5*fH - SMy)),
-        ), dtype=float)
+        self.rfcophull = numpy.zeros((self.nFootEdge, 2), dtype=float)
 
         # double support
-        # |<----d---->| d = 2*footHeight + footDistance
-        # |-----------|
-        # | *   *   * |
-        # |-^-------^-|
-        # left     right
-        # foot     foot
-        self.dscophull = numpy.array((
-            ( (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
-            ( (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
-            (-(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
-            (-(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
-        ), dtype=float)
+        self.dscophull = numpy.zeros((self.nFootEdge, 2), dtype=float)
+
+        # update hull arrays
+        self._update_hulls()
 
         # Corresponding linear system from polygonal set
             # right foot
@@ -459,6 +423,60 @@ class BaseGenerator(object):
             self.V_kp1[a:b,j] = 1
 
         self._calculate_support_order()
+
+    def _update_hulls(self):
+        """ update shape polygon of convex hulls """
+        # renaming for convenience
+        fW = self.footWidth
+        fH = self.footHeight
+        fD = self.footDistance
+
+        SMx = self.SecurityMarginX
+        SMy = self.SecurityMarginY
+
+        #  #<---footWidth---># --- ---
+        #  #<>=SMx     SMx=<>#  |   |=SMy
+        #  #  *-----------*  #  |  ---
+        #  #  |           |  #  |=footHeight
+        #  #  *-----------*  #  |  ---
+        #  #                 #  |   |=SMy
+        #  #-----------------# --- ---
+
+        # left foot
+        self.lfoot[0,:] =  0.5*fW,  0.5*fH
+        self.lfoot[1,:] =  0.5*fW, -0.5*fH
+        self.lfoot[2,:] = -0.5*fW, -0.5*fH
+        self.lfoot[3,:] = -0.5*fW,  0.5*fH
+
+        # right foot
+        self.rfoot[0,:] =  0.5*fW, -0.5*fH
+        self.rfoot[1,:] =  0.5*fW,  0.5*fH
+        self.rfoot[2,:] = -0.5*fW,  0.5*fH
+        self.rfoot[3,:] = -0.5*fW, -0.5*fH
+
+        # left foot
+        self.lfcophull[0,:] =  (0.5*fW - SMx),  (0.5*fH - SMy)
+        self.lfcophull[1,:] =  (0.5*fW - SMx), -(0.5*fH - SMy)
+        self.lfcophull[2,:] = -(0.5*fW - SMx), -(0.5*fH - SMy)
+        self.lfcophull[3,:] = -(0.5*fW - SMx),  (0.5*fH - SMy)
+
+        # right foot
+        self.rfcophull[0,:] =  (0.5*fW - SMx), -(0.5*fH - SMy)
+        self.rfcophull[1,:] =  (0.5*fW - SMx),  (0.5*fH - SMy)
+        self.rfcophull[2,:] = -(0.5*fW - SMx),  (0.5*fH - SMy)
+        self.rfcophull[3,:] = -(0.5*fW - SMx), -(0.5*fH - SMy)
+
+        # double support
+        # |<----d---->| d = 2*footHeight + footDistance
+        # |-----------|
+        # | *   *   * |
+        # |-^-------^-|
+        # left     right
+        # foot     foot
+        self.dscophull[0,:] =  (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)
+        self.dscophull[1,:] =  (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
+        self.dscophull[2,:] = -(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
+        self.dscophull[3,:] = -(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)
 
     def _update_selection_matrices(self):
         """
@@ -626,14 +644,17 @@ class BaseGenerator(object):
         Parameters
         ----------
 
-        margin_x: 0 < float < footWidht
+        margin_x: 0 < float < footWidth
             security margin to narrow center of pressure constraints in x direction
 
-        margin_y: 0 < float < footWidht
+        margin_y: 0 < float < footWidth
             security margin to narrow center of pressure constraints in x direction
         """
         self.SecurityMarginX = margin_x
         self.SecurityMarginY = margin_y
+
+        # update cop hull
+        self._update_hulls()
 
         # rebuild cop constraints
         self._initialize_convex_hull_systems()

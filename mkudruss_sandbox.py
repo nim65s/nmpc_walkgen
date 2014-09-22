@@ -6,13 +6,13 @@ from walking_generator.classic import ClassicGenerator
 gen = ClassicGenerator(fsm_state='L/R')
 
 # instantiate plotter
-show_canvas = False
+show_canvas = True
 save_to_file = False
 plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-gen.dC_kp1_x_ref[...] = 0.2
+gen.dC_kp1_x_ref[...] = 0.0
 gen.dC_kp1_y_ref[...] = 0.0
 gen.dC_kp1_q_ref[...] = 0.0
 
@@ -38,10 +38,10 @@ for i in range(200):
     comx, comy, comz, footx, footy, footq, foot, comq= \
     gen.update()
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    #plot.update()
+    plot.update()
 
     #raw_input('press key:')
-    #time.sleep(0.5)
+    time.sleep(0.1)
 
 gen.data.save_to_file('./data.json')
 

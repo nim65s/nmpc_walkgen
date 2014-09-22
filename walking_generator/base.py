@@ -1,3 +1,4 @@
+import os, sys
 import numpy
 from math import cos, sin
 from copy import deepcopy
@@ -59,11 +60,13 @@ class BaseGenerator(object):
 
     # define hull names for plotting
     _hull_keys = (
-        'rfhull',
-        'lfhull',
+        'rfposhull',
+        'lfposhull',
         'lfoot',
         'rfoot',
-        'dshull',
+        'lfcophull',
+        'rfcophull',
+        'dscophull',
     )
 
     # define values needed for calculations
@@ -221,8 +224,9 @@ class BaseGenerator(object):
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
         # convex hulls used to bound the free placement of the foot
+        self.nFootPosHullEdges = 5
             # support foot : right
-        self.rfhull = numpy.array((
+        self.rfposhull = numpy.array((
                 (-0.28, -0.2),
                 (-0.20, -0.3),
                 ( 0.00, -0.4),
@@ -231,7 +235,7 @@ class BaseGenerator(object):
         ), dtype=float)
 
             # support foot : left
-        self.lfhull = numpy.array((
+        self.lfposhull = numpy.array((
                 (-0.28, 0.2),
                 (-0.20, 0.3),
                 ( 0.00, 0.4),
@@ -274,6 +278,22 @@ class BaseGenerator(object):
 
         # left foot
         self.lfoot = numpy.array((
+            ( 0.5*fW,  0.5*fH),
+            ( 0.5*fW, -0.5*fH),
+            (-0.5*fW, -0.5*fH),
+            (-0.5*fW,  0.5*fH),
+        ), dtype=float)
+
+        # right foot
+        self.rfoot = numpy.array((
+            ( 0.5*fW, -0.5*fH),
+            ( 0.5*fW,  0.5*fH),
+            (-0.5*fW,  0.5*fH),
+            (-0.5*fW, -0.5*fH),
+        ), dtype=float)
+
+        # left foot
+        self.lfcophull = numpy.array((
             ( (0.5*fW - SMx),  (0.5*fH - SMy)),
             ( (0.5*fW - SMx), -(0.5*fH - SMy)),
             (-(0.5*fW - SMx), -(0.5*fH - SMy)),
@@ -281,7 +301,7 @@ class BaseGenerator(object):
         ), dtype=float)
 
         # right foot
-        self.rfoot = numpy.array((
+        self.rfcophull = numpy.array((
             ( (0.5*fW - SMx), -(0.5*fH - SMy)),
             ( (0.5*fW - SMx),  (0.5*fH - SMy)),
             (-(0.5*fW - SMx),  (0.5*fH - SMy)),
@@ -295,7 +315,7 @@ class BaseGenerator(object):
         # |-^-------^-|
         # left     right
         # foot     foot
-        self.dshull = numpy.array((
+        self.dscophull = numpy.array((
             ( (0.5*fW - SMx),  (0.5*(fD + fH) - SMy)),
             ( (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
             (-(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)),
@@ -438,6 +458,8 @@ class BaseGenerator(object):
             b = min((j+2)*nstep, N)
             self.V_kp1[a:b,j] = 1
 
+        self._calculate_support_order()
+
     def _update_selection_matrices(self):
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
@@ -470,79 +492,101 @@ class BaseGenerator(object):
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
             self.V_kp1[:,-1] = 0
 
+            # update support foot
+            self.f_k_x = self.F_k_x[0]
+            self.f_k_y = self.F_k_y[0]
+            self.f_k_q = self.F_k_q[0]
+
+            self.currentSupport.x     = self.f_k_x
+            self.currentSupport.y     = self.f_k_y
+            self.currentSupport.theta = self.f_k_q
+
+            if self.currentSupport.foot == 'right':
+                self.currentSupport.foot  = 'left'
+            else:
+                self.currentSupport.foot = 'right'
+
+            # update support order with new foot state
+            self._calculate_support_order()
+
+            """
+            # also update finite state machine
+            self.fsm_state = self.fsm_states[0].copy()
+            self.fsm_states[:-1] = self.fsm_states[1:]
+
+            # TODO How to update last entry in FSM?
+            # if any reference velocity is given and the CoM is moving then
+            # the next step last optimized step should be moving
+            if (self.dC_kp1_x_ref != 0.0).any() \
+            or (self.dC_kp1_y_ref != 0.0).any() \
+            or (self.dC_kp1_q_ref != 0.0).any():
+                if (self.c_k_x[1:] != 0.0).any() \
+                or (self.c_k_y[1:] != 0.0).any() \
+                or (self.c_k_q[1:] != 0.0).any():
+                    if self.supportDeque[-1].foot == 'right':
+                        self.fsm_states[-1] = 'L/R'
+                    else:
+                        self.fsm_states[-1] = 'R/L'
+            # else stay in double support
+            else:
+                self.fsm_states[-1] = 'D'
+            """
+
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
-        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
-        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
+        self.ComputeLinearSystem( self.rfposhull, "right", self.A0r, self.ubB0r)
+        self.ComputeLinearSystem( self.lfposhull, "left", self.A0l, self.ubB0l)
 
         # linear system corresponding to the convex hulls
             # right foot
-        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
+        self.ComputeLinearSystem( self.rfcophull,  "right", self.A0rf, self.ubB0rf)
             # left foot
-        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
+        self.ComputeLinearSystem( self.lfcophull,  "left",  self.A0lf, self.ubB0lf)
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
-        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dscophull, "left",  self.A0dlf, self.ubB0dlf)
+        self.ComputeLinearSystem(self.dscophull, "right", self.A0drf, self.ubB0drf)
 
-    def _initialize_matrices(self):
+    def ComputeLinearSystem(self, hull, foot, A0, B0 ):
         """
-        initializes the transformation matrices according to the walking report
+        automatically calculate linear constraints from polygon description
         """
-        T_step = self.T_step
-        T = self.T
-        N = self.N
-        nf = self.nf
-        h_com = self.h_com
-        g = self.g
+        # get number of edged from the hull specification, e.g.
+        # single and double support polygon, foot position hull
+        nEdges = hull.shape[0]
 
-        for i in range(N):
-            j = i+1
-            self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
-            self.Pps[i, :] = (1.,   j*T,           (j**2*T**2)/2.)
-            self.Pvs[i, :] = (0.,    1.,                      j*T)
-            self.Pas[i, :] = (0.,    0.,                       1.)
+        # get sign for hull from given foot
+        if foot == "left" :
+            sign = 1
+        else :
+            sign = -1
 
-            for j in range(N):
-                if j <= i:
-                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
-                    self.Ppu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6.
-                    self.Pvu[i, j] = (2.*(i-j) + 1.)*T**2/2.
-                    self.Pau[i, j] = T
+        # calculate linear constraints from hull
+        # walk around polygon and calculate coordinate representation of
+        # constraints
+        for i in range(nEdges):
+            # special case for first and last entry in hull
+            if i == nEdges-1 :
+                k = 0
+            else :
+                k = i + 1
 
-        # initialize foot decision vector and matrix
-        nstep = int(self.T_step/T) # time span of single support phase
-        self.v_kp1[:nstep] = 1 # definitions of initial support leg
+            # rename point coordinates for convenience
+            x1 = hull[i,0]
+            y1 = hull[i,1]
+            x2 = hull[k,0]
+            y2 = hull[k,1]
 
-        for j in range (nf):
-            a = min((j+1)*nstep, N)
-            b = min((j+2)*nstep, N)
-            self.V_kp1[a:b,j] = 1
+            # calculate support vectors
+            dx = y1 - y2
+            dy = x2 - x1
+            dc = dx*x1 + dy*y1
 
-        self._calculate_support_order()
+            # symmetrical constraints
+            A0[i,0] = sign * dx
+            A0[i,1] = sign * dy
+            B0[i] =   sign * dc
 
-        # linear system corresponding to the convex hulls
-        self.ComputeLinearSystem( self.rfhull, "right", self.A0r, self.ubB0r)
-        self.ComputeLinearSystem( self.lfhull, "left", self.A0l, self.ubB0l)
-
-        # linear system corresponding to the convex hulls
-            # right foot
-        self.ComputeLinearSystem( self.rfoot,  "right", self.A0rf, self.ubB0rf)
-            # left foot
-        self.ComputeLinearSystem( self.lfoot,  "left",  self.A0lf, self.ubB0lf)
-            # double support
-            # NOTE hull has to be shifted by half of feet distance in y direction
-        self.ComputeLinearSystem(self.dshull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dshull, "right", self.A0drf, self.ubB0drf)
-
-        self._updateD()
-
-        # define initial support feet order
-        self._calculate_support_order()
-
-        # build the constraints linked to
-        # the foot step placement and to the cop
-        self.buildConstraints()
 
     def _calculate_support_order(self):
         # find correct initial support foot
@@ -627,114 +671,133 @@ class BaseGenerator(object):
         foot_y: float
             current y position of support foot
 
-        foot_y: float
+        foot_q: float
             current orientation of support foot
+
+        foot: str
+            tells actual support foot state, i.e. 'right' or by default 'left'
 
         com_q: [ang, vec, acc]
             current orientation, angular velocity and acceleration of center of mass
 
         """
-        self.f_k_x = foot_x
-        self.f_k_y = foot_y
-        self.f_k_q = foot_q
+        # update CoM states
         self.c_k_x[...] = com_x
         self.c_k_y[...] = com_y
-
-        self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
-        self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
 
         if not self.h_com == com_z:
             self.h_com = com_z
             self._initialize_cop_matrices()
 
-        self._initialize_matrices()
-        self._updateD()
+        # update support foot if necessary
+        newSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot=foot)
+        if self.currentSupport != newSupport \
+        or self.f_k_x != foot_x \
+        or self.f_k_y != foot_y \
+        or self.f_k_q != foot_q :
+            sys.stderr.write('currentSupport != newSupport!!!\n')
+            # TODO what about ds, stepNumber, timeLimit do they have to change?
+            self.currentSupport = newSupport
+
+            # update support foot states
+            self.f_k_x = foot_x
+            self.f_k_y = foot_y
+            self.f_k_q = foot_q
+
+            self._calculate_support_order()
+
+        # update current CoP values
+        # TODO any other ideas of where to get it?
+        self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
+        self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
+
+        # rebuild CoP constraints
+        self.buildConstraints()
 
     def update(self):
         """
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
-        self._updatev() # update selection matrix and determine support order
+        # after solution simulate to get current states on horizon
+        self.simulate()
 
-        # NOTE call updatev before updateD! The latter depends on support order
-        self._updateD() # update constraint transformation matrix
+        # update internal data
+        self._update_data()
 
         # update internal time
         self.time += self.T
-        self.simulate()
+
+        # update matrices
+        oldSupport = deepcopy(self.currentSupport)
+        self._update_selection_matrices()
+        if self.currentSupport != oldSupport \
+        or self.f_k_x != self.currentSupport.x \
+        or self.f_k_y != self.currentSupport.y \
+        or self.f_k_q != self.currentSupport.theta :
+            sys.stderr.write('currentSupport != oldSupport!!!\n')
+
+        # provide copy of updated states as return value
+        f_k_x = deepcopy(self.f_k_x)
+        f_k_y = deepcopy(self.f_k_y)
+        f_k_q = deepcopy(self.f_k_q)
+        foot  = deepcopy(self.currentSupport.foot)
+
+        # get data for initialization of next iteration
+        c_k_x = numpy.zeros((3,), dtype=float)
+        c_k_x[0] = self.  C_kp1_x[0]
+        c_k_x[1] = self. dC_kp1_x[0]
+        c_k_x[2] = self.ddC_kp1_x[0]
+
+        c_k_y = numpy.zeros((3,), dtype=float)
+        c_k_y[0] = self.  C_kp1_y[0]
+        c_k_y[1] = self. dC_kp1_y[0]
+        c_k_y[2] = self.ddC_kp1_y[0]
+
+        c_k_q = numpy.zeros((3,), dtype=float)
+        c_k_q[0] = self.  C_kp1_q[0]
+        c_k_q[1] = self. dC_kp1_q[0]
+        c_k_q[2] = self.ddC_kp1_q[0]
+
+        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
+
+    def _update_data(self):
         self.data.update()
 
-    def _updatev(self):
+    def simulate(self):
         """
-        Update selection vector v_kp1 and selection matrix V_kp1.
-
-        Therefore shift foot decision vector and matrix by one row up,
-        i.e. the first entry in the selection vector and the first row in the
-        selection matrix drops out and selection vector's dropped first value
-        becomes the last entry in the decision matrix
+        integrates model for given initial CoM states, jerks and feet positions
+        and orientations by applying the linear time stepping scheme
         """
-        nf = self.nf
-        nstep = int(self.T_step/self.T)
-        N = self.N
+        self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
+        self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
+        self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
 
-        # save first value for concatenation
-        first_entry_v_kp1 = self.v_kp1[0].copy()
+        self.  C_kp1_y = self.Pps.dot(self.c_k_y) + self.Ppu.dot(self.dddC_k_y)
+        self. dC_kp1_y = self.Pvs.dot(self.c_k_y) + self.Pvu.dot(self.dddC_k_y)
+        self.ddC_kp1_y = self.Pas.dot(self.c_k_y) + self.Pau.dot(self.dddC_k_y)
 
-        self.v_kp1[:-1]   = self.v_kp1[1:]
-        self.V_kp1[:-1,:] = self.V_kp1[1:,:]
+        self.  C_kp1_q = self.Pps.dot(self.c_k_q) + self.Ppu.dot(self.dddC_k_q)
+        self. dC_kp1_q = self.Pvs.dot(self.c_k_q) + self.Pvu.dot(self.dddC_k_q)
+        self.ddC_kp1_q = self.Pas.dot(self.c_k_q) + self.Pau.dot(self.dddC_k_q)
 
-        # clear last row
-        self.V_kp1[-1,:] = 0
+        self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
+        self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
 
-        # concatenate last entry
-        self.V_kp1[-1, -1] = first_entry_v_kp1
-
-        # when first column of selection matrix becomes zero,
-        # then shift columns by one to the front
-        if (self.v_kp1 == 0).all():
-            self.v_kp1[:] = self.V_kp1[:,0]
-            self.V_kp1[:,:-1] = self.V_kp1[:,1:]
-            self.V_kp1[:,-1] = 0
-
-            # this way also the current support foot changes
-            self.currentSupport.foot = deepcopy(self.supportDeque[0].foot)
-            self.currentSupport.ds   = deepcopy(self.supportDeque[0].ds)
-
-            # supportDeque is then calculated from
-            # from current support in the following
-
-            self._calculate_support_order()
-
-            # also update finite state machine
-            self.fsm_state = self.fsm_states[0].copy()
-            self.fsm_states[:-1] = self.fsm_states[1:]
-
-            # TODO How to update last entry in FSM?
-            # if any reference velocity is given and the CoM is moving then
-            # the next step last optimized step should be moving
-            if (self.dC_kp1_x_ref != 0.0).any() \
-            or (self.dC_kp1_y_ref != 0.0).any() \
-            or (self.dC_kp1_q_ref != 0.0).any():
-                if (self.c_k_x[1:] != 0.0).any() \
-                or (self.c_k_y[1:] != 0.0).any() \
-                or (self.c_k_q[1:] != 0.0).any():
-                    if self.supportDeque[-1].foot == 'right':
-                        self.fsm_states[-1] = 'L/R'
-                    else:
-                        self.fsm_states[-1] = 'R/L'
-            # else stay in double support
-            else:
-                self.fsm_states[-1] = 'D'
-
-    def _updateD(self):
+    def buildConstraints(self):
         """
-        update foot constraint transformation matrices
+        builds constraint matrices for solver
 
-        NOTE: call updatev beforehand for actual support order!
+        NOTE problems are assembled in the solver implementations
         """
+        self.buildCoPconstraint()
+        self.buildFootEqConstraint()
+        self.buildFootIneqConstraint()
+
+    def _update_cop_constraint_transformation(self):
+        """ update foot constraint transformation matrices. """
         # for every time instant in the pattern generator constraints
-        # depend on the
+        # depend on the support order
         for i in range(self.N):
             if self.supportDeque[i].foot == "left" :
                 A0 = self.A0lf
@@ -764,81 +827,13 @@ class BaseGenerator(object):
                 # get right hand side of equation
                 self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
 
-    def simulate(self):
-        """
-        integrates model for given initial CoM states, jerks and feet positions
-        and orientations by applying the linear time stepping scheme
-        """
-        self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
-        self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
-        self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
-
-        self.  C_kp1_y = self.Pps.dot(self.c_k_y) + self.Ppu.dot(self.dddC_k_y)
-        self. dC_kp1_y = self.Pvs.dot(self.c_k_y) + self.Pvu.dot(self.dddC_k_y)
-        self.ddC_kp1_y = self.Pas.dot(self.c_k_y) + self.Pau.dot(self.dddC_k_y)
-
-        self.  C_kp1_q = self.Pps.dot(self.c_k_q) + self.Ppu.dot(self.dddC_k_q)
-        self. dC_kp1_q = self.Pvs.dot(self.c_k_q) + self.Pvu.dot(self.dddC_k_q)
-        self.ddC_kp1_q = self.Pas.dot(self.c_k_q) + self.Pau.dot(self.dddC_k_q)
-
-        self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
-        self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
-
-    def ComputeLinearSystem(self, hull, foot, A0, B0 ):
-        """
-        automatically calculate linear constraints from polygon description
-        """
-        # get number of edged from the hull specification, e.g.
-        # single and double support polygon, foot position hull
-        nEdges = hull.shape[0]
-
-        # get sign for hull from given foot
-        if foot == "left" :
-            sign = 1
-        else :
-            sign = -1
-
-        # calculate linear constraints from hull
-        # walk around polygon and calculate coordinate representation of
-        # constraints
-        for i in range(nEdges):
-            # special case for first and last entry in hull
-            if i == nEdges-1 :
-                k = 0
-            else :
-                k = i + 1
-
-            # rename point coordinates for convenience
-            x1 = hull[i,0]
-            y1 = hull[i,1]
-            x2 = hull[k,0]
-            y2 = hull[k,1]
-
-            # calculate support vectors
-            dx = y1 - y2
-            dy = x2 - x1
-            dc = dx*x1 + dy*y1
-
-            # symmetrical constraints
-            A0[i,0] = sign * dx
-            A0[i,1] = sign * dy
-            B0[i] =   sign * dc
-
-    def buildConstraints(self):
-        """
-        builds constraint matrices for solver
-
-        NOTE problems are assembled in the solver implementations
-        """
-        self.buildCoPconstraint()
-        self.buildFootEqConstraint()
-        self.buildFootIneqConstraint()
-
     def buildCoPconstraint(self):
         """
         build the constraint enforcing the center of pressure to stay inside
         the support polygon given through the convex hull of the foot.
         """
+        # change entries according to support order changes in D_kp1
+        self._update_cop_constraint_transformation()
 
         #rename for convenience
         D_kp1 = self.D_kp1
@@ -882,18 +877,23 @@ class BaseGenerator(object):
 
     def buildFootEqConstraint(self):
         """
-        @MAX: Please add a description
+        create constraints that freezes foot position optimization when swing
+        foot comes close to foot step in preview window. Needed for proper
+        interpolation of trajectory.
         """
         # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)
         itBeforeLandingThreshold = 2
         if ( itBeforeLanding < itBeforeLandingThreshold ) :
-            self.eqAfoot[0][self.N] = 1
-            self.eqAfoot[1][2*self.N+self.nf] = 1
+            self.eqAfoot[0,   self.N        ] = 1.
+            self.eqAfoot[1, 2*self.N+self.nf] = 1.
 
-            self.eqBfoot[0][self.N] = self.F_k_x[0]
-            self.eqBfoot[1][self.N] = self.F_k_y[0]
+            self.eqBfoot[0] = self.F_k_x[0]
+            self.eqBfoot[1] = self.F_k_y[0]
+        else:
+            self.eqAfoot[...] = 0.
+            self.eqBfoot[...] = 0.
 
     def buildFootIneqConstraint(self):
         """

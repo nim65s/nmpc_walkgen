@@ -877,18 +877,23 @@ class BaseGenerator(object):
 
     def buildFootEqConstraint(self):
         """
-        @MAX: Please add a description
+        create constraints that freezes foot position optimization when swing
+        foot comes close to foot step in preview window. Needed for proper
+        interpolation of trajectory.
         """
         # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)
         itBeforeLandingThreshold = 2
         if ( itBeforeLanding < itBeforeLandingThreshold ) :
-            self.eqAfoot[0][self.N] = 1
-            self.eqAfoot[1][2*self.N+self.nf] = 1
+            self.eqAfoot[0,   self.N        ] = 1.
+            self.eqAfoot[1, 2*self.N+self.nf] = 1.
 
-            self.eqBfoot[0][self.N] = self.F_k_x[0]
-            self.eqBfoot[1][self.N] = self.F_k_y[0]
+            self.eqBfoot[0] = self.F_k_x[0]
+            self.eqBfoot[1] = self.F_k_y[0]
+        else:
+            self.eqAfoot[...] = 0.
+            self.eqBfoot[...] = 0.
 
     def buildFootIneqConstraint(self):
         """

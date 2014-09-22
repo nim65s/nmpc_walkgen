@@ -1,3 +1,4 @@
+import time
 from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
 
@@ -28,7 +29,7 @@ gen.simulate()
 gen._update_data()
 
 # Pattern Generator Event Loop
-for i in range(20):
+for i in range(200):
     print 'iteration: ', i
     # solve QP
     gen.solve()
@@ -40,5 +41,7 @@ for i in range(20):
     plot.update()
 
     #raw_input('press key:')
+    #time.sleep(0.5)
 
 gen.data.save_to_file('./data.json')
+

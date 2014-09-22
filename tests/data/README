@@ -41,6 +41,18 @@ Coloumn |       Name  |  Variable
     37  |    RFoot_q  |   RightFootPosition.theta
     38  |   dRFoot_q  |   RightFootPosition.omega
     39  |  ddRFoot_q  |   RightFootPosition.omega2
+    40  |
+          << filterprecision(m_OneStep.ZMPTarget(0)*cos(m_CurrentConfiguration(5)) -
+                 m_OneStep.ZMPTarget(1)*sin(m_CurrentConfiguration(5))
+                 +m_CurrentConfiguration(0) ) << " "                        // 35
+          << filterprecision(m_OneStep.ZMPTarget(0)*sin(m_CurrentConfiguration(5)) +
+                 m_OneStep.ZMPTarget(1)*cos(m_CurrentConfiguration(5))
+                 +m_CurrentConfiguration(1) ) << " "                        // 36
+          << filterprecision(m_CurrentConfiguration(0) ) << " "                         // 37
+          << filterprecision(m_CurrentConfiguration(1) ) << " "                         // 38
+          << endl;
+      aof.close();
+
 
 names = {
      0 : '     Time',

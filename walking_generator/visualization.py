@@ -500,7 +500,7 @@ class Plotter(object):
         self.bird_view_axis.set_aspect('equal')
 
         # define legend
-        self.bird_view_axis.legend(loc='upper left')
+        self.bird_view_axis.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:
@@ -576,7 +576,8 @@ class Plotter(object):
         ax.set_aspect('equal')
 
         # define legend position
-        #legend = ax.legend(loc='lower left')
+        # Put a legend to the right of the current axis
+        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:

@@ -382,9 +382,6 @@ class TestBaseGenerator(TestCase):
         data_V = numpy.loadtxt(os.path.join(BASEDIR, "data", "V_kp1.dat"), skiprows=0)
         assert_allclose(gen.V_kp1[:,0], data_V)
 
-        data_b_kp1 = numpy.loadtxt(os.path.join(BASEDIR, "data", "Bdxdy.dat"), skiprows=0)
-        assert_allclose(gen.b_kp1, data_b_kp1)
-
         data_Pzs = numpy.loadtxt(os.path.join(BASEDIR, "data", "Pzs.dat"), skiprows=0)
         assert_allclose(gen.Pzs, data_Pzs)
 
@@ -417,6 +414,9 @@ class TestBaseGenerator(TestCase):
         #print "A-B:\n",data_DY - gen.D_kp1y
         assert_allclose(data_DY, gen.D_kp1y)
 
+
+        data_b_kp1 = numpy.loadtxt(os.path.join(BASEDIR, "data", "Bdxdy.dat"), skiprows=0)
+        assert_allclose(gen.b_kp1, data_b_kp1)
 #        print "data_Pzu:\n", data_Pzu
 #        print "gen.Pzu:\n", gen.Pzu
 #        print "A-B:\n",((data_Pzu - gen.Pzu) == 0).all()

@@ -405,15 +405,11 @@ class TestClassicGenerator(TestCase):
         gen.dC_kp1_y_ref[...] = 0.0
         gen.dC_kp1_q_ref[...] = 0.0
 
-        gen.simulate()
-        gen.data.update()
-
         for i in range(100):
             print 'iteration: i = ', i
             gen.solve()
             gen.update()
             gen.simulate()
-            gen.data.update()
 
             gen.c_k_x[0] = gen.  C_kp1_x[0]
             gen.c_k_x[1] = gen. dC_kp1_x[0]
@@ -437,8 +433,6 @@ class TestClassicGenerator(TestCase):
             #assert_allclose(gen.F_k_x, 0.0, rtol=RTOL, atol=ATOL)
             #assert_allclose(gen.F_k_y, 0.0, rtol=RTOL, atol=ATOL)
             #assert_allclose(gen.F_k_q, 0.0, rtol=RTOL, atol=ATOL)
-
-        gen.data.save_to_file('/tmp/data.json')
 
     def test_real_pattern_genererator_data(self):
         """ verify if data is reproducible """

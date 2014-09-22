@@ -1,7 +1,9 @@
 import os
 import sys
+import re
 import numpy
 import json
+from time import strftime
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -85,18 +87,18 @@ class Plotter(object):
             'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
             #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
         },
-        'f_k_y' : {
-            'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
-            #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
-            'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
-            #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
-        },
-        #'F_k_x' : {
+        #'f_k_y' : {
         #    'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
         #    #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
         #    'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
         #    #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
         #},
+        'F_k_x' : {
+            'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
+            'lfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+            #'rfcophull' : {'edgecolor':'blue', 'lw':1, 'fill':None,},
+        },
         #'F_k_y' : {
         #    'lfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
         #    #'rfoot'     : {'edgecolor':'gray', 'lw':1, 'fill':None,},
@@ -110,23 +112,23 @@ class Plotter(object):
     bird_view_mapping = (
         # CoM
         (
-            ('c_k_x',   {'lw':'1', 'ls':'-',  'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}$'}),
-            ('c_k_y',   {}), # not plotted
+            ('c_k_x',   {'lw':'1', 'ls':'-',  'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{x}$'}),
+            ('c_k_y',   {'lw':'1', 'ls':'--', 'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{y}$'}),
             # for rotation
-            ('c_k_q',   {}), # not plotted, but used for transformation
+            ('c_k_q',   {'lw':'1', 'ls':'-.', 'marker':'.', 'ms':4, 'c':'r', 'label':'$c_{k}^{\\theta}$'}),
         ),
         # Feet
         (
-            ('f_k_x',   {'lw':'1', 'ls':'-', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}$'}),
-            ('f_k_y',   {}),
+            ('f_k_x',   {'lw':'1', 'ls':'-',  'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}^{x}$'}),
+            ('f_k_y',   {'lw':'1', 'ls':'--', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}^{y}$'}),
             # for rotation
-            ('f_k_q',   {}),
+            ('f_k_q',   {'lw':'1', 'ls':'-.', 'marker':'x', 'ms':4, 'c':'g', 'label':'$f_{k}_{\\theta}$'}),
         ),
         # ZMP
         # TODO how to get current ZMP state?
         (
-            ('z_k_x',   {'lw':'1', 'ls':'-', 'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}$'}),
-            ('z_k_y',   {}),
+            ('z_k_x',   {'lw':'1', 'ls':'-',  'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}^{x}$'}),
+            ('z_k_y',   {'lw':'1', 'ls':'--', 'marker':'.', 'ms':4, 'c':'b', 'label':'$z_{k}^{y}$'}),
         ),
     )
 
@@ -134,19 +136,19 @@ class Plotter(object):
         # Preview
         (
             ('C_kp1_x', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
-            ('C_kp1_y', {}),
+            ('C_kp1_y', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{y}$'}),
             # for rotation
-            ('C_kp1_q', {}),
+            ('C_kp1_q', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{\\theta}$'}),
         ),
         (
             ('F_k_x', {'lw':'1', 'ls':':', 'marker':'x', 'ms':4, 'c':'k', 'label':'$F_{k}^{x}$'}),
-            ('F_k_y', {}),
+            ('F_k_y', {'lw':'1', 'ls':':', 'marker':'x', 'ms':4, 'c':'k', 'label':'$F_{k}^{y}$'}),
             # for rotation
-            ('F_k_q', {}),
+            ('F_k_q', {'lw':'1', 'ls':':', 'marker':'x', 'ms':4, 'c':'k', 'label':'$F_{k}^{\\theta}$'}),
         ),
         (
-            ('Z_kp1_x', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'b', 'label':'$Z_{k+1}$'}),
-            ('Z_kp1_y', {}),
+            ('Z_kp1_x', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'b', 'label':'$Z_{k+1}^{x}$'}),
+            ('Z_kp1_y', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'b', 'label':'$Z_{k+1}^{y}$'}),
         ),
     )
 
@@ -223,20 +225,17 @@ class Plotter(object):
                 name = name.split('.')[0]
 
             # extract path and filename
-            self.filepath = path
+            self._fpath = path
             self._fname = name
             self._ffmt  = fmt
 
-            # define filename as function from name, counter and format
-            def filename(self):
-                name = self._fname
-                cnt  = self.picture_cnt
-                fmt  = self._ffmt
-                return '{name}{cnt}.{fmt}'.format(name=name, cnt=cnt, fmt=fmt)
+            # create path
+            if not os.path.isdir(self._fpath):
+                os.makedirs(self._fpath)
 
         # BIRD'S EYE VIEW
         # initialize figure with proper size
-        self.fig = plt.figure(figsize=self.figsize)
+        self.fig = plt.figure()
 
         ax = self.fig.add_subplot(1,1,1)
         ax.set_title('Aerial View')
@@ -253,6 +252,8 @@ class Plotter(object):
             settings  = item[0][1]
 
             # layout line with empty data, but right settings
+            # remove identifier from label
+            settings['label'] = re.sub(r'_{[xy]}', '', settings['label'])
             line, = ax.plot([], [], **settings)
 
             # store lines for later update
@@ -276,11 +277,20 @@ class Plotter(object):
             self.fig.show()
             plt.pause(1e-8)
 
+    def filename(self):
+        """
+        define filename as function from name, counter and format
+        """
+        name = self._fname
+        cnt  = self.picture_cnt
+        fmt  = self._ffmt
+        return '{name}{cnt}.{fmt}'.format(name=name, cnt=cnt, fmt=fmt)
+
     def _save_to_file(self):
         """ save figure as pdf """
         # convert numpy arrays into lists
-        f_path = os.path.join(self.path, self.filename())
-        self.fig.savefig(f_path, format='pdf', dpi=self.dpi)
+        f_path = os.path.join(self._fpath, self.filename())
+        self.fig.savefig(f_path, format=self._ffmt)
         self.picture_cnt += 1
 
     def load_from_file(self, filename):
@@ -310,10 +320,18 @@ class Plotter(object):
     def update(self):
         """ creates plot of x/y trajectories on the ground """
 
-        print self.data.keys()
         time = numpy.asarray(self.data['time'])
 
         # BIRD'S EYE VIEW
+        blend = {
+            'c_k_y' : [],
+            'c_k_x' : [],
+            'f_k_y' : [],
+            'f_k_x' : [],
+            'z_k_y' : [],
+            'z_k_x' : [],
+        }
+
         for item in self.bird_view_mapping:
             # get names from mapping
             x_name = item[0][0]
@@ -384,6 +402,13 @@ class Plotter(object):
                         poly = plt.Polygon(hull, **poly_map)
                         self.bird_view_axis.add_patch(poly)
 
+            # add last value to preview plot for blending
+            dummy = {x_name : x_data, y_name : y_data}
+            for name in (x_name, y_name):
+                if name in blend:
+                    blend[name].append(dummy[name][-1])
+
+            # after data is assembled add them to plots
             line.set_xdata(x_data)
             line.set_ydata(y_data)
 
@@ -397,6 +422,14 @@ class Plotter(object):
         #preview_time[:time.shape[0]] = time
         #preview_time[time.shape[0]:] = numpy.arange(0, T*N, T) + T + time[-1]
 
+        blend_subs = {
+            'C_kp1_y' : 'c_k_y',
+            'C_kp1_x' : 'c_k_x',
+            'F_k_y' : 'f_k_y',
+            'F_k_x' : 'f_k_x',
+            'Z_kp1_y' : 'z_k_y',
+            'Z_kp1_x' : 'z_k_x',
+        }
         for item in self.preview_mapping:
             # get names from mapping
             x_name = item[0][0]
@@ -410,16 +443,20 @@ class Plotter(object):
             line = self.bird_view_lines[x_name]
 
             # define data
-            x_data = numpy.asarray(self.data[x_name][-1])
-            y_data = numpy.asarray(self.data[x_name][-1])
+            x_data = blend.get(blend_subs.get(x_name,''), [])
+            y_data = blend.get(blend_subs.get(y_name,''), [])
+            q_data = blend.get(blend_subs.get(q_name,''), [])
+
+            # extend lists with current preview data to generate preview
+            x_data.extend(self.data[x_name][-1])
+            y_data.extend(self.data[y_name][-1])
             if q_name:
-                q_data = numpy.asarray(self.data[q_name][-1])
+                q_data.extend(self.data[q_name][-1])
             else:
-                q_data = numpy.zeros(x_data.shape[0])
+                q_data.extend([0]*len(x_data))
 
             # assemble and transform polygons
             points = numpy.asarray(zip(x_data, y_data))
-            rfoot = numpy.asarray(self.data['rfoot'][-1])
 
             # if we plot foot positions draw also foot hull
             for poly_name, poly_map in self.polygons_mapping.get(x_name, {}).iteritems():
@@ -438,15 +475,20 @@ class Plotter(object):
                 T[0,0] = c; T[0,1] = -s
                 T[1,0] = s; T[1,1] =  c
 
+                # get hull as numpy array
                 hull = numpy.asarray(self.data[poly_name][i])
-                points = numpy.asarray((x_data[i], y_data[i]))
 
-                # first rotate
-                hull = T.dot(hull.transpose()).transpose()
-                hull = hull + points
+                # iterate over all
+                for j in range(points.shape[0]):
+                    # first rotate
+                    dummy = T.dot(hull.transpose()).transpose()
+                    dummy = dummy + points[j]
 
-                poly = plt.Polygon(hull, **poly_map)
-                self.bird_view_axis.add_patch(poly)
+                    # for preview add dotted linestyle
+                    poly_map['ls'] = 'dotted'
+
+                    poly = plt.Polygon(dummy, **poly_map)
+                    self.bird_view_axis.add_patch(poly)
 
             line.set_xdata(x_data)
             line.set_ydata(y_data)
@@ -469,63 +511,69 @@ class Plotter(object):
 
     def create_reference_plot(self):
         """ create plot like that from Maximilien """
+        self.reference_fig = plt.figure()
         ax = self.reference_fig.add_subplot(1,1,1)
         ax.set_ylabel("Walking Forward")
         ax.set_xlabel("time [s]")
 
-        # assemble different trajectories
-        self.reference_lines = []
-
         # retrieve data from data structure
-        time    = self.data['time']
+        time = numpy.asarray(self.data['time'])
 
-        # x values
-        data_mapping =(
-           # x
-           ('c_k_x',   {'lw':'1', 'ls':'-',  'marker':'', 'ms':4, 'c':'r', 'label':'$c_{k}^{x}$'}),
-           ('f_k_x',   {'lw':'1', 'ls':'--', 'marker':'', 'ms':4, 'c':'b', 'label':'$f_{k}^{x}$'}),
-           #('C_kp1_x', {'lw':'1', 'ls':'-', 'marker':'', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
-           #('F_kp1_x', {'lw':'1', 'ls':'-', 'marker':'', 'ms':4, 'c':'r', 'label':'$F_{k+1}^{x}$'}),
-           ('Z_kp1_x', {'lw':'1', 'ls':'--', 'marker':'', 'ms':4, 'c':'g', 'label':'$Z_{k+1}^{x}$'}),
+        for item in self.bird_view_mapping:
+            # get names from mapping
+            x_name = item[0][0]; x_map  = item[0][1]
+            y_name = item[1][0]; y_map  = item[1][1]
+            q_name = None;       q_map = None
+            # get theta name only when defined
+            if len(item) > 2:
+                q_name = item[2][0]; q_map  = item[2][1]
+                q_line, = ax.plot([], [], **q_map)
 
-           # y
-           ('c_k_y',   {'lw':'1', 'ls':'-.',  'marker':'', 'ms':4, 'c':'k', 'label':'$c_{k}^{y}$'}),
-           ('f_k_y',   {'lw':'1', 'ls':'- ', 'marker':'', 'ms':4, 'c':'k', 'label':'$f_{k}^{y}$'}),
-           #('C_kp1_y', {'lw':'1', 'ls':'-',  'marker':'', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{y}$'}),
-           #('F_kp1_y', {'lw':'1', 'ls':'-',  'marker':'', 'ms':4, 'c':'r', 'label':'$F_{k+1}^{y}$'}),
-           ('Z_kp1_y', {'lw':'1', 'ls':'-.',  'marker':'', 'ms':4, 'c':'orange', 'label':'$Z_{k+1}^{y}$'}),
+            # get line
+            x_line, = ax.plot([], [], **x_map)
+            y_line, = ax.plot([], [], **y_map)
 
-           # theta
-           #('c_k_q',   {'lw':'1', 'ls':'-',  'marker':'', 'ms':4, 'c':'r', 'label':'$c_{k}^{x}$'}),
-           #('f_k_q',   {'lw':'1', 'ls':'-',  'marker':'', 'ms':4, 'c':'r', 'label':'$f_{k}^{x}$'}),
-           #('C_kp1_q', {'lw':'1', 'ls':'-', 'marker':'', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
-           #('F_kp1_q', {'lw':'1', 'ls':'-', 'marker':'', 'ms':4, 'c':'r', 'label':'$F_{k+1}^{x}$'}),
-        )
-
-        for item in data_mapping:
-            name = item[0]
-            item = item[1]
-
-            line, = ax.plot([], [], **item)
-
-            x_data = time
+            # define data
+            x_data = numpy.ones(time.shape[0])*numpy.nan
             y_data = numpy.ones(time.shape[0])*numpy.nan
+            q_data = numpy.ones(time.shape[0])*numpy.nan
+
             for i in range(time.shape[0]):
-                val = self.data[name]
-                if len(val.shape) == 2:
+                # x value conversion
+                val = numpy.asarray(self.data[x_name])
+                if len(val.shape) > 1:
+                    val = val[i,0]
+                else:
+                    val = val[i]
+                x_data[i] = val
+
+                # y value conversion
+                val = numpy.asarray(self.data[y_name])
+                if len(val.shape) > 1:
                     val = val[i,0]
                 else:
                     val = val[i]
                 y_data[i] = val
 
-            line.set_xdata(x_data)
-            line.set_ydata(y_data)
+                # optional theta value conversion
+                if q_name:
+                    val = numpy.asarray(self.data[q_name])
+                    if len(val.shape) > 1:
+                        val = val[i,0]
+                    else:
+                        val = val[i]
+                    q_data[i] = val
 
-            self.reference_lines.append(line)
+            # plot lines
+            x_line.set_xdata(time); x_line.set_ydata(x_data)
+            y_line.set_xdata(time); y_line.set_ydata(y_data)
+            q_line.set_xdata(time); q_line.set_ydata(y_data)
+
 
         # recalculate x and y limits
         ax.relim()
         ax.autoscale_view()
+        ax.set_aspect('equal')
 
         # define legend position
         legend = ax.legend(loc='upper left')
@@ -535,56 +583,5 @@ class Plotter(object):
             self.reference_fig.show()
             plt.pause(1e-8)
 
-    def create_waterfall_plot(self):
-        """ create a waterfall like plot of each pattern generator result """
-        # assemble plot
-        ax = self.waterfall_fig.add_subplot(1,1,1)
-        ax.set_ylabel("stuff")
-        ax.set_xlabel("time [s]")
-
-        # assemble different trajectories
-        self.waterfall_lines = []
-
-
-        # retrieve data from data structure
-        time    = self.data['time']
-        C_kp1_x = self.data['C_kp1_x']
-
-        # extend given time by one horizon
-        deltaT = time[-1] - time[-2]
-        self.waterfall_time = numpy.zeros((time.shape[0] + C_kp1_x.shape[1],))
-        self.waterfall_time[:time.shape[0]] = time
-        last_horizon = numpy.arange(0, deltaT*C_kp1_x.shape[1],0.1) + deltaT
-        self.waterfall_time[time.shape[0]:] = last_horizon + time[-1]
-
-        # create for each instance a trajectory of the states
-        for i in range(C_kp1_x.shape[0]):
-            label = ''
-            if i == 0:
-                label = 'C_{k+1}^{x}'
-            line, = ax.plot([], [],
-                lw='1', ls='-', marker='', ms=4, c='r', label=label
-            )
-
-            dummy = numpy.ones(self.waterfall_time.shape[0])*numpy.nan
-            a = i; b = i + C_kp1_x.shape[1]
-            dummy[a:b] = C_kp1_x[i,:]
-
-            line.set_xdata(self.waterfall_time)
-            line.set_ydata(dummy)
-
-            self.waterfall_lines.append(line)
-
-        # recalculate x and y limits
-        ax.relim()
-        ax.autoscale_view()
-
-        # show canvas
-        if self.show_canvas:
-            self.waterfall_fig.show()
-            plt.pause(1e-8)
-
-        def show(self):
-            # use interactive mode for "real time" plotting
-            if self.show_canvas:
-                plt.interactive(True)
+        if self.save_to_file:
+            self._save_to_file()

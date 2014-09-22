@@ -54,7 +54,7 @@ class ClassicGenerator(BaseGenerator):
         self.nwsr = 1000    # # of working set recalculations
         self.options = Options()
         self.options.setToMPC()
-        #self.options.printLevel = PrintLevel.LOW
+        self.options.printLevel = PrintLevel.LOW
 
         # FOR ORIENTATIONS
         # define dimensions
@@ -64,7 +64,7 @@ class ClassicGenerator(BaseGenerator):
         # setup problem
         self.ori_dofs = numpy.zeros(self.ori_nv)
         self.ori_qp = SQProblem(self.ori_nv, self.ori_nc)
-        #self.ori_qp.setOptions(self.options) # load NMPC options
+        self.ori_qp.setOptions(self.options) # load NMPC options
 
         self.ori_H   =  numpy.zeros((self.ori_nv,self.ori_nv))
         self.ori_A   =  numpy.zeros((self.ori_nc,self.ori_nv))
@@ -87,7 +87,7 @@ class ClassicGenerator(BaseGenerator):
         # setup problem
         self.pos_dofs = numpy.zeros(self.pos_nv)
         self.pos_qp = SQProblem(self.pos_nv, self.pos_nc)
-        #self.pos_qp.setOptions(self.options)
+        self.pos_qp.setOptions(self.options)
 
         self.pos_H   = numpy.zeros((self.pos_nv,self.pos_nv))
         self.pos_A   = numpy.zeros((self.pos_nc,self.pos_nv))

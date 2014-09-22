@@ -892,8 +892,11 @@ class BaseGenerator(object):
             self.eqBfoot[0] = self.F_k_x[0]
             self.eqBfoot[1] = self.F_k_y[0]
         else:
-            self.eqAfoot[...] = 0.
-            self.eqBfoot[...] = 0.
+            self.eqAfoot[0,   self.N        ] = 0.0
+            self.eqAfoot[1, 2*self.N+self.nf] = 0.0
+
+            self.eqBfoot[0] = 0.0
+            self.eqBfoot[1] = 0.0
 
     def buildFootIneqConstraint(self):
         """

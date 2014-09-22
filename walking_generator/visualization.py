@@ -4,6 +4,7 @@ import re
 import numpy
 import json
 from time import strftime
+from copy import deepcopy
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -37,7 +38,7 @@ class PlotData(object):
         """ update internal data from generator """
         for key in self.data:
             val = self.generator.__dict__.get(key, [])
-            self.data[key].append(val)
+            self.data[key].append(deepcopy(val))
 
     def reset(self):
         """ reset all internal data """
@@ -244,6 +245,7 @@ class Plotter(object):
 
         # assemble different trajectories
         self.bird_view_axis  = ax
+        self.bird_view_background = self.fig.canvas.copy_from_bbox(ax.bbox)
         self.bird_view_lines = {}
 
         for item in self.bird_view_mapping:
@@ -275,7 +277,6 @@ class Plotter(object):
         self.fig.tight_layout()
         if self.show_canvas:
             self.fig.show()
-            plt.pause(1e-8)
 
     def filename(self):
         """
@@ -504,7 +505,9 @@ class Plotter(object):
 
         # show canvas
         if self.show_canvas:
-            plt.pause(1e-8)
+            # TODO problem of background is not refreshed
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
 
         if self.save_to_file:
             self._save_to_file()

@@ -6,8 +6,8 @@ from walking_generator.classic import ClassicGenerator
 gen = ClassicGenerator(fsm_state='L/R')
 
 # instantiate plotter
-show_canvas = True
-save_to_file = True
+show_canvas = False
+save_to_file = False
 plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
@@ -38,7 +38,7 @@ for i in range(200):
     comx, comy, comz, footx, footy, footq, foot, comq= \
     gen.update()
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    plot.update()
+    #plot.update()
 
     #raw_input('press key:')
     #time.sleep(0.5)

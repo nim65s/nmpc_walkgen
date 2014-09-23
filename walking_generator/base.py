@@ -659,6 +659,9 @@ class BaseGenerator(object):
         # rebuild cop constraints
         self._initialize_convex_hull_systems()
 
+        # rebuild constraints
+        self.buildConstraints()
+
     def set_initial_values(self,
         com_x, com_y , com_z,
         foot_x, foot_y, foot_q, foot='left',

@@ -184,10 +184,12 @@ class Plotter(object):
         matplotlib.rc('xtick', labelsize=6)
         matplotlib.rc('ytick', labelsize=6)
         matplotlib.rc('font', size=10)
+        matplotlib.rc('font', size=10)
         matplotlib.rc('text', usetex=True)
 
         # some plotting options
         self.figsize = (8.0, 5.0)
+        self.dpi = 300
 
         # save reference to pattern generator
         # NOTE used for online plotting
@@ -287,11 +289,14 @@ class Plotter(object):
         fmt  = self._ffmt
         return '{name}{cnt}.{fmt}'.format(name=name, cnt=cnt, fmt=fmt)
 
-    def _save_to_file(self):
+    def _save_to_file(self, figure=None):
         """ save figure as pdf """
         # convert numpy arrays into lists
         f_path = os.path.join(self._fpath, self.filename())
-        self.fig.savefig(f_path, format=self._ffmt)
+        if not figure:
+            self.fig.savefig(f_path, format=self._ffmt, dpi=self.dpi)
+        else:
+            figure.savefig(f_path, format=self._ffmt, dpi=self.dpi)
         self.picture_cnt += 1
 
     def load_from_file(self, filename):
@@ -501,7 +506,7 @@ class Plotter(object):
         self.bird_view_axis.set_aspect('equal')
 
         # define legend
-        self.bird_view_axis.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        self.bird_view_axis.legend(loc='center left')#, bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:
@@ -580,7 +585,7 @@ class Plotter(object):
 
         # define legend position
         # Put a legend to the right of the current axis
-        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        legend = ax.legend(loc='center left')#, bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:
@@ -588,4 +593,6 @@ class Plotter(object):
             plt.pause(1e-8)
 
         if self.save_to_file:
-            self._save_to_file()
+            self._save_to_file(figure=self.reference_fig)
+
+

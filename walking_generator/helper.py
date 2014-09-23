@@ -8,29 +8,181 @@ from time import gmtime, strftime
 class FiniteStateMachine(object):
     """
     Finite state machine to implement starting and stopping maneuvers for the
-    pattern generator.
+    pattern generator from CNRS-LAAS C++ implementation.
+    Finite state machine to determine the support parameters.
+
+    Copyright 2010,
+
+    Andrei  Herdt
+    Olivier Stasse
+
+    JRL, CNRS/AIST
+
+    This file is part of walkGenJrl.
+    walkGenJrl is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    walkGenJrl is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Lesser Public License for more details.
+    You should have received a copy of the GNU Lesser General Public License
+    along with walkGenJrl.  If not, see <http://www.gnu.org/licenses/>.
+
+    Research carried out within the scope of the
+    Joint Japanese-French Robotics Laboratory (JRL)
     """
-    def __init__(self, sl=1):
+    def __init__(self):
+        # Precision constant
+        self.EPS_ = 1e-6
+
+        # Rotation phase
+        # True if the robot is in translation
+        self.InTranslation_ = False
+
+        # True if the robot is in rotation
+        self.InRotation_ = False
+
+        # Number of stabilize steps after the end of a rotation
+        self.NbStepsAfterRotation_ = 0
+
+        # Current support foot type (SS, DS)
+        self.CurrentSupportFoot_ = 'left'
+
+        # True if the end phase of the rotation has begun
+        self.PostRotationPhase_ = False
+
+        # Length of a step
+        self.StepPeriod_ = 0.8
+
+        # Length of a double support phase
+        self.DSPeriod_ = 1e9
+
+        # Duration of the transition ds -> ss
+        self.DSSSPeriod_ = 0.8
+
+        # Number of steps to be done before DS
+        self.NbStepsSSDS_ = 200
+
+        # Sampling period
+        self.T_ = 0.005
+
+    def update_vel_reference(Ref, CurrentSupport):
         """
-        initialize finite state machine
+        Update the velocity reference after a pure rotation
 
         Parameters
         ----------
 
-        sl: int
-            number of steps in inplace stepping until stop
+        Ref: numpy.ndarray((3,), dtype=float)
+            new reference velocity
+
+        CurrentSupport: str
+            current support foot state
+        """
+        # Check if the robot is supposed to translate
+        if abs(Ref.Local.X)>2*self.EPS_ or abs(Ref.Local.Y)>2*self.EPS_:
+            self.InTranslation_ = True
+        else:
+            self.InTranslation_ = False
+
+        # Check if the robot is supposed to rotate
+        if abs(Ref.Local.Yaw) > self.EPS_:
+            self.InRotation_ = True
+        # Check if he is still in motion
+        else:
+            if self.InRotation_ and not self.InTranslation_:
+                Ref.Local.X = 2*self.EPS_
+                Ref.Local.Y = 2*self.EPS_
+                if not self.PostRotationPhase_:
+                    self.CurrentSupportFoot_ = CurrentSupport.Foot
+                    self.NbStepsAfterRotation_ = 0
+                    self.PostRotationPhase_ = True
+                else:
+                    if self.CurrentSupportFoot_ != CurrentSupport.Foot:
+                        self.CurrentSupportFoot_    = CurrentSupport.Foot
+                        self.NbStepsAfterRotation_ += 1
+
+                    if self.NbStepsAfterRotation_>2:
+                        self.InRotation_        = False
+                        self.PostRotationPhase_ = False
+            else:
+                self.InRotation_ = False
+
+    def set_support_state(time, pi, Support, Ref):
+        """
+        Initialize the previewed state
+
+        Parameters
+        ----------
+
+        time: float
+            current time
+
+        pi: float
+            Number of (p)reviewed sampling (i)nstant inside the preview period
+
+        Support: str
+            current support foot state
+
+        Ref: numpy.ndarray((3,), dtype=float)
+            new reference velocity
         """
 
-        self._states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
-        self.state = 'D'
-        self.sl = sl
+        Support.StateChanged = False
+        Support.NbInstants  += 1
 
-    def transition(self, transition):
-        err_str = 'transition {} not in FSM states ({})'.format(transition, self._states)
-        assert transition in self._states, err_str
+        ReferenceGiven = False
+        if fabs(Ref.Local.X)   > EPS_ \
+        or fabs(Ref.Local.Y)   > EPS_ \
+        or fabs(Ref.Local.Yaw) > EPS_:
+            ReferenceGiven = True
 
-        if self.state == 'D':
-            pass
+        # Update time limit for double support phase
+        if  ReferenceGiven and Support.Phase == DS \
+        and (Support.TimeLimit-time-EPS_) > DSSSPeriod_:
+            Support.TimeLimit = time+DSSSPeriod_
+            Support.NbStepsLeft = NbStepsSSDS_
+
+        # FSM
+        if time+EPS_+pi*T_ >= Support.TimeLimit:
+            # SS->DS
+            if  Support.Phase == SS  and not ReferenceGiven \
+            and Support.NbStepsLeft == 0:
+                Support.Phase = DS
+                Support.TimeLimit = time+pi*T_+DSPeriod_
+                Support.StateChanged = True
+                Support.NbInstants = 0
+
+        # DS->SS
+        elif ((Support.Phase == DS) and ReferenceGiven) \
+        or   ((Support.Phase == DS) and (Support.NbStepsLeft > 0)):
+            Support.Phase = SS
+            Support.TimeLimit = time+pi*T_+StepPeriod_
+            Support.NbStepsLeft = NbStepsSSDS_
+            Support.StateChanged = True
+            Support.NbInstants = 0
+
+        # SS->SS
+        elif (Support.Phase == SS and Support.NbStepsLeft > 0) \
+        or   (Support.NbStepsLeft == 0 and ReferenceGiven):
+            if Support.Foot == LEFT:
+                Support.Foot = RIGHT
+            else:
+              Support.Foot = LEFT
+
+            Support.StateChanged = True
+            Support.NbInstants = 0
+            Support.TimeLimit = time+pi*T_+StepPeriod_
+            # Flying foot is not down
+            if pi != 1:
+                Support.StepNumber += 1
+            if not ReferenceGiven:
+                Support.NbStepsLeft = Support.NbStepsLeft-1
+            if ReferenceGiven:
+                Support.NbStepsLeft = NbStepsSSDS_
 
 
 class BaseTypeSupportFoot(object):

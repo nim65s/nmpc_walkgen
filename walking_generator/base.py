@@ -258,8 +258,8 @@ class BaseGenerator(object):
         self.eqBfoot = numpy.zeros((2,), dtype=float)
 
         # security margins for CoP constraints
-        self.SecurityMarginX = SMx = 0.04
-        self.SecurityMarginY = SMy = 0.04
+        self.SecurityMarginX = SMx = 0.09
+        self.SecurityMarginY = SMy = 0.05
 
         # Position of the foot in the local foot frame
         self.nFootEdge    = 4
@@ -604,7 +604,6 @@ class BaseGenerator(object):
             A0[i,0] = sign * dx
             A0[i,1] = sign * dy
             B0[i] =   sign * dc
-
 
     def _calculate_support_order(self):
         # find correct initial support foot

@@ -465,6 +465,7 @@ class TestBaseGenerator(TestCase):
         assert_allclose(gen.dddC_k_y, 0.0)
         assert_allclose(gen.dddC_k_q, 0.0)
 
+
 if __name__ == '__main__':
     try:
         import nose

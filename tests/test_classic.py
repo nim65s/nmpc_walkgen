@@ -660,6 +660,55 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.F_k_y, F_k_y, rtol=RTOL, atol=ATOL)
             assert_allclose(gen.F_k_q, 0.0, rtol=RTOL, atol=ATOL)
 
+    def test_foot_angular_velocity_selection_matrices (self):
+        # instantiate pattern generator
+        gen = ClassicGenerator(fsm_state='L/R')
+
+        # Pattern Generator Preparation
+        # set reference velocities to zero
+        gen.dC_kp1_x_ref[...] = 0.2
+        gen.dC_kp1_y_ref[...] = 0.0
+        gen.dC_kp1_q_ref[...] = 0.0
+
+        gen.set_security_margin(0.04, 0.04)
+
+        # set initial values
+        comx = [0.06591456,0.07638739,-0.1467377]
+        comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+        comz = 0.814
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+        gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
+
+        assert_allclose(gen.E_F,     0.0)
+        assert_allclose(gen.E_F_bar, 0.0)
+
+        gen.simulate()
+
+        # Pattern Generator Event Loop
+        for i in range(160):
+            print 'iteration: ', i
+
+            # solve QP
+            gen.solve()
+
+            # initial value embedding by internal states and simulation
+            print [gen.currentSupport.foot] + [x.foot for x in gen.supportDeque]
+            print numpy.hstack((gen.v_kp1.reshape(gen.N,1), gen.V_kp1))
+            comx, comy, comz, footx, footy, footq, foot, comq= \
+            gen.update()
+            print [gen.currentSupport.foot] + [x.foot for x in gen.supportDeque]
+            print numpy.hstack((gen.v_kp1.reshape(gen.N,1), gen.V_kp1))
+            gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+            gen._update_foot_selection_matrices()
+            #print 'gen.E_FR\n', gen.E_FR
+            #print 'gen.E_FL\n', gen.E_FL
+            #print 'gen.E_FR_bar\n', gen.E_FR_bar
+            #print 'gen.E_FL_bar\n', gen.E_FL_bar
+            raw_input('press key: ')
+
+
 if __name__ == '__main__':
     try:
         import nose

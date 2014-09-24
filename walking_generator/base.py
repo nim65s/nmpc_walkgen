@@ -186,11 +186,6 @@ class BaseGenerator(object):
         self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
 
         # feet matrices
-
-        self.F_kp1_x = numpy.zeros((N,), dtype=float)
-        self.F_kp1_y = numpy.zeros((N,), dtype=float)
-        self.F_kp1_q = numpy.zeros((N,), dtype=float)
-
         # initial support foot positions and orientation
         # NOTE we assume the left foot to be the initial support foot
         self.f_k_x = 0.00949035
@@ -200,6 +195,37 @@ class BaseGenerator(object):
         self.F_k_x = numpy.zeros((self.nf,), dtype=float)
         self.F_k_y = numpy.zeros((self.nf,), dtype=float)
         self.F_k_q = numpy.zeros((self.nf,), dtype=float)
+
+        # states for the foot orientation
+
+        self.   f_k_qL = numpy.zeros((3,), dtype=float)
+        self.   f_k_qR = numpy.zeros((3,), dtype=float)
+
+        self.   F_k_qL = numpy.zeros((self.N,), dtype=float)
+        self.   F_k_qR = numpy.zeros((self.N,), dtype=float)
+
+        self.  dF_k_qL = numpy.zeros((self.N,), dtype=float)
+        self.  dF_k_qR = numpy.zeros((self.N,), dtype=float)
+
+        self. ddF_k_qL = numpy.zeros((self.N,), dtype=float)
+        self. ddF_k_qR = numpy.zeros((self.N,), dtype=float)
+
+        self.dddF_k_qL = numpy.zeros((self.N,), dtype=float)
+        self.dddF_k_qR = numpy.zeros((self.N,), dtype=float)
+
+        # foot angular velocity selection matrices objective
+        # E_F = ( E_FR    0 )
+        #       (    0 E_FL )
+
+        self.E_F  = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.E_FR = self.E_F[:self.N/2, :self.N]
+        self.E_FL = self.E_F[self.N/2:, self.N:]
+
+        # foot angular velocity selection matrices objective
+
+        self.E_F_bar  = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.E_FR_bar = self.E_F[:self.N/2, :]
+        self.E_FL_bar = self.E_F[self.N/2:, :]
 
         # zero moment point matrices
 
@@ -360,6 +386,25 @@ class BaseGenerator(object):
         self._initialize_convex_hull_systems()
 
         self.data = PlotData(self)
+
+    def _update_foot_selection_matrices(self):
+        """ update the foot selection matrices E_F and E_F_bar """
+        j = 0
+        for i,supp in enumerate(self.supportDeque):
+            if supp.foot == 'left':
+                self.E_F   [i,j] = 1.0
+                self.E_F_bar[i,j] = 0.0
+
+                self.E_F    [i,j+self.N] = 0.0
+                self.E_F_bar[i,j+self.N] = 1.0
+            else:
+                self.E_F    [i,j] = 0.0
+                self.E_F_bar[i,j] = 1.0
+
+                self.E_F    [i,j+self.N] = 1.0
+                self.E_F_bar[i,j+self.N] = 0.0
+
+            j += 1
 
     def _initialize_constant_matrices(self):
         """
@@ -615,6 +660,8 @@ class BaseGenerator(object):
             pair = "right"
             impair = "left"
 
+        print 'pair',   pair
+        print 'impair', impair
         timeLimit = self.supportDeque[0].timeLimit
 
         # define support feet for whole horizon
@@ -728,7 +775,8 @@ class BaseGenerator(object):
             self.f_k_y = foot_y
             self.f_k_q = foot_q
 
-            self._calculate_support_order()
+        # always recalculate support order
+        self._calculate_support_order()
 
         # update current CoP values
         # TODO any other ideas of where to get it?
@@ -793,6 +841,7 @@ class BaseGenerator(object):
         integrates model for given initial CoM states, jerks and feet positions
         and orientations by applying the linear time stepping scheme
         """
+        # get CoM states from jerks
         self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
         self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
         self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
@@ -805,6 +854,16 @@ class BaseGenerator(object):
         self. dC_kp1_q = self.Pvs.dot(self.c_k_q) + self.Pvu.dot(self.dddC_k_q)
         self.ddC_kp1_q = self.Pas.dot(self.c_k_q) + self.Pau.dot(self.dddC_k_q)
 
+        # get feet orientation states from feet jerks
+        self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
+        self. dF_kp1_qL = self.Pvs.dot(self.f_k_qL) + self.Pvu.dot(self.dddF_k_qL)
+        self.ddF_kp1_qL = self.Pas.dot(self.f_k_qL) + self.Pau.dot(self.dddF_k_qL)
+
+        self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
+        self. dF_kp1_qR = self.Pvs.dot(self.f_k_qR) + self.Pvu.dot(self.dddF_k_qR)
+        self.ddF_kp1_qR = self.Pas.dot(self.f_k_qR) + self.Pau.dot(self.dddF_k_qR)
+
+        # get ZMP states from jerks
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
 

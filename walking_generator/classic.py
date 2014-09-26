@@ -58,8 +58,10 @@ class ClassicGenerator(BaseGenerator):
 
         # FOR ORIENTATIONS
         # define dimensions
-        self.ori_nv = self.N + self.nf
-        self.ori_nc = 1
+        self.ori_nv = 2*self.N
+        self.ori_fvel = self.N # velocity constraints on support foot
+        self.ori_facc = self.N # acceleration constraints on support foot
+        self.ori_nc = self.ori_fvel# + self.ori_facc
 
         # setup problem
         self.ori_dofs = numpy.zeros(self.ori_nv)
@@ -103,8 +105,10 @@ class ClassicGenerator(BaseGenerator):
         analyser = SolutionAnalysis()
 
         # dummy matrices
-        self._Q = numpy.zeros((self.N + self.nf, self.N + self.nf))
-        self._p = numpy.zeros((self.N + self.nf,))
+        self._ori_Q = numpy.zeros((2*self.N, 2*self.N))
+        self._ori_p = numpy.zeros((2*self.N,))
+        self._pos_Q = numpy.zeros((self.N + self.nf, self.N + self.nf))
+        self._pos_p = numpy.zeros((self.N + self.nf,))
 
     def solve(self):
         """ Process and solve problem, s.t. pattern generator data is consistent """
@@ -126,8 +130,8 @@ class ClassicGenerator(BaseGenerator):
             # ori_dofs = ( dddC_kp1_q )
             #            (      F_k_q )
 
-            self.ori_dofs[:N]   = self.dddC_k_q
-            self.ori_dofs[-nf:] = self.F_k_q
+            self.ori_dofs[:N] = self.dddF_k_qR
+            self.ori_dofs[N:] = self.dddF_k_qL
 
             # TODO guess initial active set
             # this requires changes to the python interface
@@ -136,15 +140,28 @@ class ClassicGenerator(BaseGenerator):
 
         # H = ( Q_k_q )
         self._update_ori_Q() # updates values in _Q
-        self.ori_H  [:,:] = self._Q
+        self.ori_H  [:,:] = self._ori_Q
 
         # g = ( p_k_q )
         self._update_ori_p() # updates values in _p
-        self.ori_g  [:]   = self._p
+        self.ori_g  [:]   = self._ori_p
 
-        #self.ori_A  [...] = 0.0
-        #self.ori_lbA[...] = 0.0
-        #self.ori_ubA[...] = 0.0
+        # ORIENTATION LINEAR CONSTRAINTS
+        # velocity constraints on support foot to freeze movement
+        a = 0
+        b = self.ori_fvel
+        self.ori_A  [a:b] = self.A_fvel
+        self.ori_lbA[a:b] = self.B_fvel
+        self.ori_ubA[a:b] = self.B_fvel
+
+        # according constraints on support foot to freeze movement
+        #a = 0
+        #b = self.ori_fvel
+        #self.ori_A  [a:b] = self.A_facc
+        #self.ori_lbA[a:b] = self.B_facc
+        #self.ori_ubA[a:b] = self.B_facc
+
+        # ORIENTATION BOX CONSTRAINTS
         #self.ori_lb [...] = 0.0
         #self.ori_ub [...] = 0.0
 
@@ -172,15 +189,15 @@ class ClassicGenerator(BaseGenerator):
         # H = ( Q_k   0 )
         #     (   0 Q_k )
         self._update_pos_Q() # updates values in _Q
-        self.pos_H  [ :N+nf,  :N+nf] = self._Q
-        self.pos_H  [-N-nf:, -N-nf:] = self._Q
+        self.pos_H  [ :N+nf,  :N+nf] = self._pos_Q
+        self.pos_H  [-N-nf:, -N-nf:] = self._pos_Q
 
         # g = ( p_k_x )
         #     ( p_k_y )
         self._update_pos_p('x') # updates values in _p
-        self.pos_g  [ :N+nf] = self._p
+        self.pos_g  [ :N+nf] = self._pos_p
         self._update_pos_p('y') # updates values in _p
-        self.pos_g  [-N-nf:] = self._p
+        self.pos_g  [-N-nf:] = self._pos_p
 
         # lbA <= A x <= ubA
         # () <= (    Acop ) <= (    Bcop )
@@ -216,8 +233,10 @@ class ClassicGenerator(BaseGenerator):
         '''
         Update Hessian block Q according to walking report
 
-        Q = ( a*Pvu*Pvu + b*PpuT*ET*E*Ppu + c*Ppu*Ppu, -c*Ppu*V_kp1  )
-            (                            -c*Ppu*V_kp1, c*V_kp1*V_kp1 )
+        min a/2 || dC_kp1_q_ref - dF_k_q ||_2^2
+        Q = ( QR  0 )
+            (  0 QL )
+        QR = ( a * Pvu^T * E_FR^T * E_FR * Pvu )
         '''
         # rename for convenience
         N  = self.N
@@ -229,46 +248,35 @@ class ClassicGenerator(BaseGenerator):
         gamma = self.c
         delta = self.d
 
-        # cast matrices for convenience
-        E     = numpy.asmatrix(self.E)
-        Ppu   = numpy.asmatrix(self.Ppu)
-        Pvu   = numpy.asmatrix(self.Pvu)
-        Pzu   = numpy.asmatrix(self.Pzu)
-        V_kp1 = numpy.asmatrix(self.V_kp1)
+        # matrices
+        E_FR = self.E_FR
+        E_FL = self.E_FL
 
-        # Q = ([*], * ) = a*Pvu*Pvu + b*Ppu*E*E*Ppu + c*Ppu*Ppu
-        #     ( * , * )
+        Pvu = self.Pvu
+
+        # assemble Hessian matrix
+        # QR = ( a * Pvu^T * E_FR^T * E_FR * Pvu )
         a = 0; b = N
         c = 0; d = N
-        self._Q[a:b,c:d] = alpha * Pvu.transpose() * Pvu \
-                         + gamma * Ppu.transpose() * Ppu
-                        #+ b * Ppu.transpose() * E.transpose() * E * Ppu \
+        QR = self._ori_Q[a:b,c:d]
+        QR[...] = alpha * Pvu.transpose().dot(E_FR.transpose()).dot(E_FR).dot(Pvu)
 
-        # Q = ( * ,[*])
-        #     ( * , * )
-        a = 0; b = N
-        c = N; d = N+nf
-        self._Q[a:b,c:d] = -gamma * Ppu.transpose() * V_kp1
-
-        # Q = (  * , * ) = ( * , [*] )^T
-        #     ( [*], * )   ( * ,  *  )
-        dummy = self._Q[a:b,c:d]
-        a = N; b = N+nf
-        c = 0; d = N
-        self._Q[a:b,c:d] = dummy.transpose()
-
+        # QL = ( a * Pvu^T * E_FL^T * E_FL * Pvu )
         # Q = ( * , * )
         #     ( * ,[*])
-        a = N; b = N+nf
-        c = N; d = N+nf
-        self._Q[a:b,c:d] = gamma * V_kp1.transpose() * V_kp1
+        a = N; b = 2*N
+        c = N; d = 2*N
+        QL = self._ori_Q[a:b,c:d]
+        QL[...] = alpha * Pvu.transpose().dot(E_FL.transpose()).dot(E_FL).dot(Pvu)
 
     def _update_ori_p(self):
         """
         Update pass gradient block p according to walking report
 
-        p = ( a*Pvu*(Pvs*ck - Refk+1) + b*Ppu*E*(E*Pps*cx - Refk+1) + c*Ppu*(Pps*ck - vk+1*fk )
-            (                                                       -c*Vk+1*(Pps*ck - vk+1*fk )
+        min a/2 || dC_kp1_q_ref - dF_k_q ||_2^2
+        p = ( pR )
+            ( pL )
+        pR = ( a * Pvu^T * E_FR^T * (E_FR * Pvs * f_k_qR - dC_kp1_q_ref[N/2] )
         """
         # rename for convenience
         N  = self.N
@@ -280,35 +288,29 @@ class ClassicGenerator(BaseGenerator):
         gamma = self.c
 
         # matrices
-        f_k        = self.f_k_q
-        c_k        = utility.cast_array_as_matrix(self.c_k_q)
-        dC_kp1_ref = utility.cast_array_as_matrix(self.dC_kp1_q_ref)
-        v_kp1      = utility.cast_array_as_matrix(self.v_kp1)
+        E_FR = self.E_FR
+        E_FL = self.E_FL
 
-        E     = numpy.asmatrix(self.E)
-        Pvs   = numpy.asmatrix(self.Pvs)
-        Pvu   = numpy.asmatrix(self.Pvu)
-        Pps   = numpy.asmatrix(self.Pps)
-        Ppu   = numpy.asmatrix(self.Ppu)
-        Pzs   = numpy.asmatrix(self.Pzs)
-        Pzu   = numpy.asmatrix(self.Pzu)
-        V_kp1 = numpy.asmatrix(self.V_kp1)
+        f_k_qR = self.f_k_qR
+        f_k_qL = self.f_k_qL
 
+        Pvs   = self.Pvs
+        Pvu   = self.Pvu
+
+        dC_kp1_q_ref = self.dC_kp1_q_ref
+
+        # pR = ( a * Pvu^T * E_FL^T * (E_FL * Pvs * f_k_qL + dC_kp1_q_ref) )
         # p = ([*]) =
         #     ( * )
         a = 0; b = N
-        self._p[a:b] = (
-              alpha * Pvu.transpose() * (Pvs*c_k - dC_kp1_ref)
-            + gamma * Ppu.transpose() * (Pps*c_k - v_kp1*f_k)
-            #+ b*Ppu.transpose() * E.transpose() * E * Ppu \
-        ).ravel()
+        self._ori_p[a:b] = \
+            alpha * Pvu.transpose().dot(E_FR.transpose()).dot(E_FR.dot(Pvs).dot(f_k_qR) - dC_kp1_q_ref)
 
         # p = ( * ) =
         #     ([*])
-        a = N; b = N+nf
-        self._p[a:b] = (
-            -gamma * V_kp1.transpose() * (Pps*c_k - v_kp1*f_k)
-        ).ravel()
+        a = N; b = 2*N
+        self._ori_p[a:b] = \
+            alpha * Pvu.transpose().dot(E_FL.transpose()).dot(E_FL.dot(Pvs).dot(f_k_qL) - dC_kp1_q_ref)
 
     def _update_pos_Q(self):
         '''
@@ -328,7 +330,6 @@ class ClassicGenerator(BaseGenerator):
         delta = self.d
 
         # cast matrices for convenience
-        E     = numpy.asmatrix(self.E)
         Ppu   = numpy.asmatrix(self.Ppu)
         Pvu   = numpy.asmatrix(self.Pvu)
         Pzu   = numpy.asmatrix(self.Pzu)
@@ -338,29 +339,28 @@ class ClassicGenerator(BaseGenerator):
         #     ( * , * )
         a = 0; b = N
         c = 0; d = N
-        self._Q[a:b,c:d] = alpha * Pvu.transpose() * Pvu \
+        self._pos_Q[a:b,c:d] = alpha * Pvu.transpose() * Pvu \
                          + gamma * Pzu.transpose() * Pzu \
                          + delta * numpy.eye(N)
-                         #+ beta * Ppu.transpose() * E.transpose() * E * Ppu \
 
         # Q = ( * ,[*])
         #     ( * , * )
         a = 0; b = N
         c = N; d = N+nf
-        self._Q[a:b,c:d] = -gamma * Pzu.transpose() * V_kp1
+        self._pos_Q[a:b,c:d] = -gamma * Pzu.transpose() * V_kp1
 
         # Q = (  * , * ) = ( * , [*] )^T
         #     ( [*], * )   ( * ,  *  )
-        dummy = self._Q[a:b,c:d]
+        dummy = self._pos_Q[a:b,c:d]
         a = N; b = N+nf
         c = 0; d = N
-        self._Q[a:b,c:d] = dummy.transpose()
+        self._pos_Q[a:b,c:d] = dummy.transpose()
 
         # Q = ( * , * )
         #     ( * ,[*])
         a = N; b = N+nf
         c = N; d = N+nf
-        self._Q[a:b,c:d] = gamma * V_kp1.transpose() * V_kp1
+        self._pos_Q[a:b,c:d] = gamma * V_kp1.transpose() * V_kp1
 
     def _update_pos_p(self, case=None):
         """
@@ -396,7 +396,6 @@ class ClassicGenerator(BaseGenerator):
         # matrices
         v_kp1 = utility.cast_array_as_matrix(self.v_kp1)
 
-        E     = numpy.asmatrix(self.E)
         Pvs   = numpy.asmatrix(self.Pvs)
         Pvu   = numpy.asmatrix(self.Pvu)
         Pps   = numpy.asmatrix(self.Pps)
@@ -408,7 +407,7 @@ class ClassicGenerator(BaseGenerator):
         # p = ([*]) =
         #     ( * )
         a = 0; b = N
-        self._p[a:b] = (
+        self._pos_p[a:b] = (
               alpha * Pvu.transpose() *(Pvs*c_k - dC_kp1_ref)
             + gamma * Pzu.transpose() *(Pzs*c_k - v_kp1*f_k)
             #+ b*Ppu.transpose() * E.transpose() * E * Ppu \
@@ -417,7 +416,7 @@ class ClassicGenerator(BaseGenerator):
         # p = ( * ) =
         #     ([*])
         a = N; b = N+nf
-        self._p[a:b] = (
+        self._pos_p[a:b] = (
             -gamma * V_kp1.transpose() * (Pzs*c_k - v_kp1*f_k)
         ).ravel()
 
@@ -469,11 +468,11 @@ class ClassicGenerator(BaseGenerator):
         self.ori_qp.getPrimalSolution(self.ori_dofs)
 
         # extract dofs
-        # ori_dofs = ( dddC_kp1_q )
-        #            (      F_k_q )
+        # ori_dofs = ( dddF_k_qR )
+        #            ( dddF_k_qL )
 
-        self.dddC_k_q[:] = self.ori_dofs[:N]
-        self.F_k_q[:]    = self.ori_dofs[-nf:]
+        self.dddF_k_qR[:] = self.ori_dofs[:N]
+        self.dddF_k_qL[:] = self.ori_dofs[N:]
 
         # position primal solution
         self.pos_qp.getPrimalSolution(self.pos_dofs)

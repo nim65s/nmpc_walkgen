@@ -4,6 +4,8 @@
 *.orig
 *~
 *.json
+*.png
+*.pdf
 
 LeftFootBuffer
 RightFootBuffer

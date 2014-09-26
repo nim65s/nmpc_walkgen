@@ -94,8 +94,8 @@ class FiniteStateMachine(object):
         # Check if he is still in motion
         else:
             if self.InRotation_ and not self.InTranslation_:
-                Ref.Local.X = 2*self.EPS_
-                Ref.Local.Y = 2*self.EPS_
+                Ref.Local.X = 2*self.EPS_ # @Max: why does it change velocity?
+                Ref.Local.Y = 2*self.EPS_ #       that it's set to InTranslation_ ?
                 if not self.PostRotationPhase_:
                     self.CurrentSupportFoot_ = CurrentSupport.Foot
                     self.NbStepsAfterRotation_ = 0
@@ -168,10 +168,10 @@ class FiniteStateMachine(object):
         # SS->SS
         elif (Support.Phase == SS and Support.NbStepsLeft > 0) \
         or   (Support.NbStepsLeft == 0 and ReferenceGiven):
-            if Support.Foot == LEFT:
-                Support.Foot = RIGHT
+            if Support.Foot == 'left':
+                Support.Foot = 'right'
             else:
-              Support.Foot = LEFT
+              Support.Foot = 'left'
 
             Support.StateChanged = True
             Support.NbInstants = 0

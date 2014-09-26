@@ -91,16 +91,15 @@ class TestClassicGenerator(TestCase):
         gen.ori_lb[...] = -numpy.ones((gen.ori_nv,))*0.5
         gen.ori_ub[...] =  numpy.ones((gen.ori_nv,))*0.5
 
-        gen.ori_A[...]   = numpy.eye(gen.ori_nc, gen.ori_nc) + numpy.eye(gen.ori_nc, gen.ori_nv, k=1)
+        gen.ori_A[...]   = numpy.eye(gen.ori_nc, gen.ori_nv) + numpy.eye(gen.ori_nc, gen.ori_nv, k=1)
         gen.ori_lbA[...] = -numpy.ones((gen.ori_nc,))
         gen.ori_ubA[...] =  numpy.ones((gen.ori_nc,))
 
         # define solution
-        ori_x = -numpy.ones((gen.ori_nv,))*0.11764706
-        ori_x[gen.ori_nc] = 0.5
+        ori_x = -numpy.ones((gen.ori_nv,))*0.5
+        ori_f = -12.0
         pos_x = -numpy.ones((gen.pos_nv,))*0.5
         pos_f = -13.5
-        ori_f = -1.2573529411764695
 
         # test first qp solution
         gen._solve_qp()
@@ -659,6 +658,7 @@ class TestClassicGenerator(TestCase):
             assert_allclose(gen.F_k_x, F_k_x, rtol=RTOL, atol=ATOL)
             assert_allclose(gen.F_k_y, F_k_y, rtol=RTOL, atol=ATOL)
             assert_allclose(gen.F_k_q, 0.0, rtol=RTOL, atol=ATOL)
+
 
 if __name__ == '__main__':
     try:

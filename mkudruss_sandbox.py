@@ -1,4 +1,7 @@
+import os, sys
 import time
+import numpy
+numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
 
@@ -14,7 +17,7 @@ plot = Plotter(gen, show_canvas, save_to_file)
 # set reference velocities to zero
 gen.dC_kp1_x_ref[...] = 0.1
 gen.dC_kp1_y_ref[...] = 0.1
-gen.dC_kp1_q_ref[...] = 0.0
+gen.dC_kp1_q_ref[...] = 0.05
 
 gen.set_security_margin(0.04, 0.04)
 
@@ -35,20 +38,41 @@ for i in range(160):
     print 'iteration: ', i
 
     if 50 <= i < 100:
-        gen.dC_kp1_x_ref[...] =  0.2
+        gen.dC_kp1_x_ref[...] =  0.1
         gen.dC_kp1_y_ref[...] =  0.0
-        gen.dC_kp1_q_ref[...] =  0.0
+        gen.dC_kp1_q_ref[...] = -0.05
     if 100 <= i < 130:
         gen.dC_kp1_x_ref[...] =  0.0
         gen.dC_kp1_y_ref[...] = -0.2
-        gen.dC_kp1_q_ref[...] =  0.0
+        gen.dC_kp1_q_ref[...] = -0.1
     if 130 <= i:
         gen.dC_kp1_x_ref[...] = -0.3
         gen.dC_kp1_y_ref[...] =  0.0
-        gen.dC_kp1_q_ref[...] =  0.0
+        gen.dC_kp1_q_ref[...] =  0.15
+
+    gen.dddC_k_q  [...] = 1.0
+    gen.dddF_k_qL [...] = 1.0
+    gen.dddF_k_qR [...] = 1.0
 
     # solve QP
     gen.solve()
+    gen.simulate()
+
+    #print 'gen.E_F\n', gen.E_F
+    #print 'gen.E_F_bar\n', gen.E_F_bar
+    #print 'gen.A_rot_eq\n',   gen.A_rot_eq
+    #print 'gen.B_rot_eq\n',   gen.B_rot_eq
+    #print 'gen.A_rot_ineq\n', gen.A_rot_ineq
+    #print 'gen.B_rot_ineq\n', gen.B_rot_ineq
+
+    #print 'gen._ori_Q:\n',    gen._ori_Q
+    #print 'gen._ori_p:\n',    gen._ori_p
+    #print 'gen.F_kp1_q:\n',   gen.F_kp1_q
+    #print 'gen.F_k_q:\n',     gen.F_k_q
+    #print 'gen.F_kp1_qL:\n',  gen.F_kp1_qL
+    #print 'gen.F_kp1_qR:\n',  gen.F_kp1_qR
+    #print 'gen.dddF_k_qL:\n', gen.dddF_k_qL
+    #print 'gen.dddF_k_qR:\n', gen.dddF_k_qR
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \

@@ -900,7 +900,16 @@ class BaseGenerator(object):
         self.ddF_kp1_qR = self.Pas.dot(self.f_k_qR) + self.Pau.dot(self.dddF_k_qR)
 
         # get support foot orientation
-        #self.F_kp1_q = self.E_FR_bar.dot(F_)
+        self.F_kp1_q = self.E_FR_bar.dot(self.F_kp1_qR) \
+                     + self.E_FL_bar.dot(self.F_kp1_qL)
+
+        for j in range(self.nf):
+            for i in range(self.N):
+                if self.V_kp1[i,j] != 0:
+                    self.F_k_q[j] = self.F_kp1_q[i]
+                    break
+            else:
+                self.F_k_q[j] = 0.0
 
         # get ZMP states from jerks
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
@@ -1079,7 +1088,6 @@ class BaseGenerator(object):
 
     def buildFootRotationConstraints(self):
         """ constraints that freeze foot orientation for support leg """
-        print 'buildRotEqConstraint'
         # 0 = E_F_bar * dF_k_q
         # <=>
         # ( 0 ) = ( E_FR_bar        0 ) * ( Pvs * f_k_qR + Pvu * dddF_k_qR )
@@ -1142,7 +1150,6 @@ class BaseGenerator(object):
 
     def buildRotIneqConstraint(self):
         """ constraints on relative angular velocity """
-        print 'buildRotIneqConstraint'
         raise NotImplementedError
         A_rot_ineq_R = self.A_rot_ineq[:self.N/2, :self.N]
         A_rot_ineq_L = self.A_rot_ineq[self.N/2:, self.N:]

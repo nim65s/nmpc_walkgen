@@ -932,7 +932,9 @@ class BaseGenerator(object):
         # for every time instant in the pattern generator constraints
         # depend on the support order
         for i in range(self.N):
+
             if self.supportDeque[i].foot == "left" :
+                rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
                 A0 = self.A0lf
                 B0 = self.ubB0lf
                 D0 = self.A0dlf

@@ -685,7 +685,6 @@ class BaseGenerator(object):
         timeLimit = self.supportDeque[0].timeLimit
 
         # define support feet for whole horizon
-        print "self.supportDeque[i].ds"
         for i in range(self.N):
             if self.v_kp1[i] == 1:
                 self.supportDeque[i].foot = self.currentSupport.foot
@@ -704,8 +703,6 @@ class BaseGenerator(object):
                 timeLimit = self.currentTime + self.T_step
 
             self.supportDeque[i].timeLimit = timeLimit
-            print self.supportDeque[i].ds , self.supportDeque[i].stepNumber
-        print "END self.supportDeque[i].ds"
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
         """

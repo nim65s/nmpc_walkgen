@@ -375,10 +375,12 @@ class BaseGenerator(object):
         self.B_facc_eq = numpy.zeros((self.N,), dtype=float)
 
         self.A_fpos_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fpos_ineq = numpy.zeros((self.N,), dtype=float)
+        self.ubB_fpos_ineq = numpy.zeros((self.N,), dtype=float)
+        self.lbB_fpos_ineq = numpy.zeros((self.N,), dtype=float)
 
         self.A_fvel_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fvel_ineq = numpy.zeros((self.N,), dtype=float)
+        self.ubB_fvel_ineq = numpy.zeros((self.N,), dtype=float)
+        self.lbB_fvel_ineq = numpy.zeros((self.N,), dtype=float)
 
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
@@ -930,7 +932,7 @@ class BaseGenerator(object):
         self.buildFootEqConstraint()
         self.buildFootIneqConstraint()
         self.buildFootRotationConstraints()
-        #self.buildRotIneqConstraint()
+        self.buildRotIneqConstraint()
 
     def _update_cop_constraint_transformation(self):
         """ update foot constraint transformation matrices. """
@@ -1135,33 +1137,40 @@ class BaseGenerator(object):
     def buildRotIneqConstraint(self):
         """ constraints on relative angular velocity """
         # rename for convenience
-        A_fpos_ineq_R = self.A_fpos_ineq[:, :self.N]
-        A_fpos_ineq_L = self.A_fpos_ineq[:, self.N:]
-        B_fpos_ineq   = self.B_fpos_ineq
+        A_fpos_ineq   = self.A_fpos_ineq
+        A_fpos_ineq_R = A_fpos_ineq[:, :self.N]
+        A_fpos_ineq_L = A_fpos_ineq[:, self.N:]
+        ubB_fpos_ineq = self.ubB_fpos_ineq
+        lbB_fpos_ineq = self.lbB_fpos_ineq
 
-        A_fvel_ineq_R = self.A_fvel_ineq[:, :self.N]
-        A_fvel_ineq_L = self.A_fvel_ineq[:, self.N:]
-        B_fvel_ineq   = self.B_fvel_ineq
+        A_fvel_ineq   = self.A_fvel_ineq
+        A_fvel_ineq_R = A_fvel_ineq[:, :self.N]
+        A_fvel_ineq_L = A_fvel_ineq[:, self.N:]
+        ubB_fvel_ineq = self.ubB_fvel_ineq
+        lbB_fvel_ineq = self.lbB_fvel_ineq
 
         # calculate proper selection matrices
         self._update_foot_selection_matrices()
 
         # build foot position constraints
-        A_fvel_eq_R[...] = self.E_FR_bar.dot(self.Pvu)
-        A_fvel_eq_L[...] = self.E_FL_bar.dot(self.Pvu)
+        # || F_kp1_qR - F_kp1_qL ||_2^2 <= 0.09 ~ 5 degrees
+        # <=>
+        # -0.09 <= F_kp1_qR - F_kp1_qL <= 0.09
+        # -0.09 - Pps(f_k_qR - f_k_qL) <= Ppu * ( 1 | -1 ) U_k <= 0.09 - Pps(f_k_qR - f_k_qL)
+        A_fpos_ineq_R[...] =  numpy.eye(self.N)
+        A_fpos_ineq_L[...] = -numpy.eye(self.N)
+        A_fpos_ineq[...]   = self.Ppu.dot(A_fpos_ineq)
 
-        B_fvel_eq[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
-                           -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
+        ubB_fpos_ineq[...] =  0.09 - self.Pps.dot(self.f_k_qR - self.f_k_qL)
+        lbB_fpos_ineq[...] = -0.09 - self.Pps.dot(self.f_k_qR - self.f_k_qL)
 
         # build foot velocity constraints
-        A_fvel_eq_R[...] = self.E_FR_bar.dot(self.Pvu)
-        A_fvel_eq_L[...] = self.E_FL_bar.dot(self.Pvu)
+        A_fvel_ineq_R[...] =  numpy.eye(self.N)
+        A_fvel_ineq_L[...] = -numpy.eye(self.N)
+        A_fvel_ineq[...]   = self.Pvu.dot(A_fvel_ineq)
 
-        B_fvel_eq[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
-                           -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
-
-    def buildOriConstraints():
-        raise NotImplementedError
+        ubB_fvel_ineq[...] =  0.2 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
+        lbB_fvel_ineq[...] = -0.2 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
 
     def solve(self):
         """

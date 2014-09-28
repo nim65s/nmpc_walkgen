@@ -156,21 +156,19 @@ class ClassicGenerator(BaseGenerator):
         self.ori_lbA[a:b] = self.B_fvel_eq
         self.ori_ubA[a:b] = self.B_fvel_eq
 
-        """
         # box constraints for maximum orientation change
-        a = self.ori_fvel
-        b = self.ori_fvel + self.ori_fpos_ineq
+        a = self.ori_fvel_eq
+        b = self.ori_fvel_eq + self.ori_fpos_ineq
         self.ori_A  [a:b] = self.A_fpos_ineq
-        self.ori_lbA[a:b] = self.B_fpos_ineq
-        self.ori_ubA[a:b] = self.B_fpos_ineq
+        self.ori_lbA[a:b] = self.lbB_fpos_ineq
+        self.ori_ubA[a:b] = self.ubB_fpos_ineq
 
         # box constraints for maximum angular velocity
-        a = self.ori_fvel + self.ori_fpos_ineq
-        b = self.ori_fvel + self.ori_fpos_ineq + self.ori_fvel_ineq
+        a = self.ori_fvel_eq + self.ori_fpos_ineq
+        b = self.ori_fvel_eq + self.ori_fpos_ineq + self.ori_fvel_ineq
         self.ori_A  [a:b] = self.A_fvel_ineq
-        self.ori_lbA[a:b] = self.B_fvel_ineq
-        self.ori_ubA[a:b] = self.B_fvel_ineq
-        """
+        self.ori_lbA[a:b] = self.lbB_fvel_ineq
+        self.ori_ubA[a:b] = self.ubB_fvel_ineq
 
         # ORIENTATION BOX CONSTRAINTS
         #self.ori_lb [...] = 0.0

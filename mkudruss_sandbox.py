@@ -22,8 +22,8 @@ gen.dC_kp1_q_ref[...] = -0.2
 gen.set_security_margin(0.04, 0.04)
 
 # set initial values
-comx = [0.06591456,0.07638739,-0.1467377]
-comy = [2.49008564e-02,6.61665254e-02,6.72712187e-01]
+comx = [0.00949035, 0.0, 0.0]
+comy = [0.095,      0.0, 0.0]
 comz = 0.814
 footx = 0.00949035
 footy = 0.095
@@ -81,7 +81,7 @@ for i in range(160):
     plot.update()
 
     #raw_input('press key:')
-    time.sleep(0.1)
+    #time.sleep(0.1)
 
 gen.data.save_to_file('./data.json')
 

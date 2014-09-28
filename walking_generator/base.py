@@ -685,6 +685,7 @@ class BaseGenerator(object):
         timeLimit = self.supportDeque[0].timeLimit
 
         # define support feet for whole horizon
+        print "self.supportDeque[i].ds"
         for i in range(self.N):
             if self.v_kp1[i] == 1:
                 self.supportDeque[i].foot = self.currentSupport.foot
@@ -698,12 +699,13 @@ class BaseGenerator(object):
                             self.supportDeque[i].foot = impair
 
             if i > 0 :
-                self.supportDeque[i].ds = self.supportDeque[i  ].stepNumber \
-                                        - self.supportDeque[i-1].stepNumber
+                self.supportDeque[i].ds = self.supportDeque[i].stepNumber - self.supportDeque[i-1].stepNumber
             if self.supportDeque[i].ds == 1 :
                 timeLimit = self.currentTime + self.T_step
 
             self.supportDeque[i].timeLimit = timeLimit
+            print self.supportDeque[i].ds , self.supportDeque[i].stepNumber
+        print "END self.supportDeque[i].ds"
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
         """
@@ -806,7 +808,7 @@ class BaseGenerator(object):
         self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
         self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
 
-        # rebuild CoP constraints
+        # rebuild all constraints
         self.buildConstraints()
 
     def update(self):
@@ -866,6 +868,12 @@ class BaseGenerator(object):
         f_k_qL[1] = self. dF_kp1_qL[0]
         f_k_qL[2] = self.ddF_kp1_qL[0]
         self.f_k_qL[...] = f_k_qL
+
+        if self.currentSupport.foot == "left" :
+            self.f_k_q = self.f_k_qL[0]
+        else :
+            self.f_k_q = self.f_k_qR[0]
+        self.currentSupport.theta = self.f_k_q
 
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
 
@@ -929,20 +937,21 @@ class BaseGenerator(object):
 
     def _update_cop_constraint_transformation(self):
         """ update foot constraint transformation matrices. """
-        # for every time instant in the pattern generator constraints
+        # every time instant in the pattern generator constraints
         # depend on the support order
+        theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
         for i in range(self.N):
-
+            theta = theta_vec[self.supportDeque[i].stepNumber]
+            rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
             if self.supportDeque[i].foot == "left" :
-                rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
-                A0 = self.A0lf
+                A0 = self.A0lf.dot(rotMat)
                 B0 = self.ubB0lf
-                D0 = self.A0dlf
+                D0 = self.A0dlf.dot(rotMat)
                 d0 = self.ubB0dlf
             else :
-                A0 = self.A0rf
+                A0 = self.A0rf.dot(rotMat)
                 B0 = self.ubB0rf
-                D0 = self.A0drf
+                D0 = self.A0drf.dot(rotMat)
                 d0 = self.ubB0drf
 
             # get support foot and check if it is double support
@@ -1039,33 +1048,30 @@ class BaseGenerator(object):
 
         NOTE: needs actual self.supportFoot to work properly
         """
-
         # inequality constraint on both feet A u + B <= 0
         # A0 R(theta) [Fx_k+1 - Fx_k] <= ubB0
         #             [Fy_k+1 - Fy_k]
 
         matSelec = numpy.array([ [1, 0],[-1, 1] ])
         footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])
-        theta = self.currentSupport.theta
+        theta_vec = [self.f_k_q,self.F_k_q[0]]
 
         # rotation matrice from F_k+1 to F_k
-        rotMat = numpy.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
+        rotMat1 = numpy.array([[cos(theta_vec[0]), sin(theta_vec[0])],[-sin(theta_vec[0]), cos(theta_vec[0])]])
+        rotMat2 = numpy.array([[cos(theta_vec[1]), sin(theta_vec[1])],[-sin(theta_vec[1]), cos(theta_vec[1])]])
         nf = self.nf
         nEdges = self.A0l.shape[0]
         N = self.N
         ncfoot = nf * nEdges
 
-        A0lrot = self.A0l.dot(rotMat)
-        A0rrot = self.A0r.dot(rotMat)
-
         if self.currentSupport.foot == "left":
-            A_f1 = A0rrot
-            A_f2 = A0lrot
+            A_f1 = self.A0r.dot(rotMat1)
+            A_f2 = self.A0l.dot(rotMat2)
             B_f1 = self.ubB0r
             B_f2 = self.ubB0l
         else :
-            A_f1 = A0lrot
-            A_f2 = A0rrot
+            A_f1 = self.A0l.dot(rotMat1)
+            A_f2 = self.A0r.dot(rotMat2)
             B_f1 = self.ubB0l
             B_f2 = self.ubB0r
 

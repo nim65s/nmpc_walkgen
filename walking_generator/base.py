@@ -368,20 +368,17 @@ class BaseGenerator(object):
         self.ubBcop = numpy.zeros((self.N*self.nFootEdge), dtype=float)
 
         # foot rotation constraints
-        self.A_fpos = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fpos = numpy.zeros((self.N,), dtype=float)
+        self.A_fvel_eq = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.B_fvel_eq = numpy.zeros((self.N,), dtype=float)
 
-        self.A_fvel = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fvel = numpy.zeros((self.N,), dtype=float)
+        self.A_facc_eq = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.B_facc_eq = numpy.zeros((self.N,), dtype=float)
 
-        self.A_facc = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_facc = numpy.zeros((self.N,), dtype=float)
+        self.A_fpos_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.B_fpos_ineq = numpy.zeros((self.N,), dtype=float)
 
-        self.A_fjer = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fjer = numpy.zeros((self.N,), dtype=float)
-
-        self.A_rot_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_rot_ineq = numpy.zeros((self.N,), dtype=float)
+        self.A_fvel_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
+        self.B_fvel_ineq = numpy.zeros((self.N,), dtype=float)
 
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
@@ -1115,64 +1112,53 @@ class BaseGenerator(object):
         # ( - E_FL_bar * Pvs * f_k_qL)
 
         # rename for convenience
-        A_fvel_R = self.A_fvel[:, :self.N]
-        A_fvel_L = self.A_fvel[:, self.N:]
-        B_fvel   = self.B_fvel
-
-        A_facc_R = self.A_facc[:, :self.N]
-        A_facc_L = self.A_facc[:, self.N:]
-        B_facc   = self.B_facc
-
-        A_fjer_R = self.A_fjer[:, :self.N]
-        A_fjer_L = self.A_fjer[:, self.N:]
-        B_fjer   = self.B_fjer
+        A_fvel_eq_R = self.A_fvel_eq[:, :self.N]
+        A_fvel_eq_L = self.A_fvel_eq[:, self.N:]
+        B_fvel_eq   = self.B_fvel_eq
 
         # calculate proper selection matrices
         self._update_foot_selection_matrices()
 
         # build foot angular velocity constraints
-        # A_fvel =
+        # A_fvel_eq =
         # (E_FR_bar * Pvu              0 ) * dddF_k_qR
         # (             0 E_FL_bar * Pvu ) * dddF_k_qL
-        # B_fvel =
+        # B_fvel_eq =
         # ( - E_FR_bar * Pvs * f_k_qR)
         # ( - E_FL_bar * Pvs * f_k_qL)
-        A_fvel_R[...] = self.E_FR_bar.dot(self.Pvu)
-        A_fvel_L[...] = self.E_FL_bar.dot(self.Pvu)
+        A_fvel_eq_R[...] = self.E_FR_bar.dot(self.Pvu)
+        A_fvel_eq_L[...] = self.E_FL_bar.dot(self.Pvu)
 
-        B_fvel[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
-                        -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
-
-        # build foot angular acceleration constraints
-        A_facc_R[...] = self.E_FR_bar.dot(self.Pau)
-        A_facc_L[...] = self.E_FL_bar.dot(self.Pau)
-
-        B_facc[...]   = -self.E_FR_bar.dot(self.Pas).dot(self.f_k_qR) \
-                        -self.E_FL_bar.dot(self.Pas).dot(self.f_k_qL)
-
-        # build foot angular jerk constraints
-        A_fjer_R[...] = self.E_FR_bar
-        A_fjer_L[...] = self.E_FL_bar
-
-        B_fjer[...]   = 0.0
+        B_fvel_eq[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
+                           -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
 
     def buildRotIneqConstraint(self):
         """ constraints on relative angular velocity """
-        raise NotImplementedError
-        A_rot_ineq_R = self.A_rot_ineq[:self.N/2, :self.N]
-        A_rot_ineq_L = self.A_rot_ineq[self.N/2:, self.N:]
-        B_rot_ineq_R = self.A_rot_ineq[:self.N/2]
-        B_rot_ineq_L = self.A_rot_ineq[self.N/2:]
+        # rename for convenience
+        A_fpos_ineq_R = self.A_fpos_ineq[:, :self.N]
+        A_fpos_ineq_L = self.A_fpos_ineq[:, self.N:]
+        B_fpos_ineq   = self.B_fpos_ineq
+
+        A_fvel_ineq_R = self.A_fvel_ineq[:, :self.N]
+        A_fvel_ineq_L = self.A_fvel_ineq[:, self.N:]
+        B_fvel_ineq   = self.B_fvel_ineq
 
         # calculate proper selection matrices
         self._update_foot_selection_matrices()
 
-        # build equations
-        A_rot_ineq_R[...] = self.E_FR_bar.dot(self.Pvu)
-        A_rot_ineq_L[...] = self.E_FL_bar.dot(self.Pvu)
+        # build foot position constraints
+        A_fvel_eq_R[...] = self.E_FR_bar.dot(self.Pvu)
+        A_fvel_eq_L[...] = self.E_FL_bar.dot(self.Pvu)
 
-        B_rot_ineq_R = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR)
-        B_rot_ineq_L = -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
+        B_fvel_eq[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
+                           -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
+
+        # build foot velocity constraints
+        A_fvel_eq_R[...] = self.E_FR_bar.dot(self.Pvu)
+        A_fvel_eq_L[...] = self.E_FL_bar.dot(self.Pvu)
+
+        B_fvel_eq[...]   = -self.E_FR_bar.dot(self.Pvs).dot(self.f_k_qR) \
+                           -self.E_FL_bar.dot(self.Pvs).dot(self.f_k_qL)
 
     def buildOriConstraints():
         raise NotImplementedError

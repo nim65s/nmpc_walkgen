@@ -59,9 +59,11 @@ class ClassicGenerator(BaseGenerator):
         # FOR ORIENTATIONS
         # define dimensions
         self.ori_nv = 2*self.N
-        self.ori_fvel = self.N # velocity constraints on support foot
-        self.ori_facc = self.N # acceleration constraints on support foot
-        self.ori_nc = self.ori_fvel# + self.ori_facc
+        self.ori_fvel_eq = self.N # velocity constraints on support foot
+        self.ori_fpos_ineq = self.N # maximum orientation change
+        self.ori_fvel_ineq = self.N # maximum angular velocity
+        self.ori_nc = self.ori_fvel_eq \
+                    + self.ori_fpos_ineq + self.ori_fvel_ineq
 
         # setup problem
         self.ori_dofs = numpy.zeros(self.ori_nv)
@@ -149,17 +151,26 @@ class ClassicGenerator(BaseGenerator):
         # ORIENTATION LINEAR CONSTRAINTS
         # velocity constraints on support foot to freeze movement
         a = 0
-        b = self.ori_fvel
-        self.ori_A  [a:b] = self.A_fvel
-        self.ori_lbA[a:b] = self.B_fvel
-        self.ori_ubA[a:b] = self.B_fvel
+        b = self.ori_fvel_eq
+        self.ori_A  [a:b] = self.A_fvel_eq
+        self.ori_lbA[a:b] = self.B_fvel_eq
+        self.ori_ubA[a:b] = self.B_fvel_eq
 
-        # according constraints on support foot to freeze movement
-        #a = 0
-        #b = self.ori_fvel
-        #self.ori_A  [a:b] = self.A_facc
-        #self.ori_lbA[a:b] = self.B_facc
-        #self.ori_ubA[a:b] = self.B_facc
+        """
+        # box constraints for maximum orientation change
+        a = self.ori_fvel
+        b = self.ori_fvel + self.ori_fpos_ineq
+        self.ori_A  [a:b] = self.A_fpos_ineq
+        self.ori_lbA[a:b] = self.B_fpos_ineq
+        self.ori_ubA[a:b] = self.B_fpos_ineq
+
+        # box constraints for maximum angular velocity
+        a = self.ori_fvel + self.ori_fpos_ineq
+        b = self.ori_fvel + self.ori_fpos_ineq + self.ori_fvel_ineq
+        self.ori_A  [a:b] = self.A_fvel_ineq
+        self.ori_lbA[a:b] = self.B_fvel_ineq
+        self.ori_ubA[a:b] = self.B_fvel_ineq
+        """
 
         # ORIENTATION BOX CONSTRAINTS
         #self.ori_lb [...] = 0.0

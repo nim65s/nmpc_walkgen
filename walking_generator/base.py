@@ -785,7 +785,7 @@ class BaseGenerator(object):
             self._initialize_cop_matrices()
 
         # update support foot if necessary
-        newSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot=foot)
+        newSupport = BaseTypeSupportFoot(x=foot_x, y=foot_y, theta=foot_q, foot=foot)
         if self.currentSupport != newSupport \
         or self.f_k_x != foot_x \
         or self.f_k_y != foot_y \

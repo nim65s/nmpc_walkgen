@@ -3,6 +3,8 @@ import numpy
 import utility
 
 from base import BaseGenerator
+from visualization import PlotData
+
 # Try to get qpOASES SQP Problem class
 try:
     from qpoases import PyOptions as Options
@@ -12,6 +14,7 @@ try:
 except ImportError:
     err_str = 'Please install qpOASES python interface, else you will not be able to use this pattern generator.'
     raise ImportError(err_str)
+
 
 class ClassicGenerator(BaseGenerator):
     """
@@ -50,8 +53,8 @@ class ClassicGenerator(BaseGenerator):
         # SQPProblem class, which supports this kind of QPs
 
         # define some qpOASES specific things
-        self.cpu_time = 0.0 # upper bound on CPU time, 0 is no upper limit
-        self.nwsr = 1000    # # of working set recalculations
+        self.cpu_time = 0.1 # upper bound on CPU time, 0 is no upper limit
+        self.nwsr = 100      # number of working set recalculations
         self.options = Options()
         self.options.setToMPC()
         self.options.printLevel = PrintLevel.LOW
@@ -80,6 +83,10 @@ class ClassicGenerator(BaseGenerator):
 
         self._ori_qp_is_initialized = False
 
+        # save computation time and working set recalculations
+        self.ori_qp_nwsr    = 0.0
+        self.ori_qp_cputime = 0.0
+
         # FOR POSITIONS
         # define dimensions
         self.pos_nv = 2*(self.N + self.nf)
@@ -103,14 +110,24 @@ class ClassicGenerator(BaseGenerator):
 
         self._pos_qp_is_initialized = False
 
-        # setup analyzer for solution analysis
-        analyser = SolutionAnalysis()
+        # save computation time and working set recalculations
+        self.pos_qp_nwsr    = 0.0
+        self.pos_qp_cputime = 0.0
 
         # dummy matrices
         self._ori_Q = numpy.zeros((2*self.N, 2*self.N))
         self._ori_p = numpy.zeros((2*self.N,))
         self._pos_Q = numpy.zeros((self.N + self.nf, self.N + self.nf))
         self._pos_p = numpy.zeros((self.N + self.nf,))
+
+        # add additional keys that should be saved
+        self._data_keys.append('ori_qp_nwsr')
+        self._data_keys.append('ori_qp_cputime')
+        self._data_keys.append('pos_qp_nwsr')
+        self._data_keys.append('pos_qp_cputime')
+
+        # reinitialize plot data structure
+        self.data = PlotData(self)
 
     def solve(self):
         """ Process and solve problem, s.t. pattern generator data is consistent """
@@ -435,7 +452,7 @@ class ClassicGenerator(BaseGenerator):
         """
         #sys.stdout.write('Solve for orientations:\n')
         if not self._ori_qp_is_initialized:
-            self.ori_qp.init(
+            ret, nwsr, cputime = self.ori_qp.init(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
@@ -443,16 +460,20 @@ class ClassicGenerator(BaseGenerator):
             )
             self._ori_qp_is_initialized = True
         else:
-            self.ori_qp.hotstart(
+            ret, nwsr, cputime = self.ori_qp.hotstart(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
                 self.nwsr, self.cpu_time
             )
 
+        # save qp solver data
+        self.ori_qp_nwsr    = nwsr          # working set recalculations
+        self.ori_qp_cputime = cputime*1000. # in milliseconds
+
         #sys.stdout.write('Solve for positions:\n')
         if not self._pos_qp_is_initialized:
-            self.pos_qp.init(
+            ret, nwsr, cputime = self.pos_qp.init(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
@@ -460,12 +481,16 @@ class ClassicGenerator(BaseGenerator):
             )
             self._pos_qp_is_initialized = True
         else:
-            self.pos_qp.hotstart(
+            ret, nwsr, cputime = self.pos_qp.hotstart(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
                 self.nwsr, self.cpu_time
             )
+
+        # save qp solver data
+        self.pos_qp_nwsr    = nwsr          # working set recalculations
+        self.pos_qp_cputime = cputime*1000. # in milliseconds
 
     def _postprocess_solution(self):
         """ Get solution and put it back into generator data structures """

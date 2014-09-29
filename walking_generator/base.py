@@ -20,7 +20,7 @@ class BaseGenerator(object):
     g = 9.81
 
     # define list of members for plotting
-    _plot_keys = (
+    _plot_keys = [
         'time',
         'c_k_x',
         'c_k_y',
@@ -66,10 +66,10 @@ class BaseGenerator(object):
         'Z_kp1_y',
         'fsm_state',
         'fsm_states',
-        )
+    ]
 
     # define hull names for plotting
-    _hull_keys = (
+    _hull_keys = [
         'rfposhull',
         'lfposhull',
         'lfoot',
@@ -77,10 +77,10 @@ class BaseGenerator(object):
         'lfcophull',
         'rfcophull',
         'dscophull',
-    )
+    ]
 
     # define values needed for calculations
-    _data_keys = (
+    _data_keys = [
         'N',
         'nf',
         'T',
@@ -88,7 +88,7 @@ class BaseGenerator(object):
         'footWidth',
         'footHeight',
         'footDistance',
-    )
+    ]
 
     def __init__(
         self, N=16, T=0.1, T_step=0.8,
@@ -811,8 +811,7 @@ class BaseGenerator(object):
         or self.f_k_x != foot_x \
         or self.f_k_y != foot_y \
         or self.f_k_q != foot_q :
-            sys.stderr.write('currentSupport != newSupport!!!\n')
-            # TODO what about ds, stepNumber, timeLimit do they have to change?
+            # take newSupport as current support
             self.currentSupport = newSupport
 
             # update support foot states
@@ -852,7 +851,7 @@ class BaseGenerator(object):
         or self.f_k_x != self.currentSupport.x \
         or self.f_k_y != self.currentSupport.y \
         or self.f_k_q != self.currentSupport.theta :
-            sys.stderr.write('currentSupport != oldSupport!!!\n')
+            raise NotImplementedError
 
         # provide copy of updated states as return value
         f_k_x = deepcopy(self.f_k_x)

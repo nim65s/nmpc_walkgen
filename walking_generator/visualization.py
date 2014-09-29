@@ -153,6 +153,22 @@ class Plotter(object):
         ),
     )
 
+    data_mapping = (
+        # Preview
+        (
+            ('ori_qp_nwsr', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
+            ('pos_qp_nwsr', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{y}$'}),
+        ),
+        (
+            ('ori_qp_cputime}', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
+            ('pos_qp_cputime}', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{y}$'}),
+        ),
+        #(
+            #('qp_nwsr', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{x}$'}),
+            #('qp_nwsr', {'lw':'1', 'ls':':', 'marker':'.', 'ms':4, 'c':'r', 'label':'$C_{k+1}^{y}$'}),
+        #),
+    )
+
     def __init__(self,
         generator=None, show_canvas=True, save_to_file=False, filename='',
         fmt='png'
@@ -291,12 +307,19 @@ class Plotter(object):
 
     def _save_to_file(self, figure=None):
         """ save figure as pdf """
+        # set options
+        plot_options = {
+            'format' : self._ffmt,
+            'dpi' : self.dpi,
+            'bbox_inches' : 'tight',
+        }
+
         # convert numpy arrays into lists
         f_path = os.path.join(self._fpath, self.filename())
         if not figure:
-            self.fig.savefig(f_path, format=self._ffmt, dpi=self.dpi)
+            self.fig.savefig(f_path, **plot_options)
         else:
-            figure.savefig(f_path, format=self._ffmt, dpi=self.dpi)
+            figure.savefig(f_path, **plot_options)
         self.picture_cnt += 1
 
     def load_from_file(self, filename):
@@ -506,7 +529,7 @@ class Plotter(object):
         self.bird_view_axis.set_aspect('equal')
 
         # define legend
-        self.bird_view_axis.legend(loc='center left')#, bbox_to_anchor=(1, 0.5))
+        self.bird_view_axis.legend(loc='lower left')#, bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:
@@ -585,7 +608,7 @@ class Plotter(object):
 
         # define legend position
         # Put a legend to the right of the current axis
-        legend = ax.legend(loc='center left')#, bbox_to_anchor=(1, 0.5))
+        legend = ax.legend(loc='lower left')#, bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:
@@ -594,5 +617,79 @@ class Plotter(object):
 
         if self.save_to_file:
             self._save_to_file(figure=self.reference_fig)
+
+    def create_data_plot(self):
+        """ create plot of problem data """
+        # CPUTIME
+        self.data_cpu_fig  = plt.figure()
+        ax  = self.data_cpu_fig.add_subplot(1,1,1)
+        ax.set_title('CPU Time of Solvers')
+        ax.set_ylabel("CPU time [ms]")
+        ax.set_xlabel("no. of iterations")
+
+        # retrieve data from data structure
+        ori_cpu = numpy.asarray(self.data['ori_qp_cputime'])
+        pos_cpu = numpy.asarray(self.data['pos_qp_cputime'])
+        idx = numpy.asarray(range(len(ori_cpu)))
+
+        # get bar plots
+        width = 0.3
+        ori_bar = ax.bar(idx, ori_cpu, width, linewidth=0, color='r')
+        pos_bar = ax.bar(idx, pos_cpu, width, linewidth=0, color='y',
+            bottom=ori_cpu
+        )
+
+        # recalculate x and y limits
+        ax.relim()
+        ax.autoscale_view(scalex=True, scaley=True, tight='True')
+        #ax.set_aspect('equal')
+
+        # define legend position
+        # Put a legend to the right of the current axis
+        legend = ax.legend(
+            (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
+        )
+
+        # NWSR
+        self.data_nwsr_fig = plt.figure()
+        ax  = self.data_nwsr_fig.add_subplot(1,1,1)
+        ax.set_title('Working Set Recalculation of Solvers')
+        ax.set_ylabel("no. of WSR")
+        ax.set_xlabel("no. of iterations")
+
+        # retrieve data from data structure
+        ori_nwsr = numpy.asarray(self.data['ori_qp_nwsr'])
+        pos_nwsr = numpy.asarray(self.data['pos_qp_nwsr'])
+        idx = numpy.asarray(range(len(ori_cpu)))
+
+        # get bar plots
+        width = 0.3
+        ori_bar = ax.bar(idx, ori_nwsr, width, linewidth=0, color='r')
+        pos_bar = ax.bar(idx, pos_nwsr, width, linewidth=0, color='y',
+            bottom=ori_nwsr
+        )
+
+        # recalculate x and y limits
+        ax.relim()
+        ax.autoscale_view(scalex=True, scaley=True, tight='True')
+        #ax.set_aspect('equal')
+
+        # define legend position
+        # Put a legend to the right of the current axis
+        legend = ax.legend(
+            (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
+        )
+
+        # show canvas
+        if self.show_canvas:
+            self.data_cpu_fig.tight_layout()
+            self.data_cpu_fig.show()
+            self.data_nwsr_fig.tight_layout()
+            self.data_nwsr_fig.show()
+            plt.pause(1e-8)
+
+        if self.save_to_file:
+            self._save_to_file(figure=self.data_cpu_fig)
+            self._save_to_file(figure=self.data_nwsr_fig)
 
 

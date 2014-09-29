@@ -11,3 +11,14 @@ LeftFootBuffer
 RightFootBuffer
 
 !*.py
+*BACKUP*
+*BASE*
+*REMOTE*
+*LOCAL*
+lfttraj.txt
+rfttraj.txt
+tests/data/TestHerdt2010DynamicFilterTestFGPI.dat
+tests/data/v_f.dat
+tests/data/walkSideward2m_s.dat
+tmp/
+

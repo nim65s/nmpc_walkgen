@@ -187,6 +187,7 @@ class BaseGenerator(object):
         self. dC_kp1_x_ref = numpy.zeros((N,), dtype=float)
         self. dC_kp1_y_ref = numpy.zeros((N,), dtype=float)
         self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
+        self.local_vel_ref = numpy.zeros((3,), dtype=float)
 
         # feet matrices
         # initial support foot positions and orientation
@@ -730,6 +731,29 @@ class BaseGenerator(object):
         # rebuild constraints
         self.buildConstraints()
 
+    def set_velocity_reference(self,local_vel_ref):
+        """
+        Velocity reference update and computed from a local frame to a global frame using the
+        current support foot frame
+
+        Parameters
+        ----------
+
+        vel_ref: [dx,dy,dq]
+            reference velocity in x, y and q
+        """
+        # get feet orientation states from feet jerks
+        self.local_vel_ref = local_vel_ref
+        self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
+        self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
+
+        flyingFoot = self.E_FR.dot(self.F_kp1_qR) + self.E_FL.dot(self.F_kp1_qL)
+        supportFoot = self.E_FR_bar.dot(self.F_kp1_qR) + self.E_FL_bar.dot(self.F_kp1_qL)
+        q = (flyingFoot[0] + supportFoot[0])*0.5
+        self.dC_kp1_x_ref[...] = local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q)
+        self.dC_kp1_y_ref[...] = local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q)
+        self.dC_kp1_q_ref[...] = local_vel_ref[2]
+
     def set_initial_values(self,
         com_x, com_y , com_z,
         foot_x, foot_y, foot_q, foot='left',
@@ -871,6 +895,7 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.theta = self.f_k_q
 
+        self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
 
     def _update_data(self):
@@ -1166,8 +1191,8 @@ class BaseGenerator(object):
         A_fvel_ineq_L[...] = -numpy.eye(self.N)
         A_fvel_ineq[...]   = self.Pvu.dot(A_fvel_ineq)
 
-        ubB_fvel_ineq[...] =  0.2 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
-        lbB_fvel_ineq[...] = -0.2 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
+        ubB_fvel_ineq[...] =  0.22 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
+        lbB_fvel_ineq[...] = -0.22   - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
 
     def solve(self):
         """

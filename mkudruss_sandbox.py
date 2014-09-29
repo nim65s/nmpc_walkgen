@@ -15,9 +15,7 @@ plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-gen.dC_kp1_x_ref[...] = 0.2
-gen.dC_kp1_y_ref[...] = 0.0
-gen.dC_kp1_q_ref[...] = -0.2
+gen.set_velocity_reference([0.2,0.0,-0.2])
 
 gen.set_security_margin(0.04, 0.04)
 
@@ -38,17 +36,11 @@ for i in range(160):
     print 'iteration: ', i
 
     if 50 <= i < 100:
-        gen.dC_kp1_x_ref[...] =  0.2
-        gen.dC_kp1_y_ref[...] =  0.0
-        gen.dC_kp1_q_ref[...] = -0.2
+        gen.set_velocity_reference([0.2,0.0,-0.2])
     if 100 <= i < 130:
-        gen.dC_kp1_x_ref[...] =  0.2
-        gen.dC_kp1_y_ref[...] =  0.0
-        gen.dC_kp1_q_ref[...] = -0.2
+        gen.set_velocity_reference([0.2,0.0,-0.2])
     if 130 <= i:
-        gen.dC_kp1_x_ref[...] =  0.2
-        gen.dC_kp1_y_ref[...] =  0.0
-        gen.dC_kp1_q_ref[...] = -0.2
+        gen.set_velocity_reference([0.2,0.0,-0.2])
 
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0

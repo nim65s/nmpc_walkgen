@@ -50,7 +50,7 @@ class ClassicGenerator(BaseGenerator):
         # SQPProblem class, which supports this kind of QPs
 
         # define some qpOASES specific things
-        self.cpu_time = 0.0 # upper bound on CPU time, 0 is no upper limit
+        self.cpu_time = 10.0 # upper bound on CPU time, 0 is no upper limit
         self.nwsr = 1000    # # of working set recalculations
         self.options = Options()
         self.options.setToMPC()
@@ -111,6 +111,9 @@ class ClassicGenerator(BaseGenerator):
         self._ori_p = numpy.zeros((2*self.N,))
         self._pos_Q = numpy.zeros((self.N + self.nf, self.N + self.nf))
         self._pos_p = numpy.zeros((self.N + self.nf,))
+
+        # add additional keys that should be saved
+        self._data_keys
 
     def solve(self):
         """ Process and solve problem, s.t. pattern generator data is consistent """
@@ -435,7 +438,7 @@ class ClassicGenerator(BaseGenerator):
         """
         #sys.stdout.write('Solve for orientations:\n')
         if not self._ori_qp_is_initialized:
-            self.ori_qp.init(
+            ret, nwsr, cputime = self.ori_qp.init(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
@@ -443,16 +446,20 @@ class ClassicGenerator(BaseGenerator):
             )
             self._ori_qp_is_initialized = True
         else:
-            self.ori_qp.hotstart(
+            ret, nwsr, cputime = self.ori_qp.hotstart(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
                 self.nwsr, self.cpu_time
             )
+        print 'ori_qp solve:'
+        print 'return value: ', ret
+        print 'nwsr:         ', nwsr
+        print 'cpu time:     ', cputime
 
         #sys.stdout.write('Solve for positions:\n')
         if not self._pos_qp_is_initialized:
-            self.pos_qp.init(
+            ret, nwsr, cputime = self.pos_qp.init(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
@@ -460,12 +467,16 @@ class ClassicGenerator(BaseGenerator):
             )
             self._pos_qp_is_initialized = True
         else:
-            self.pos_qp.hotstart(
+            ret, nwsr, cputime = self.pos_qp.hotstart(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
                 self.nwsr, self.cpu_time
             )
+        print 'pos_qp solve:'
+        print 'return value: ', ret
+        print 'nwsr:         ', nwsr
+        print 'cpu time:     ', cputime
 
     def _postprocess_solution(self):
         """ Get solution and put it back into generator data structures """

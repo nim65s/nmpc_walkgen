@@ -3,8 +3,8 @@ from walking_generator.visualization import Plotter
 
 gen = ClassicGenerator()
 gen = None
-show_canvas  = False
-save_to_file = True
+show_canvas  = True
+save_to_file = False
 
 plotter = Plotter(
     generator=gen, show_canvas=show_canvas,

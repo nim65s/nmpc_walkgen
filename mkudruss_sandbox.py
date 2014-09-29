@@ -10,7 +10,7 @@ gen = ClassicGenerator(fsm_state='L/R')
 
 # instantiate plotter
 show_canvas = True
-save_to_file = False
+save_to_file = True
 plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation

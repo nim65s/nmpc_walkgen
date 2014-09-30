@@ -19,7 +19,7 @@ class Interpolation(object):
 
         self.T = self.gen.T # QP sampling period
         self.Tc = Tc # sampling period of the robot low level controller
-        self.interval = int(self.Tc/self.T) # number of iteration in 100ms
+        self.interval = int(self.T/self.Tc) # number of iteration in 100ms
                                             # the initial state of the next QP iteration
 
         # initiale states used to interpolate (they should be intialized once at
@@ -175,6 +175,7 @@ class LIPM(object):
         Ac = self.Ac
         Bc = self.Bc
 
+
         CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
         ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
 
@@ -182,8 +183,10 @@ class LIPM(object):
             CoMbuffer[i] = CoMState()
             ZMPbuffer[i] = ZMPState()
 
-        CoMbuffer[0].x = curCoM.x
-        CoMbuffer[0].y = curCoM.y
+        print 'curCoM.x\n', curCoM.x
+        print 'curCoM.y\n', curCoM.y
+        CoMbuffer[0].x[...] = curCoM.x
+        CoMbuffer[0].y[...] = curCoM.y
         ZMPbuffer[0].x = C.dot(curCoM.x)
         ZMPbuffer[0].y = C.dot(curCoM.y)
 

@@ -52,9 +52,13 @@ class ClassicGenerator(BaseGenerator):
         # Because of varying H and A, we have to use the
         # SQPProblem class, which supports this kind of QPs
 
+        # rename for convenience
+        N  = self.N
+        nf = self.nf
+
         # define some qpOASES specific things
         self.cpu_time = 0.1 # upper bound on CPU time, 0 is no upper limit
-        self.nwsr = 100      # number of working set recalculations
+        self.nwsr     = 100      # number of working set recalculations
         self.options = Options()
         self.options.setToMPC()
         self.options.printLevel = PrintLevel.LOW
@@ -62,11 +66,10 @@ class ClassicGenerator(BaseGenerator):
         # FOR ORIENTATIONS
         # define dimensions
         self.ori_nv = 2*self.N
-        self.ori_fvel_eq = self.N # velocity constraints on support foot
-        self.ori_fpos_ineq = self.N # maximum orientation change
-        self.ori_fvel_ineq = self.N # maximum angular velocity
-        self.ori_nc = self.ori_fvel_eq \
-                    + self.ori_fpos_ineq + self.ori_fvel_ineq
+        self.ori_nc = (
+            self.nc_fvel_eq +
+            self.nc_fpos_ineq + self.nc_fvel_ineq
+        )
 
         # setup problem
         self.ori_dofs = numpy.zeros(self.ori_nv)
@@ -90,10 +93,14 @@ class ClassicGenerator(BaseGenerator):
         # FOR POSITIONS
         # define dimensions
         self.pos_nv = 2*(self.N + self.nf)
-        self.pos_nc_cop    = self.nFootEdge*(self.N)      # ZMP constraints
-        self.pos_nc_eqfoot = self.nf                      # foot equality constraints
-        self.pos_nc_foot   = self.nFootPosHullEdges*self.nf # foot position constraints
-        self.pos_nc = self.pos_nc_cop + self.pos_nc_eqfoot + self.pos_nc_foot
+        #self.pos_nc_cop    = self.nFootEdge*(self.N)      # ZMP constraints
+        #self.pos_nc_eqfoot = self.nf                      # foot equality constraints
+        #self.pos_nc_foot   = self.nFootPosHullEdges*self.nf # foot position constraints
+        self.pos_nc = (
+            self.nc_cop
+            + self.nc_foot_position
+            + self.nc_fchange_eq
+        )
 
         # setup problem
         self.pos_dofs = numpy.zeros(self.pos_nv)
@@ -168,21 +175,21 @@ class ClassicGenerator(BaseGenerator):
         # ORIENTATION LINEAR CONSTRAINTS
         # velocity constraints on support foot to freeze movement
         a = 0
-        b = self.ori_fvel_eq
+        b = self.nc_fvel_eq
         self.ori_A  [a:b] = self.A_fvel_eq
         self.ori_lbA[a:b] = self.B_fvel_eq
         self.ori_ubA[a:b] = self.B_fvel_eq
 
         # box constraints for maximum orientation change
-        a = self.ori_fvel_eq
-        b = self.ori_fvel_eq + self.ori_fpos_ineq
+        a = self.nc_fvel_eq
+        b = self.nc_fvel_eq + self.nc_fpos_ineq
         self.ori_A  [a:b] = self.A_fpos_ineq
         self.ori_lbA[a:b] = self.lbB_fpos_ineq
         self.ori_ubA[a:b] = self.ubB_fpos_ineq
 
         # box constraints for maximum angular velocity
-        a = self.ori_fvel_eq + self.ori_fpos_ineq
-        b = self.ori_fvel_eq + self.ori_fpos_ineq + self.ori_fvel_ineq
+        a = self.nc_fvel_eq + self.nc_fpos_ineq
+        b = self.nc_fvel_eq + self.nc_fpos_ineq + self.nc_fvel_ineq
         self.ori_A  [a:b] = self.A_fvel_ineq
         self.ori_lbA[a:b] = self.lbB_fvel_ineq
         self.ori_ubA[a:b] = self.ubB_fvel_ineq
@@ -232,21 +239,21 @@ class ClassicGenerator(BaseGenerator):
 
         # CoP constraints
         a = 0
-        b = self.pos_nc_cop
+        b = self.nc_cop
         self.pos_A  [a:b] = self.Acop
         self.pos_lbA[a:b] = self.pos_lbA[a:b]
         self.pos_ubA[a:b] = self.ubBcop
 
         #foot inequality constraints
-        a = self.pos_nc_cop
-        b = self.pos_nc_cop + self.pos_nc_foot
+        a = self.nc_cop
+        b = self.nc_cop + self.nc_foot_position
         self.pos_A  [a:b] = self.Afoot
         self.pos_lbA[a:b] = self.pos_lbA[a:b]
         self.pos_ubA[a:b] = self.ubBfoot
 
         #foot equality constraints
-        a = self.pos_nc_cop + self.pos_nc_foot
-        b = self.pos_nc_cop + self.pos_nc_foot + self.pos_nc_eqfoot
+        a = self.nc_cop + self.nc_foot_position
+        b = self.nc_cop + self.nc_foot_position + self.nc_fchange_eq
         self.pos_A  [a:b] = self.eqAfoot
         self.pos_lbA[a:b] = self.eqBfoot
         self.pos_ubA[a:b] = self.eqBfoot
@@ -467,6 +474,9 @@ class ClassicGenerator(BaseGenerator):
                 self.nwsr, self.cpu_time
             )
 
+        # orientation primal solution
+        self.ori_qp.getPrimalSolution(self.ori_dofs)
+
         # save qp solver data
         self.ori_qp_nwsr    = nwsr          # working set recalculations
         self.ori_qp_cputime = cputime*1000. # in milliseconds
@@ -488,6 +498,9 @@ class ClassicGenerator(BaseGenerator):
                 self.nwsr, self.cpu_time
             )
 
+        # position primal solution
+        self.pos_qp.getPrimalSolution(self.pos_dofs)
+
         # save qp solver data
         self.pos_qp_nwsr    = nwsr          # working set recalculations
         self.pos_qp_cputime = cputime*1000. # in milliseconds
@@ -498,18 +511,12 @@ class ClassicGenerator(BaseGenerator):
         N  = self.N
         nf = self.nf
 
-        # orientation primal solution
-        self.ori_qp.getPrimalSolution(self.ori_dofs)
-
         # extract dofs
         # ori_dofs = ( dddF_k_qR )
         #            ( dddF_k_qL )
 
         self.dddF_k_qR[:] = self.ori_dofs[:N]
         self.dddF_k_qL[:] = self.ori_dofs[N:]
-
-        # position primal solution
-        self.pos_qp.getPrimalSolution(self.pos_dofs)
 
         # extract dofs
         # pos_dofs = ( dddC_kp1_x )

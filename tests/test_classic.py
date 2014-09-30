@@ -392,7 +392,7 @@ class TestClassicGenerator(TestCase):
         assert_allclose(gen.pos_ub[:34], pos_ub, rtol=RTOL, atol=ATOL)
 
         # test linear constraints
-        assert_allclose(gen.pos_ubA[:-gen.pos_nc_eqfoot-gen.nFootPosHullEdges], pos_lbA, rtol=RTOL, atol=ATOL)
+        assert_allclose(gen.pos_ubA[:-gen.nc_fchange_eq-gen.nFootPosHullEdges], pos_lbA, rtol=RTOL, atol=ATOL)
 
         gen.simulate()
 

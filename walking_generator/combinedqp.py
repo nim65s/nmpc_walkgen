@@ -255,7 +255,7 @@ class NMPCGenerator(BaseGenerator):
         Hxq[...] = Hx.transpose().dot(Hq)
         Hqx[...] = Hxq.transpose()
         Hqq[...] = Hq.transpose().dot(Hq)
-        self.qp_H[...] = numpy.eye(self.nv)
+        #self.qp_H[...] = numpy.eye(self.nv)
 
         # Gradient of Objective
         # define sub blocks
@@ -270,7 +270,7 @@ class NMPCGenerator(BaseGenerator):
         # gq = ( U_k_q.T Q_k_q + p_k_q )
         gq[...] = Hq
 
-        self.qp_g[...] = numpy.zeros(self.nv)
+        #self.qp_g[...] = numpy.zeros(self.nv)
 
         # CONSTRAINTS
         A_xy   = self.qp_A  [:self.nc_pos,:nU_k_xy]

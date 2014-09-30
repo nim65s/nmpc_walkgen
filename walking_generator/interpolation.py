@@ -56,9 +56,8 @@ class Interpolation(object):
     def interpolate(self, time):
 
         self.curCoM, self.CoMbuffer, self.ZMPbuffer = self.lipm.interpolate(
-                                                            self.gen.dddC_k_x[0], self.gen.dddC_k_y[0],
-                                                            self.curCoM, self.ZMPbuffer, self.CoMbuffer)
-
+                                self.gen.dddC_k_x[0], self.gen.dddC_k_y[0],
+                                self.curCoM, self.ZMPbuffer, self.CoMbuffer)
         self.curleft, self.curRight, self.LFbuffer, self.RFbuffer =\
                         self.fi.interpolate(time, self.gen.currentSupport,
                                     self.curleft, self.curRight,
@@ -69,6 +68,8 @@ class Interpolation(object):
         self.zmpTraj = numpy.append(self.zmpTraj, self.ZMPbuffer, axis=0)
         self.leftFootTraj = numpy.append(self.leftFootTraj, self.LFbuffer, axis=0)
         self.rightFootTraj = numpy.append(self.rightFootTraj, self.RFbuffer, axis=0)
+
+        print self.curCoM.x
 
     def save_to_file(self):
         comX   = numpy.asarray([item.x for item in self.comTraj])
@@ -127,7 +128,6 @@ class LIPM(object):
         # for Tc sampling interpolation
         self.Ac = numpy.zeros( (3,3) , dtype=float )
         self.Bc = numpy.zeros( (3,) , dtype=float )
-        self.Cc = numpy.zeros( (3,) , dtype=float )
 
         self.intervaleSize = int(self.Tc/self.T)
 
@@ -152,7 +152,7 @@ class LIPM(object):
 
         Tc = self.Tc
         Ac = self.Ac
-        Ac[0][0] = 1 ; Ac[0][1] = Tc ; A[0][2] = Tc*Tc*0.5 ;
+        Ac[0][0] = 1 ; Ac[0][1] = Tc ; Ac[0][2] = Tc*Tc*0.5 ;
         Ac[1][1] = 1 ; Ac[1][2] = Tc ;
         Ac[2][2] = 1 ;
 
@@ -161,10 +161,12 @@ class LIPM(object):
         Bc[1]= Tc*Tc/2
         Bc[2]= Tc
 
-        Cc = self.Cc
-        Cc[0]= 1
-        Cc[1]= 0
-        Cc[2]= -self.h_com/self.g
+        print A
+        print B
+        print C
+
+        print Ac
+        print Bc
 
     def interpolate(self, jerkX, jerkY, curCoM, ZMPbuffer, CoMbuffer):
         A = self.A
@@ -172,7 +174,6 @@ class LIPM(object):
         C = self.C
         Ac = self.Ac
         Bc = self.Bc
-        Cc = self.Cc
 
         CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
         ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
@@ -181,12 +182,12 @@ class LIPM(object):
             CoMbuffer[i] = CoMState()
             ZMPbuffer[i] = ZMPState()
 
-        CoMbuffer[0].x = A.dot(curCoM.x) + B.dot(jerkX)
-        CoMbuffer[0].y = A.dot(curCoM.y) + B.dot(jerkY)
-        ZMPbuffer[0].x = C.dot(CoMbuffer[0].x)
-        ZMPbuffer[0].y = C.dot(CoMbuffer[0].y)
+        CoMbuffer[0].x = curCoM.x
+        CoMbuffer[0].y = curCoM.y
+        ZMPbuffer[0].x = C.dot(curCoM.x)
+        ZMPbuffer[0].y = C.dot(curCoM.y)
 
-        for i in range(self.intervaleSize):
+        for i in range(1,self.intervaleSize):
             CoMbuffer[i].x = A.dot(CoMbuffer[i-1].x) + B.dot(jerkX)
             CoMbuffer[i].y = A.dot(CoMbuffer[i-1].y) + B.dot(jerkY)
             ZMPbuffer[i].x = C.dot(CoMbuffer[i].x)

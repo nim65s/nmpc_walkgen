@@ -39,10 +39,10 @@ class Interpolation(object):
         self.RFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer containing the rigth foot trajectory over 100ms
         self.LFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer containing the left foot trajectory over 100ms
 
-        self.comTraj = numpy.empty( (0,) , dtype=CoMState ) #buffer containing the full CoM trajectory
-        self.zmpTraj = numpy.empty( (0,) , dtype=ZMPState ) #buffer containing the full ZMP trajectory
-        self.leftFootTraj = numpy.empty( (0,) , dtype=BaseTypeFoot ) #buffer containing the full rigth foot trajectory
-        self.rightFootTraj = numpy.empty( (0,) , dtype=BaseTypeFoot ) #buffer containing the full left foot trajectory
+        self.comTraj = [] #buffer containing the full CoM trajectory
+        self.zmpTraj = [] #buffer containing the full ZMP trajectory
+        self.leftFootTraj = [] #buffer containing the full rigth foot trajectory
+        self.rightFootTraj = [] #buffer containing the full left foot trajectory
 
         for i in range(self.interval):
             self.CoMbuffer[i] = CoMState()
@@ -102,7 +102,7 @@ class Interpolation(object):
                 lfY ,lfdY ,lfddY, lfQ ,lfdQ ,lfddQ ]
 
         data = numpy.asarray(lst).transpose()
-        numpy.savetxt("./wieber2010python.csv", data, delimiter=" ")
+        numpy.savetxt("./wieber2010python.csv", data, delimiter="   ")
 class LIPM(object):
     """
     LIPM class of walking pattern generator for humanoids, cf.

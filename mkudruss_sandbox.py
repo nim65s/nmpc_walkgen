@@ -28,20 +28,17 @@ footx = 0.00949035
 footy = 0.095
 footq = 0.0
 gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
-
-gen.simulate()
-gen._update_data()
-
 sampling_period = 0.005
 interpol = Interpolation(sampling_period,gen)
-
+gen.simulate()
+gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(50):
     time = i*sampling_period
     print 'iteration: ', i
 
-    if 25 <= i < 50:
+    if 30 <= i < 50:
         gen.set_velocity_reference([0.0,0.2,0.0])
 #    if 100 <= i < 130:
 #        gen.set_velocity_reference([0.2,0.0,-0.2])

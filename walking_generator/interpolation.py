@@ -19,17 +19,21 @@ class Interpolation(object):
 
         self.T = self.gen.T # QP sampling period
         self.Tc = Tc # sampling period of the robot low level controller
-        self.interval = int(self.Tc/self.T) # number of iteration in 100ms
+        self.interval = int(self.T/self.Tc) # number of iteration in 100ms
                                             # the initial state of the next QP iteration
 
         # initiale states used to interpolate (they should be intialized once at
         # the beginning of the qp
         # and updated inside the class
         self.curCoM = CoMState()
-        self.curCoM.x = self.gen.c_k_x
-        self.curCoM.y = self.gen.c_k_y
-        self.curCoM.theta = self.gen.c_k_q
-        self.curCoM.h_com = self.gen.h_com
+        self.curCoM.x = deepcopy(self.gen.c_k_x)
+        self.curCoM.y = deepcopy(self.gen.c_k_y)
+        self.curCoM.theta = deepcopy(self.gen.c_k_q)
+        self.curCoM.h_com = deepcopy(self.gen.h_com)
+        zmp = ZMPState()
+        zmp.x=deepcopy(self.curCoM.x[0])
+        zmp.y=deepcopy(self.curCoM.y[0])
+        zmp.z=0.0
 
         self.curleft = BaseTypeFoot()
         self.curRight = BaseTypeFoot()
@@ -39,10 +43,10 @@ class Interpolation(object):
         self.RFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer containing the rigth foot trajectory over 100ms
         self.LFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer containing the left foot trajectory over 100ms
 
-        self.comTraj = [] #buffer containing the full CoM trajectory
-        self.zmpTraj = [] #buffer containing the full ZMP trajectory
-        self.leftFootTraj = [] #buffer containing the full rigth foot trajectory
-        self.rightFootTraj = [] #buffer containing the full left foot trajectory
+        self.comTraj = [self.curCoM] #buffer containing the full CoM trajectory
+        self.zmpTraj = [zmp] #buffer containing the full ZMP trajectory
+        self.leftFootTraj = [self.curleft] #buffer containing the full rigth foot trajectory
+        self.rightFootTraj = [self.curRight] #buffer containing the full left foot trajectory
 
         for i in range(self.interval):
             self.CoMbuffer[i] = CoMState()
@@ -63,13 +67,13 @@ class Interpolation(object):
                                     self.curleft, self.curRight,
                                     self.gen.F_k_x[0], self.gen.F_k_x[0], self.gen.F_k_q[0],
                                     self.LFbuffer, self.RFbuffer)
+        for i in range (self.CoMbuffer.shape[0]):
+            print self.CoMbuffer[i].x
 
-        self.comTraj = numpy.append(self.comTraj, self.CoMbuffer, axis=0)
-        self.zmpTraj = numpy.append(self.zmpTraj, self.ZMPbuffer, axis=0)
-        self.leftFootTraj = numpy.append(self.leftFootTraj, self.LFbuffer, axis=0)
-        self.rightFootTraj = numpy.append(self.rightFootTraj, self.RFbuffer, axis=0)
-
-        print self.curCoM.x
+        self.comTraj.extend(self.CoMbuffer)
+        self.zmpTraj.extend(self.ZMPbuffer)
+        self.leftFootTraj.extend(self.LFbuffer)
+        self.rightFootTraj.extend(self.RFbuffer)
 
     def save_to_file(self):
         comX   = numpy.asarray([item.x for item in self.comTraj])
@@ -103,6 +107,7 @@ class Interpolation(object):
 
         data = numpy.asarray(lst).transpose()
         numpy.savetxt("./wieber2010python.csv", data, delimiter="   ")
+
 class LIPM(object):
     """
     LIPM class of walking pattern generator for humanoids, cf.
@@ -175,15 +180,12 @@ class LIPM(object):
         Ac = self.Ac
         Bc = self.Bc
 
-        CoMbuffer = numpy.resize(CoMbuffer,(self.intervaleSize,))
-        ZMPbuffer = numpy.resize(ZMPbuffer,(self.intervaleSize,))
-
         for i in range(self.intervaleSize):
             CoMbuffer[i] = CoMState()
             ZMPbuffer[i] = ZMPState()
 
-        CoMbuffer[0].x = curCoM.x
-        CoMbuffer[0].y = curCoM.y
+        CoMbuffer[0].x[...] = curCoM.x
+        CoMbuffer[0].y[...] = curCoM.y
         ZMPbuffer[0].x = C.dot(curCoM.x)
         ZMPbuffer[0].y = C.dot(curCoM.y)
 

@@ -71,9 +71,9 @@ for i in range(160):
     comx, comy, comz, footx, footy, footq, foot, comq= \
     gen.update()
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    #plot.update()
+    plot.update()
 
-    #raw_input('press key:')
+    raw_input('press key:')
     #time.sleep(0.1)
 
 gen.data.save_to_file('./data.json')

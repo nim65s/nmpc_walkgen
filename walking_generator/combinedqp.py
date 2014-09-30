@@ -255,6 +255,7 @@ class NMPCGenerator(BaseGenerator):
         Hxq[...] = Hx.transpose().dot(Hq)
         Hqx[...] = Hxq.transpose()
         Hqq[...] = Hq.transpose().dot(Hq)
+        self.qp_H[...] = numpy.eye(self.nv)
 
         # Gradient of Objective
         # define sub blocks
@@ -269,10 +270,26 @@ class NMPCGenerator(BaseGenerator):
         # gq = ( U_k_q.T Q_k_q + p_k_q )
         gq[...] = Hq
 
-        # CONSTRAINTS
-        A_xy = self.qp_A[:self.nc_pos,:nU_k_xy]
-        A_q  = self.qp_A[:,-nU_k_q:]
+        self.qp_g[...] = numpy.zeros(self.nv)
 
+        # CONSTRAINTS
+        A_xy   = self.qp_A  [:self.nc_pos,:nU_k_xy]
+        lbA_xy = self.qp_lbA[:self.nc_pos]
+        ubA_xy = self.qp_lbA[:self.nc_pos]
+
+        A_q   = self.qp_A  [-self.nc_ori:,-nU_k_q:]
+        lbA_q = self.qp_lbA[-self.nc_ori:]
+        ubA_q = self.qp_lbA[-self.nc_ori:]
+
+        # linearized constraints are given by
+        # lbA - A * U_k <= nablaA * Delta_U_k <= ubA - A * U_k
+        A_xy[...]   = self.A_pos
+        lbA_xy[...] = self.lbA_pos - self.A_pos.dot(U_k_xy)
+        ubA_xy[...] = self.ubA_pos - self.A_pos.dot(U_k_xy)
+
+        A_q[...]   = self.A_ori
+        lbA_q[...] = self.lbA_ori - self.A_ori.dot(U_k_q)
+        ubA_q[...] = self.ubA_ori - self.A_ori.dot(U_k_q)
 
     def _calculate_common_expressions(self):
         """

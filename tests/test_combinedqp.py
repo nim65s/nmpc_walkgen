@@ -254,6 +254,13 @@ class TestNMPCGenerator(TestCase):
         classic._preprocess_solution()
 
         # reference them for comparison
+        classic_pos_A   = classic.pos_A
+        classic_pos_lbA = classic.pos_lbA
+        classic_pos_ubA = classic.pos_ubA
+
+        classic_ori_A   = classic.ori_A
+        classic_ori_lbA = classic.ori_lbA
+        classic_ori_ubA = classic.ori_ubA
 
         # define initial values
         comx = [0.00949035, 0.0, 0.0]
@@ -276,11 +283,26 @@ class TestNMPCGenerator(TestCase):
         nmpc._preprocess_solution()
 
         # reference them for comparison
+        nmpc_pos_A   = nmpc.A_pos
+        nmpc_pos_lbA = nmpc.lbA_pos
+        nmpc_pos_ubA = nmpc.ubA_pos
+
+        nmpc_ori_A   = nmpc.A_ori
+        nmpc_ori_lbA = nmpc.lbA_ori
+        nmpc_ori_ubA = nmpc.ubA_ori
+
+        print nmpc.dofs
 
         # compare matrices
         # position common sub expressions
+        assert_allclose(classic_pos_A,   nmpc_pos_A,   atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_pos_lbA, nmpc_pos_lbA, atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_pos_ubA, nmpc_pos_ubA, atol=ATOL, rtol=RTOL)
 
         # orientation common sub expressions
+        assert_allclose(classic_ori_A,   nmpc_ori_A,   atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_ori_lbA, nmpc_ori_lbA, atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_ori_ubA, nmpc_ori_ubA, atol=ATOL, rtol=RTOL)
 
     def test_against_classic_generator_zero_angular_velocity(self):
         pass

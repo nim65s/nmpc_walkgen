@@ -151,8 +151,8 @@ class ClassicGenerator(BaseGenerator):
         # initialize with actual values, else take last known solution
         # NOTE for warmstart last solution is taken from qpOASES internal memory
         if not self._ori_qp_is_initialized:
-            # ori_dofs = ( dddC_kp1_q )
-            #            (      F_k_q )
+            # ori_dofs = ( dddF_k_qR )
+            #            ( dddF_k_qL )
 
             self.ori_dofs[:N] = self.dddF_k_qR
             self.ori_dofs[N:] = self.dddF_k_qL
@@ -231,9 +231,9 @@ class ClassicGenerator(BaseGenerator):
         self.pos_g  [-N-nf:] = self._pos_p
 
         # lbA <= A x <= ubA
-        # () <= (    Acop ) <= (    Bcop )
-        # () <= ( eqAfoot ) <= ( eqBfoot )
-        # () <= (   Afoot ) <= (   Bfoot )
+        # (       ) <= (    Acop ) <= (    Bcop )
+        # (eqBfoot) <= ( eqAfoot ) <= ( eqBfoot )
+        # (       ) <= (   Afoot ) <= (   Bfoot )
 
         # CoP constraints
         a = 0

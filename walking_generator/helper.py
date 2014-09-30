@@ -192,7 +192,7 @@ class BaseTypeSupportFoot(object):
     def __init__(self, x=0, y=0, theta=0, foot="left"):
         self.x = x
         self.y = y
-        self.theta = theta
+        self.q = theta
         self.foot = foot
         self.ds = 0
         self.stepNumber = 0
@@ -214,17 +214,17 @@ class BaseTypeFoot(object):
         self.x = x
         self.y = y
         self.z = 0
-        self.theta = theta
+        self.q = theta
 
         self.dx = 0
         self.dy = 0
         self.dz = 0
-        self.dtheta = 0
+        self.dq = 0
 
         self.ddx = 0
         self.ddy = 0
         self.ddz = 0
-        self.ddtheta = 0
+        self.ddq = 0
 
         self.supportFoot = supportFoot
 
@@ -243,7 +243,7 @@ class CoMState(object):
         self.x = numpy.zeros( (3,) , dtype=float )
         self.y = numpy.zeros( (3,) , dtype=float )
         self.z = h_com
-        self.theta = numpy.zeros( (3,) , dtype=float )
+        self.q = numpy.zeros( (3,) , dtype=float )
 
 
 class ZMPState(object):

@@ -588,9 +588,9 @@ class BaseGenerator(object):
             self.f_k_y = self.F_k_y[0]
             self.f_k_q = self.F_k_q[0]
 
-            self.currentSupport.x     = self.f_k_x
-            self.currentSupport.y     = self.f_k_y
-            self.currentSupport.theta = self.f_k_q
+            self.currentSupport.x = self.f_k_x
+            self.currentSupport.y = self.f_k_y
+            self.currentSupport.q = self.f_k_q
 
             if self.currentSupport.foot == 'right':
                 self.currentSupport.foot  = 'left'
@@ -855,7 +855,7 @@ class BaseGenerator(object):
         if self.currentSupport != oldSupport \
         or self.f_k_x != self.currentSupport.x \
         or self.f_k_y != self.currentSupport.y \
-        or self.f_k_q != self.currentSupport.theta :
+        or self.f_k_q != self.currentSupport.q :
             raise NotImplementedError
 
         # provide copy of updated states as return value
@@ -897,7 +897,7 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qL[0]
         else :
             self.f_k_q = self.f_k_qR[0]
-        self.currentSupport.theta = self.f_k_q
+        self.currentSupport.q = self.f_k_q
 
         self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q

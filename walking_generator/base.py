@@ -280,12 +280,15 @@ class BaseGenerator(object):
         self.ubB0l = numpy.zeros((5,), dtype=float)
 
         # Linear constraints matrix
-        self.Afoot = numpy.zeros((), dtype=float)
-        self.eqAfoot = numpy.zeros( (2,2*(self.N+self.nf)), dtype=float)
+        self.nc_fchange_eq = 2
+        self.eqAfoot = numpy.zeros((self.nc_fchange_eq,2*(self.N+self.nf)), dtype=float)
+        self.eqBfoot = numpy.zeros((self.nc_fchange_eq,), dtype=float)
 
         # Linear constraints vector
-        self.ubBfoot = numpy.zeros((), dtype=float)
-        self.eqBfoot = numpy.zeros((2,), dtype=float)
+        self.nc_foot_position = self.nf * self.nFootPosHullEdges
+        self.Afoot   = numpy.zeros((self.nc_foot_position, 2*(self.N + self.nf)), dtype=float)
+        self.lbBfoot =-numpy.ones((self.nc_foot_position), dtype=float)*1e+08
+        self.ubBfoot = numpy.zeros((self.nc_foot_position), dtype=float)
 
         # security margins for CoP constraints
         self.SecurityMarginX = SMx = 0.09
@@ -362,26 +365,28 @@ class BaseGenerator(object):
         self.b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
         # Constraint matrices
+        self.nc_cop = self.N*self.nFootEdge
         self.Acop = numpy.zeros(
-            (self.N*self.nFootEdge, 2*(self.N+self.nf)),
+            (self.nc_cop, 2*(self.N+self.nf)),
              dtype=float
         )
-        self.ubBcop = numpy.zeros((self.N*self.nFootEdge), dtype=float)
+        self.lbBcop = -numpy.ones((self.nc_cop), dtype=float)*1e+08
+        self.ubBcop =  numpy.zeros((self.nc_cop), dtype=float)
 
         # foot rotation constraints
-        self.A_fvel_eq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_fvel_eq = numpy.zeros((self.N,), dtype=float)
+        self.nc_fvel_eq = self.N # velocity constraints on support foot
+        self.A_fvel_eq  = numpy.zeros((self.nc_fvel_eq, 2*self.N), dtype=float)
+        self.B_fvel_eq  = numpy.zeros((self.nc_fvel_eq,), dtype=float)
 
-        self.A_facc_eq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.B_facc_eq = numpy.zeros((self.N,), dtype=float)
+        self.nc_fpos_ineq  = self.N # maximum orientation change
+        self.A_fpos_ineq   = numpy.zeros((self.nc_fpos_ineq, 2*self.N), dtype=float)
+        self.ubB_fpos_ineq = numpy.zeros((self.nc_fpos_ineq,), dtype=float)
+        self.lbB_fpos_ineq = numpy.zeros((self.nc_fpos_ineq,), dtype=float)
 
-        self.A_fpos_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.ubB_fpos_ineq = numpy.zeros((self.N,), dtype=float)
-        self.lbB_fpos_ineq = numpy.zeros((self.N,), dtype=float)
-
-        self.A_fvel_ineq = numpy.zeros((self.N, 2*self.N), dtype=float)
-        self.ubB_fvel_ineq = numpy.zeros((self.N,), dtype=float)
-        self.lbB_fvel_ineq = numpy.zeros((self.N,), dtype=float)
+        self.nc_fvel_ineq  = self.N # maximum angular velocity
+        self.A_fvel_ineq   = numpy.zeros((self.nc_fvel_ineq, 2*self.N), dtype=float)
+        self.ubB_fvel_ineq = numpy.zeros((self.nc_fvel_ineq,), dtype=float)
+        self.lbB_fvel_ineq = numpy.zeros((self.nc_fvel_ineq,), dtype=float)
 
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
@@ -1108,11 +1113,12 @@ class BaseGenerator(object):
         B0full = numpy.concatenate( (B_f1, B_f2) , 0 )
         B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
 
-        self.Afoot = numpy.concatenate ( (numpy.zeros((ncfoot,N),dtype=float),\
-                                          A0x,\
-                                          numpy.zeros((ncfoot,N),dtype=float),\
-                                          A0y) , 1 )
-        self.ubBfoot = B0
+        self.Afoot[...] = numpy.concatenate ((
+            numpy.zeros((ncfoot,N),dtype=float), A0x,
+            numpy.zeros((ncfoot,N),dtype=float), A0y
+            ), 1
+        )
+        self.ubBfoot[...] = B0
 
     def buildFootRotationConstraints(self):
         """ constraints that freeze foot orientation for support leg """

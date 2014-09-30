@@ -201,11 +201,11 @@ class Plotter(object):
         matplotlib.rc('ytick', labelsize=6)
         matplotlib.rc('font', size=10)
         matplotlib.rc('font', size=10)
-        matplotlib.rc('text', usetex=True)
+        matplotlib.rc('text', usetex=False)
 
         # some plotting options
         self.figsize = (8.0, 5.0)
-        self.dpi = 300
+        self.dpi = 100
 
         # save reference to pattern generator
         # NOTE used for online plotting
@@ -628,27 +628,41 @@ class Plotter(object):
         ax.set_xlabel("no. of iterations")
 
         # retrieve data from data structure
-        ori_cpu = numpy.asarray(self.data['ori_qp_cputime'])
-        pos_cpu = numpy.asarray(self.data['pos_qp_cputime'])
-        idx = numpy.asarray(range(len(ori_cpu)))
+        if 'ori_qp_cputime' in self.data:
+            ori_cpu = numpy.asarray(self.data['ori_qp_cputime'])
+            pos_cpu = numpy.asarray(self.data['pos_qp_cputime'])
+            idx = numpy.asarray(range(len(ori_cpu)))
 
-        # get bar plots
-        width = 0.3
-        ori_bar = ax.bar(idx, ori_cpu, width, linewidth=0, color='r')
-        pos_bar = ax.bar(idx, pos_cpu, width, linewidth=0, color='y',
-            bottom=ori_cpu
-        )
+            # get bar plots
+            width = 0.3
+            ori_bar = ax.bar(idx, ori_cpu, width, linewidth=0, color='r')
+            pos_bar = ax.bar(idx, pos_cpu, width, linewidth=0, color='y',
+                bottom=ori_cpu
+            )
+
+            # define legend position
+            # Put a legend to the right of the current axis
+            legend = ax.legend(
+                (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
+            )
+        else:
+            qp_cpu = numpy.asarray(self.data['qp_cputime'])
+            idx = numpy.asarray(range(len(qp_cpu)))
+
+            # get bar plots
+            width = 0.3
+            qp_bar = ax.bar(idx, qp_cpu, width, linewidth=0, color='g')
+
+            # define legend position
+            # Put a legend to the right of the current axis
+            legend = ax.legend(
+                (qp_bar[0],), ('$QP_{x,y,\\theta}$',)
+            )
 
         # recalculate x and y limits
         ax.relim()
         ax.autoscale_view(scalex=True, scaley=True, tight='True')
         #ax.set_aspect('equal')
-
-        # define legend position
-        # Put a legend to the right of the current axis
-        legend = ax.legend(
-            (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
-        )
 
         # NWSR
         self.data_nwsr_fig = plt.figure()
@@ -658,27 +672,41 @@ class Plotter(object):
         ax.set_xlabel("no. of iterations")
 
         # retrieve data from data structure
-        ori_nwsr = numpy.asarray(self.data['ori_qp_nwsr'])
-        pos_nwsr = numpy.asarray(self.data['pos_qp_nwsr'])
-        idx = numpy.asarray(range(len(ori_cpu)))
+        if 'ori_qp_nwsr' in self.data:
+            ori_nwsr = numpy.asarray(self.data['ori_qp_nwsr'])
+            pos_nwsr = numpy.asarray(self.data['pos_qp_nwsr'])
+            idx = numpy.asarray(range(len(ori_cpu)))
 
-        # get bar plots
-        width = 0.3
-        ori_bar = ax.bar(idx, ori_nwsr, width, linewidth=0, color='r')
-        pos_bar = ax.bar(idx, pos_nwsr, width, linewidth=0, color='y',
-            bottom=ori_nwsr
-        )
+            # get bar plots
+            width = 0.3
+            ori_bar = ax.bar(idx, ori_nwsr, width, linewidth=0, color='r')
+            pos_bar = ax.bar(idx, pos_nwsr, width, linewidth=0, color='y',
+                bottom=ori_nwsr
+            )
+
+            # define legend position
+            # Put a legend to the right of the current axis
+            legend = ax.legend(
+                (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
+            )
+        else:
+            qp_nwsr = numpy.asarray(self.data['qp_nwsr'])
+            idx = numpy.asarray(range(len(qp_nwsr)))
+
+            # get bar plots
+            width = 0.3
+            qp_bar = ax.bar(idx, qp_nwsr, width, linewidth=0, color='g')
+
+            # define legend position
+            # Put a legend to the right of the current axis
+            legend = ax.legend(
+                (qp_bar[0],), ('$QP_{x,y,\\theta}$',)
+            )
 
         # recalculate x and y limits
         ax.relim()
         ax.autoscale_view(scalex=True, scaley=True, tight='True')
         #ax.set_aspect('equal')
-
-        # define legend position
-        # Put a legend to the right of the current axis
-        legend = ax.legend(
-            (ori_bar[0], pos_bar[0]), ('$QP_{\\theta}$', '$QP_{x,y}$')
-        )
 
         # show canvas
         if self.show_canvas:

@@ -67,8 +67,9 @@ class ClassicGenerator(BaseGenerator):
         # define dimensions
         self.ori_nv = 2*self.N
         self.ori_nc = (
-            self.nc_fvel_eq +
-            self.nc_fpos_ineq + self.nc_fvel_ineq
+              self.nc_fvel_eq
+            + self.nc_fpos_ineq
+            + self.nc_fvel_ineq
         )
 
         # setup problem
@@ -93,9 +94,6 @@ class ClassicGenerator(BaseGenerator):
         # FOR POSITIONS
         # define dimensions
         self.pos_nv = 2*(self.N + self.nf)
-        #self.pos_nc_cop    = self.nFootEdge*(self.N)      # ZMP constraints
-        #self.pos_nc_eqfoot = self.nf                      # foot equality constraints
-        #self.pos_nc_foot   = self.nFootPosHullEdges*self.nf # foot position constraints
         self.pos_nc = (
             self.nc_cop
             + self.nc_foot_position
@@ -241,14 +239,14 @@ class ClassicGenerator(BaseGenerator):
         a = 0
         b = self.nc_cop
         self.pos_A  [a:b] = self.Acop
-        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_lbA[a:b] = self.lbBcop
         self.pos_ubA[a:b] = self.ubBcop
 
         #foot inequality constraints
         a = self.nc_cop
         b = self.nc_cop + self.nc_foot_position
         self.pos_A  [a:b] = self.Afoot
-        self.pos_lbA[a:b] = self.pos_lbA[a:b]
+        self.pos_lbA[a:b] = self.lbBfoot
         self.pos_ubA[a:b] = self.ubBfoot
 
         #foot equality constraints

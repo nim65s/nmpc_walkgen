@@ -61,7 +61,22 @@ class NMPCGenerator(BaseGenerator):
         self.nv = 2*(self.N+self.nf) + 2*N
 
         # define constraint dimensions
-        self.nc = 0#self.fvel# + self.facc
+        self.nc_pos = (
+              self.nc_cop
+            + self.nc_foot_position
+            + self.nc_fchange_eq
+        )
+        self.nc_ori = (
+              self.nc_fvel_eq
+            + self.nc_fpos_ineq
+            + self.nc_fvel_ineq
+        )
+        self.nc = (
+            # position
+              self.nc_pos
+            # orientation
+            + self.nc_ori
+        )
 
         # setup problem
         self.dofs = numpy.zeros(self.nv)
@@ -98,6 +113,14 @@ class NMPCGenerator(BaseGenerator):
         self.Q_k_qL = numpy.zeros((N, N),   dtype=float)
         self.p_k_qR = numpy.zeros((N),      dtype=float)
         self.p_k_qL = numpy.zeros((N),      dtype=float)
+
+        self.A_pos   = numpy.zeros((self.nc_pos, 2*(N+nf)), dtype=float)
+        self.ubA_pos = numpy.zeros((self.nc_pos,), dtype=float)
+        self.lbA_pos = numpy.zeros((self.nc_pos,), dtype=float)
+
+        self.A_ori   = numpy.zeros((self.nc_ori, 2*N), dtype=float)
+        self.ubA_ori = numpy.zeros((self.nc_ori,),     dtype=float)
+        self.lbA_ori = numpy.zeros((self.nc_ori,),     dtype=float)
 
         # add additional keys that should be saved
         self._data_keys.append('qp_nwsr')
@@ -246,29 +269,10 @@ class NMPCGenerator(BaseGenerator):
         # gq = ( U_k_q.T Q_k_q + p_k_q )
         gq[...] = Hq
 
-        """
-        # ORIENTATION LINEAR CONSTRAINTS
-        # velocity constraints on support foot to freeze movement
-        a = 0
-        b = self.ori_fvel_eq
-        self.ori_A  [a:b] = self.A_fvel_eq
-        self.ori_lbA[a:b] = self.B_fvel_eq
-        self.ori_ubA[a:b] = self.B_fvel_eq
+        # CONSTRAINTS
+        A_xy = self.qp_A[:self.nc_pos,:nU_k_xy]
+        A_q  = self.qp_A[:,-nU_k_q:]
 
-        # box constraints for maximum orientation change
-        a = self.ori_fvel_eq
-        b = self.ori_fvel_eq + self.ori_fpos_ineq
-        self.ori_A  [a:b] = self.A_fpos_ineq
-        self.ori_lbA[a:b] = self.lbB_fpos_ineq
-        self.ori_ubA[a:b] = self.ubB_fpos_ineq
-
-        # box constraints for maximum angular velocity
-        a = self.ori_fvel_eq + self.ori_fpos_ineq
-        b = self.ori_fvel_eq + self.ori_fpos_ineq + self.ori_fvel_ineq
-        self.ori_A  [a:b] = self.A_fvel_ineq
-        self.ori_lbA[a:b] = self.lbB_fvel_ineq
-        self.ori_ubA[a:b] = self.ubB_fvel_ineq
-        """
 
     def _calculate_common_expressions(self):
         """
@@ -381,6 +385,49 @@ class NMPCGenerator(BaseGenerator):
         # p_k_qL = (       a * Pvu^T * E_FL^T * (E_FL * Pvs * f_k_qL + dC_kp1_q_ref) )
         p_k_qL = self.p_k_qL
         p_k_qL[...] = alpha * Pvu.transpose().dot(E_FL.transpose()).dot(E_FL.dot(Pvs).dot(f_k_qL) - dC_kp1_q_ref)
+
+        # LINEAR CONSTRAINTS
+        # CoP constraints
+        a = 0
+        b = self.nc_cop
+        self.A_pos  [a:b] = self.Acop
+        self.lbA_pos[a:b] = self.lbBcop
+        self.ubA_pos[a:b] = self.ubBcop
+
+        #foot inequality constraints
+        a = self.nc_cop
+        b = self.nc_cop + self.nc_foot_position
+        self.A_pos  [a:b] = self.Afoot
+        self.lbA_pos[a:b] = self.lbBfoot
+        self.ubA_pos[a:b] = self.ubBfoot
+
+        #foot equality constraints
+        a = self.nc_cop + self.nc_foot_position
+        b = self.nc_cop + self.nc_foot_position + self.nc_fchange_eq
+        self.A_pos  [a:b] = self.eqAfoot
+        self.lbA_pos[a:b] = self.eqBfoot
+        self.ubA_pos[a:b] = self.eqBfoot
+
+        # velocity constraints on support foot to freeze movement
+        a = 0
+        b = self.nc_fvel_eq
+        self.A_ori  [a:b] = self.A_fvel_eq
+        self.lbA_ori[a:b] = self.B_fvel_eq
+        self.ubA_ori[a:b] = self.B_fvel_eq
+
+        # box constraints for maximum orientation change
+        a = self.nc_fvel_eq
+        b = self.nc_fvel_eq + self.nc_fpos_ineq
+        self.A_ori  [a:b] = self.A_fpos_ineq
+        self.lbA_ori[a:b] = self.lbB_fpos_ineq
+        self.ubA_ori[a:b] = self.ubB_fpos_ineq
+
+        # box constraints for maximum angular velocity
+        a = self.nc_fvel_eq + self.nc_fpos_ineq
+        b = self.nc_fvel_eq + self.nc_fpos_ineq + self.nc_fvel_ineq
+        self.A_ori  [a:b] = self.A_fvel_ineq
+        self.lbA_ori[a:b] = self.lbB_fvel_ineq
+        self.ubA_ori[a:b] = self.ubB_fvel_ineq
 
     def _solve_qp(self):
         """

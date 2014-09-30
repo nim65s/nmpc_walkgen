@@ -287,6 +287,7 @@ class BaseGenerator(object):
         # Linear constraints vector
         self.nc_foot_position = self.nf * self.nFootPosHullEdges
         self.Afoot   = numpy.zeros((self.nc_foot_position, 2*(self.N + self.nf)), dtype=float)
+        self.lbBfoot =-numpy.ones((self.nc_foot_position), dtype=float)*1e+08
         self.ubBfoot = numpy.zeros((self.nc_foot_position), dtype=float)
 
         # security margins for CoP constraints
@@ -369,7 +370,8 @@ class BaseGenerator(object):
             (self.nc_cop, 2*(self.N+self.nf)),
              dtype=float
         )
-        self.ubBcop = numpy.zeros((self.nc_cop), dtype=float)
+        self.lbBcop = -numpy.ones((self.nc_cop), dtype=float)*1e+08
+        self.ubBcop =  numpy.zeros((self.nc_cop), dtype=float)
 
         # foot rotation constraints
         self.nc_fvel_eq = self.N # velocity constraints on support foot

@@ -297,7 +297,7 @@ class TestNMPCGenerator(TestCase):
         # Pattern Generator Preparation
         nmpc = NMPCGenerator()
 
-        nmpc.set_velocity_reference([0.2,0.0,-0.2])
+        nmpc.set_velocity_reference([0.2,0.0, 0.0])
         nmpc.set_security_margin(0.04, 0.04)
 
         # set initial values
@@ -305,6 +305,12 @@ class TestNMPCGenerator(TestCase):
 
         # build up QP matrices
         nmpc.solve()
+        nmpc.update()
+        print nmpc.qp_nwsr
+        print nmpc.qp_cputime
+
+        nmpc.solve()
+        nmpc.update()
 
         print nmpc.qp_nwsr
         print nmpc.qp_cputime

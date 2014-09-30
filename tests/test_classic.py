@@ -396,6 +396,7 @@ class TestClassicGenerator(TestCase):
 
         gen.simulate()
 
+    @decorators.setastest(False)
     def test_generator_with_zero_reference_velocity(self):
         gen = ClassicGenerator()
 

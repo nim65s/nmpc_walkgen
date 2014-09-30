@@ -241,7 +241,7 @@ class TestNMPCGenerator(TestCase):
         footq = 0.0
 
         # Pattern Generator Preparation
-        classic = ClassicGenerator()
+        classic = ClassicGenerator(fsm_state='R/L')
 
         # set reference velocities to zero
         classic.set_velocity_reference([0.2,0.0,-0.2])
@@ -271,7 +271,7 @@ class TestNMPCGenerator(TestCase):
         footq = 0.0
 
         # Pattern Generator Preparation
-        nmpc = NMPCGenerator()
+        nmpc = NMPCGenerator(fsm_state='R/L')
 
         nmpc.set_velocity_reference([0.2,0.0,-0.2])
         nmpc.set_security_margin(0.04, 0.04)
@@ -291,7 +291,13 @@ class TestNMPCGenerator(TestCase):
         nmpc_ori_lbA = nmpc.lbA_ori
         nmpc_ori_ubA = nmpc.ubA_ori
 
-        print nmpc.dofs
+        nmpc_A_pos   = nmpc.qp_A  [:nmpc.nc_pos,:2*(nmpc.N+nmpc.nf)]
+        nmpc_lbA_pos = nmpc.qp_lbA[:nmpc.nc_pos]
+        nmpc_ubA_pos = nmpc.qp_ubA[:nmpc.nc_pos]
+
+        nmpc_A_ori   = nmpc.qp_A  [-nmpc.nc_ori:,-2*nmpc.N:]
+        nmpc_lbA_ori = nmpc.qp_lbA[-nmpc.nc_ori:]
+        nmpc_ubA_ori = nmpc.qp_ubA[-nmpc.nc_ori:]
 
         # compare matrices
         # position common sub expressions
@@ -299,10 +305,18 @@ class TestNMPCGenerator(TestCase):
         assert_allclose(classic_pos_lbA, nmpc_pos_lbA, atol=ATOL, rtol=RTOL)
         assert_allclose(classic_pos_ubA, nmpc_pos_ubA, atol=ATOL, rtol=RTOL)
 
+        assert_allclose(classic_pos_A,   nmpc_A_pos,   atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_pos_lbA, nmpc_lbA_pos, atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_pos_ubA, nmpc_ubA_pos, atol=ATOL, rtol=RTOL)
+
         # orientation common sub expressions
         assert_allclose(classic_ori_A,   nmpc_ori_A,   atol=ATOL, rtol=RTOL)
         assert_allclose(classic_ori_lbA, nmpc_ori_lbA, atol=ATOL, rtol=RTOL)
         assert_allclose(classic_ori_ubA, nmpc_ori_ubA, atol=ATOL, rtol=RTOL)
+
+        assert_allclose(classic_ori_A,   nmpc_A_ori,   atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_ori_lbA, nmpc_lbA_ori, atol=ATOL, rtol=RTOL)
+        assert_allclose(classic_ori_ubA, nmpc_ubA_ori, atol=ATOL, rtol=RTOL)
 
     def test_against_classic_generator_zero_angular_velocity(self):
         pass

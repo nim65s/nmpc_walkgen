@@ -275,11 +275,11 @@ class NMPCGenerator(BaseGenerator):
         # CONSTRAINTS
         A_xy   = self.qp_A  [:self.nc_pos,:nU_k_xy]
         lbA_xy = self.qp_lbA[:self.nc_pos]
-        ubA_xy = self.qp_lbA[:self.nc_pos]
+        ubA_xy = self.qp_ubA[:self.nc_pos]
 
         A_q   = self.qp_A  [-self.nc_ori:,-nU_k_q:]
         lbA_q = self.qp_lbA[-self.nc_ori:]
-        ubA_q = self.qp_lbA[-self.nc_ori:]
+        ubA_q = self.qp_ubA[-self.nc_ori:]
 
         # linearized constraints are given by
         # lbA - A * U_k <= nablaA * Delta_U_k <= ubA - A * U_k

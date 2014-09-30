@@ -4,13 +4,14 @@ import numpy
 numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
+from walking_generator.interpolation import Interpolation
 
 # instantiate pattern generator
 gen = ClassicGenerator(fsm_state='L/R')
 
 # instantiate plotter
 show_canvas = True
-save_to_file = True
+save_to_file = False
 plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
@@ -31,16 +32,21 @@ gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 gen.simulate()
 gen._update_data()
 
+sampling_period = 0.005
+interpol = Interpolation(sampling_period,gen)
+
+
 # Pattern Generator Event Loop
-for i in range(160):
+for i in range(50):
+    time = i*sampling_period
     print 'iteration: ', i
 
-    if 50 <= i < 100:
-        gen.set_velocity_reference([0.2,0.0,-0.2])
-    if 100 <= i < 130:
-        gen.set_velocity_reference([0.2,0.0,-0.2])
-    if 130 <= i:
-        gen.set_velocity_reference([0.2,0.0,-0.2])
+#    if 50 <= i < 100:
+#        gen.set_velocity_reference([0.2,0.0,-0.2])
+#    if 100 <= i < 130:
+#        gen.set_velocity_reference([0.2,0.0,-0.2])
+#    if 130 <= i:
+#        gen.set_velocity_reference([0.2,0.0,-0.2])
 
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0
@@ -72,8 +78,10 @@ for i in range(160):
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     plot.update()
 
+    interpol.interpolate(time)
     #raw_input('press key:')
     #time.sleep(0.1)
 
 gen.data.save_to_file('./data.json')
+interpol.save_to_file()
 

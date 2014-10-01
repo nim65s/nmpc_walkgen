@@ -1,9 +1,11 @@
 import sys
 import numpy
 import utility
+import matplotlib.pyplot as plt
 
 from base import BaseGenerator
 from visualization import PlotData
+from walking_generator.utility import color_matrix
 
 # Try to get qpOASES SQP Problem class
 try:
@@ -285,7 +287,6 @@ class NMPCGenerator(BaseGenerator):
         A_xyq  = self.qp_A  [:self.nc_pos,-nU_k_q:]
         lbA_xy = self.qp_lbA[:self.nc_pos]
         ubA_xy = self.qp_ubA[:self.nc_pos]
-
 
         A_q   = self.qp_A  [-self.nc_ori:,-nU_k_q:]
         lbA_q = self.qp_lbA[-self.nc_ori:]

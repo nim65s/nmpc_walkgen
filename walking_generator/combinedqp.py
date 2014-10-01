@@ -114,13 +114,19 @@ class NMPCGenerator(BaseGenerator):
         self.p_k_qR = numpy.zeros((N),      dtype=float)
         self.p_k_qL = numpy.zeros((N),      dtype=float)
 
-        self.A_pos   = numpy.zeros((self.nc_pos, 2*(N+nf)), dtype=float)
+        self.A_pos_x   = numpy.zeros((self.nc_pos, 2*(N+nf)), dtype=float)
+        self.A_pos_q   = numpy.zeros((self.nc_pos, 2*N), dtype=float)
         self.ubA_pos = numpy.zeros((self.nc_pos,), dtype=float)
         self.lbA_pos = numpy.zeros((self.nc_pos,), dtype=float)
 
         self.A_ori   = numpy.zeros((self.nc_ori, 2*N), dtype=float)
         self.ubA_ori = numpy.zeros((self.nc_ori,),     dtype=float)
         self.lbA_ori = numpy.zeros((self.nc_ori,),     dtype=float)
+
+        self.derv_Acop_map = numpy.zeros((self.nc_cop, self.N), dtype=float)
+        self.derv_Afoot_map = numpy.zeros((self.nc_foot_position, self.N), dtype=float)
+
+        self._update_foot_selection_matrix()
 
         # add additional keys that should be saved
         self._data_keys.append('qp_nwsr')
@@ -273,9 +279,13 @@ class NMPCGenerator(BaseGenerator):
         gq[-nU_k_qL:] = U_k_qL.dot(Q_k_qL) + p_k_qL
 
         # CONSTRAINTS
+        # A = ( A_xy, A_xyq )
+        #     (    0, A_q   )
         A_xy   = self.qp_A  [:self.nc_pos,:nU_k_xy]
+        A_xyq  = self.qp_A  [:self.nc_pos,-nU_k_q:]
         lbA_xy = self.qp_lbA[:self.nc_pos]
         ubA_xy = self.qp_ubA[:self.nc_pos]
+
 
         A_q   = self.qp_A  [-self.nc_ori:,-nU_k_q:]
         lbA_q = self.qp_lbA[-self.nc_ori:]
@@ -283,9 +293,10 @@ class NMPCGenerator(BaseGenerator):
 
         # linearized constraints are given by
         # lbA - A * U_k <= nablaA * Delta_U_k <= ubA - A * U_k
-        A_xy[...]   = self.A_pos
-        lbA_xy[...] = self.lbA_pos - self.A_pos.dot(U_k_xy)
-        ubA_xy[...] = self.ubA_pos - self.A_pos.dot(U_k_xy)
+        A_xy[...]   = self.A_pos_x
+        A_xyq[...]  = self.A_pos_q
+        lbA_xy[...] = self.lbA_pos - self.A_pos_x.dot(U_k_xy)
+        ubA_xy[...] = self.ubA_pos - self.A_pos_x.dot(U_k_xy)
 
         A_q[...]   = self.A_ori
         lbA_q[...] = self.lbA_ori - self.A_ori.dot(U_k_q)
@@ -407,21 +418,21 @@ class NMPCGenerator(BaseGenerator):
         # CoP constraints
         a = 0
         b = self.nc_cop
-        self.A_pos  [a:b] = self.Acop
+        self.A_pos_x[a:b] = self.Acop
         self.lbA_pos[a:b] = self.lbBcop
         self.ubA_pos[a:b] = self.ubBcop
 
         #foot inequality constraints
         a = self.nc_cop
         b = self.nc_cop + self.nc_foot_position
-        self.A_pos  [a:b] = self.Afoot
+        self.A_pos_x[a:b] = self.Afoot
         self.lbA_pos[a:b] = self.lbBfoot
         self.ubA_pos[a:b] = self.ubBfoot
 
         #foot equality constraints
         a = self.nc_cop + self.nc_foot_position
         b = self.nc_cop + self.nc_foot_position + self.nc_fchange_eq
-        self.A_pos  [a:b] = self.eqAfoot
+        self.A_pos_x[a:b] = self.eqAfoot
         self.lbA_pos[a:b] = self.eqBfoot
         self.ubA_pos[a:b] = self.eqBfoot
 
@@ -504,6 +515,8 @@ class NMPCGenerator(BaseGenerator):
                 b_kp1 [i*self.nFootEdge+k]    = B0[k]
 
         #rename for convenience
+        N  = self.N
+        nf = self.nf
         PzuV  = self.PzuV
         PzuVx = self.PzuVx
         PzuVy = self.PzuVy
@@ -539,7 +552,17 @@ class NMPCGenerator(BaseGenerator):
         # build CoP linear constraints
         # NOTE D_kp1 is member and D_kp1 = ( D_kp1x | D_kp1y )
         #      D_kp1x,y contains entries from support polygon
-        self.derv_Acop   = D_kp1.dot(PzuV)
+        dummy = D_kp1.dot(PzuV)
+        dummy = dummy.dot(self.dofs[:2*(N+nf)])
+
+        # CoP constraints
+        a = 0
+        b = self.nc_cop
+        self.A_pos_q[a:b, :N] = \
+           dummy.dot(self.derv_Acop_map).dot(self.E_FR_bar).dot(self.Ppu)
+
+        self.A_pos_q[a:b,-N:] = \
+            dummy.dot(self.derv_Acop_map).dot(self.E_FL_bar).dot(self.Ppu)
 
         # FOOT POSITION CONSTRAINTS
         # defined on the horizon
@@ -591,11 +614,18 @@ class NMPCGenerator(BaseGenerator):
         Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
         A0y = Y_mat.dot(matSelec)
 
-        self.Afoot[...] = numpy.concatenate ((
+        dummy = numpy.concatenate ((
             numpy.zeros((ncfoot,N),dtype=float), A0x,
             numpy.zeros((ncfoot,N),dtype=float), A0y
             ), 1
         )
+        dummy = dummy.dot(self.dofs[:2*(N+nf)])
+
+        #foot inequality constraints
+        a = self.nc_cop
+        b = self.nc_cop + self.nc_foot_position
+        self.A_pos_q[a:b, :N] = dummy.dot(self.derv_Afoot_map).dot(self.E_FR_bar).dot(self.Ppu)
+        self.A_pos_q[a:b,-N:] = dummy.dot(self.derv_Afoot_map).dot(self.E_FL_bar).dot(self.Ppu)
 
     def _solve_qp(self):
         """
@@ -658,4 +688,33 @@ class NMPCGenerator(BaseGenerator):
         self.dddF_k_qR[:] += alpha * self.dofs[  a:a+N]
         self.dddF_k_qL[:] += alpha * self.dofs[ -N:]
 
+    def update(self):
+        """
+        overload update function to define time dependent support foot selection
+        matrix.
+        """
+        ret = super(NMPCGenerator, self).update()
 
+        # update selection matrix when something has changed
+        self._update_foot_selection_matrix()
+
+        return ret
+
+    def _update_foot_selection_matrix(self):
+        """ get right foot selection matrix """
+        i = 0
+        for j in range(self.N):
+            self.derv_Acop_map[i:i+self.nFootEdge,j] = 1.0
+            i += self.nFootEdge
+
+        self.derv_Afoot_map[...] = 0.0
+
+        i = self.nFootPosHullEdges
+        for j in range(self.nf-1):
+            for k in range(self.N):
+                if self.V_kp1[k,j] == 1:
+                    self.derv_Afoot_map[i:i+self.nFootPosHullEdges,k] = 1.0
+                    i += self.nFootPosHullEdges
+                    break
+            else:
+                self.derv_Afoot_map[i:i+self.nFootPosHullEdges,j] = 0.0

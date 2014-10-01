@@ -128,7 +128,6 @@ class BaseGenerator(object):
         self.T_window = N*T
         self.T_step = T_step
         self.nf = (int)(self.T_window/T_step)
-        self.currentTime = 0.0
         self.time = 0.0
         # finite state machine for starting and landing maneuvers
         self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
@@ -850,8 +849,6 @@ class BaseGenerator(object):
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
-#        # update the time to now when we land
-#        self.currentTime = time
 
         # after solution simulate to get current states on horizon
         self.simulate()

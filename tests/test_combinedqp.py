@@ -284,7 +284,7 @@ class TestNMPCGenerator(TestCase):
         nmpc._preprocess_solution()
 
         # reference them for comparison
-        nmpc_pos_A   = nmpc.A_pos
+        nmpc_pos_A   = nmpc.A_pos_x
         nmpc_pos_lbA = nmpc.lbA_pos
         nmpc_pos_ubA = nmpc.ubA_pos
 

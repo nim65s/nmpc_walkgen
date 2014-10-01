@@ -16,7 +16,7 @@ plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-gen.set_velocity_reference([0.2,0.0,-0.0])
+gen.set_velocity_reference([0.2,0.0,-0.6])
 
 gen.set_security_margin(0.04, 0.04)
 
@@ -34,15 +34,16 @@ gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(160):
-    time = i*0.1
     print 'iteration: ', i
 
+    """
     if 50 <= i < 100:
         gen.set_velocity_reference([0.2,0.0,-0.0])
     if 100 <= i < 130:
         gen.set_velocity_reference([0.2,0.0,-0.0])
     if 130 <= i:
         gen.set_velocity_reference([0.2,0.0,-0.0])
+    """
 
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0
@@ -50,7 +51,6 @@ for i in range(160):
 
     # solve QP
     gen.solve()
-    gen.simulate()
 
     #print 'gen.E_F\n', gen.E_F
     #print 'gen.E_F_bar\n', gen.E_F_bar
@@ -69,8 +69,8 @@ for i in range(160):
     #print 'gen.dddF_k_qR:\n', gen.dddF_k_qR
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq= \
-    gen.update(time)
+    comx, comy, comz, footx, footy, footq, foot, comq = \
+    gen.update()
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     plot.update()
 

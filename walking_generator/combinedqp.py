@@ -693,10 +693,12 @@ class NMPCGenerator(BaseGenerator):
         overload update function to define time dependent support foot selection
         matrix.
         """
-        super(NMPCGenerator, self).update()
+        ret = super(NMPCGenerator, self).update()
 
         # update selection matrix when something has changed
         self._update_foot_selection_matrix()
+
+        return ret
 
     def _update_foot_selection_matrix(self):
         """ get right foot selection matrix """
@@ -708,7 +710,6 @@ class NMPCGenerator(BaseGenerator):
         self.derv_Afoot_map[...] = 0.0
 
         i = self.nFootPosHullEdges
-        print self.V_kp1
         for j in range(self.nf-1):
             for k in range(self.N):
                 if self.V_kp1[k,j] == 1:
@@ -717,5 +718,3 @@ class NMPCGenerator(BaseGenerator):
                     break
             else:
                 self.derv_Afoot_map[i:i+self.nFootPosHullEdges,j] = 0.0
-
-        print self.derv_Afoot_map

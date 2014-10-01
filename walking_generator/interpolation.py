@@ -69,10 +69,11 @@ class Interpolation(object):
         self.leftFootTraj = [] #buffer containing the full rigth foot trajectory
         self.rightFootTraj = [] #buffer containing the full left foot trajectory
 
-        self.comTraj.extend(deepcopy(self.CoMbuffer))
-        self.zmpTraj.extend(deepcopy(self.ZMPbuffer))
-        self.leftFootTraj .extend(deepcopy(self.LFbuffer))
-        self.rightFootTraj.extend(deepcopy(self.RFbuffer))
+        for i in range(30):
+            self.comTraj.extend(deepcopy(self.CoMbuffer))
+            self.zmpTraj.extend(deepcopy(self.ZMPbuffer))
+            self.leftFootTraj .extend(deepcopy(self.LFbuffer))
+            self.rightFootTraj.extend(deepcopy(self.RFbuffer))
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
         self.fi = FootInterpolation(genrator=self.gen)

@@ -34,6 +34,7 @@ gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(160):
+    time = i*0.005
     print 'iteration: ', i
 
     """
@@ -51,7 +52,7 @@ for i in range(160):
 
     # solve QP
     gen.solve()
-
+    
     #print 'gen.E_F\n', gen.E_F
     #print 'gen.E_F_bar\n', gen.E_F_bar
     #print 'gen.A_rot_eq\n',   gen.A_rot_eq
@@ -69,7 +70,7 @@ for i in range(160):
     #print 'gen.dddF_k_qR:\n', gen.dddF_k_qR
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq = \
+    comx, comy, comz, footx, footy, footq, foot, comq= \
     gen.update()
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     plot.update()

@@ -102,23 +102,13 @@ class Interpolation(object):
         zmpY   = numpy.asarray([item.y for item in self.zmpTraj])
         zmpZ   = numpy.asarray([item.z for item in self.zmpTraj])
         rfX    = numpy.asarray([item.  x for item in self.rightFootTraj])
-        rfdX   = numpy.asarray([item. dx for item in self.rightFootTraj])
-        rfddX  = numpy.asarray([item.ddx for item in self.rightFootTraj])
         rfY    = numpy.asarray([item.  y for item in self.rightFootTraj])
-        rfdY   = numpy.asarray([item. dy for item in self.rightFootTraj])
-        rfddY  = numpy.asarray([item.ddy for item in self.rightFootTraj])
+        rfZ    = numpy.asarray([item.  z for item in self.rightFootTraj])
         rfQ    = numpy.asarray([item.  q for item in self.rightFootTraj])
-        rfdQ   = numpy.asarray([item. dq for item in self.rightFootTraj])
-        rfddQ  = numpy.asarray([item.ddq for item in self.rightFootTraj])
         lfX    = numpy.asarray([item.  x for item in self.leftFootTraj])
-        lfdX   = numpy.asarray([item. dx for item in self.leftFootTraj])
-        lfddX  = numpy.asarray([item.ddx for item in self.leftFootTraj])
         lfY    = numpy.asarray([item.  y for item in self.leftFootTraj])
-        lfdY   = numpy.asarray([item. dy for item in self.leftFootTraj])
-        lfddY  = numpy.asarray([item.ddy for item in self.leftFootTraj])
+        lfZ    = numpy.asarray([item.  z for item in self.leftFootTraj])
         lfQ    = numpy.asarray([item.  q for item in self.leftFootTraj])
-        lfdQ   = numpy.asarray([item. dq for item in self.leftFootTraj])
-        lfddQ  = numpy.asarray([item.ddq for item in self.leftFootTraj])
 
         lst = [
         comX[:,0], # 1
@@ -134,23 +124,13 @@ class Interpolation(object):
         zmpY,      # 11
         zmpZ,      # 12
         rfX,       # 13
-        rfdX,      # 14
-        rfddX,     # 15
-        rfY,       # 16
-        rfdY,      # 17
-        rfddY,     # 18
-        rfQ,       # 19
-        rfdQ,      # 20
-        rfddQ,     # 21
-        lfX,       # 22
-        lfdX,      # 23
-        lfddX,     # 24
-        lfY,       # 25
-        lfdY,      # 26
-        lfddY,     # 27
-        lfQ,       # 28
-        lfdQ,      # 29
-        lfddQ ]    # 30
+        rfY,       # 14
+        rfZ,       # 15
+        rfQ,       # 16
+        lfX,       # 17
+        lfY,       # 18
+        rfZ,       # 19
+        lfQ   ]    # 20
 
         data = numpy.asarray(lst).transpose()
         numpy.savetxt("./wieber2010python.csv", data, delimiter="   ")

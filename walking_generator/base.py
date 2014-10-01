@@ -849,6 +849,7 @@ class BaseGenerator(object):
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
+
         # after solution simulate to get current states on horizon
         self.simulate()
 

@@ -1,4 +1,5 @@
 
+*.csv
 *.fuse_hidden*
 *.pyc
 *.orig

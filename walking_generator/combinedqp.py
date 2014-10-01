@@ -210,6 +210,9 @@ class NMPCGenerator(BaseGenerator):
         # calculate some common sub expressions
         self._calculate_common_expressions()
 
+        # calculate Jacobian parts that are non-trivial, i.e. wrt. to orientation
+        self._calculate_derivatives()
+
         # POSITION QP
         # rename matrices
         Q_k_x = self.Q_k_x
@@ -442,6 +445,167 @@ class NMPCGenerator(BaseGenerator):
         self.A_ori  [a:b] = self.A_fvel_ineq
         self.lbA_ori[a:b] = self.lbB_fvel_ineq
         self.ubA_ori[a:b] = self.ubB_fvel_ineq
+
+    def _calculate_derivatives(self):
+        """ calculate the Jacobian of the constraints function """
+
+        # COP CONSTRAINTS
+        # build the constraint enforcing the center of pressure to stay inside
+        # the support polygon given through the convex hull of the foot.
+
+        # define dummy values
+        # D_kp1 = (D_kp1x, Dkp1_y)
+        D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
+        D_kp1x = D_kp1[:, :self.N] # view on big matrix
+        D_kp1y = D_kp1[:,-self.N:] # view on big matrix
+        b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
+
+        # change entries according to support order changes in D_kp1
+        theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
+        print [item.stepNumber for item in self.supportDeque]
+        for i in range(self.N):
+            theta = theta_vec[self.supportDeque[i].stepNumber]
+
+            # NOTE THIS CHANGES DUE TO APPLYING THE DERIVATIVE!
+            rotMat = numpy.array([
+                # old
+                # [ cos(theta), sin(theta)],
+                # [-sin(theta), cos(theta)]
+                # new: derivative wrt to theta
+                [-numpy.sin(theta), numpy.cos(theta)],
+                [-numpy.cos(theta),-numpy.sin(theta)]
+            ])
+
+            if self.supportDeque[i].foot == "left" :
+                A0 = self.A0lf.dot(rotMat)
+                B0 = self.ubB0lf
+                D0 = self.A0dlf.dot(rotMat)
+                d0 = self.ubB0dlf
+            else :
+                A0 = self.A0rf.dot(rotMat)
+                B0 = self.ubB0rf
+                D0 = self.A0drf.dot(rotMat)
+                d0 = self.ubB0drf
+
+            # get support foot and check if it is double support
+            for j in range(self.nf):
+                if self.V_kp1[i,j] == 1:
+                    if self.fsm_states[j] == 'D':
+                        A0 = D0
+                        B0 = d0
+                else:
+                    pass
+
+            for k in range(self.nFootEdge):
+                # get d_i+1^x(f^theta)
+                D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
+                # get d_i+1^y(f^theta)
+                D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
+                # get right hand side of equation
+                b_kp1 [i*self.nFootEdge+k]    = B0[k]
+
+        #rename for convenience
+        PzuV  = self.PzuV
+        PzuVx = self.PzuVx
+        PzuVy = self.PzuVy
+        PzsC  = self.PzsC
+        PzsCx = self.PzsCx
+        PzsCy = self.PzsCy
+        v_kp1fc   = self.v_kp1fc
+        v_kp1fc_x = self.v_kp1fc_x
+        v_kp1fc_y = self.v_kp1fc_y
+
+        # build constraint transformation matrices
+        # PzuV = ( PzuVx )
+        #        ( PzuVy )
+
+        # PzuVx = ( Pzu | -V_kp1 |   0 |      0 )
+        PzuVx[:,      :self.N        ] =  self.Pzu # TODO this is constant in matrix and should go into the build up matrice part
+        PzuVx[:,self.N:self.N+self.nf] = -self.V_kp1
+
+        # PzuVy = (   0 |      0 | Pzu | -V_kp1 )
+        PzuVy[:,-self.N-self.nf:-self.nf] =  self.Pzu # TODO this is constant in matrix and should go into the build up matrice part
+        PzuVy[:,       -self.nf:       ] = -self.V_kp1
+
+        # PzuV = ( PzsCx ) = ( Pzs * c_k_x)
+        #        ( PzsCy )   ( Pzs * c_k_y)
+        PzsCx[...] = self.Pzs.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
+        PzsCy[...] = self.Pzs.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
+
+        # v_kp1fc = ( v_kp1fc_x ) = ( v_kp1 * f_k_x)
+        #           ( v_kp1fc_y )   ( v_kp1 * f_k_y)
+        v_kp1fc_x[...] = self.v_kp1.dot(self.f_k_x)
+        v_kp1fc_y[...] = self.v_kp1.dot(self.f_k_y)
+
+        # build CoP linear constraints
+        # NOTE D_kp1 is member and D_kp1 = ( D_kp1x | D_kp1y )
+        #      D_kp1x,y contains entries from support polygon
+        Acop   = D_kp1.dot(PzuV)
+        ubBcop = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
+
+        # FOOT POSITION CONSTRAINTS
+        # defined on the horizon
+        # inequality constraint on both feet A u + B <= 0
+        # A0 R(theta) [Fx_k+1 - Fx_k] <= ubB0
+        #             [Fy_k+1 - Fy_k]
+
+        matSelec = numpy.array([ [1, 0],[-1, 1] ])
+        footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])
+        theta_vec = [self.f_k_q,self.F_k_q[0]]
+
+        # rotation matrice from F_k+1 to F_k
+        # NOTE THIS CHANGES DUE TO APPLYING THE DERIVATIVE!
+        rotMat1 = numpy.array([
+            # old
+            # [cos(theta_vec[0]), sin(theta_vec[0])],
+            # [-sin(theta_vec[0]), cos(theta_vec[0])]
+            # new: derivative wrt to theta
+            [-numpy.sin(theta_vec[0]), numpy.cos(theta_vec[0])],
+            [-numpy.cos(theta_vec[0]),-numpy.sin(theta_vec[0])]
+        ])
+        rotMat2 = numpy.array([
+            # old
+            # [cos(theta_vec[1]), sin(theta_vec[1])],
+            # [-sin(theta_vec[1]), cos(theta_vec[1])]
+            # new
+            [-numpy.sin(theta_vec[1]), numpy.cos(theta_vec[1])],
+            [-numpy.cos(theta_vec[1]),-numpy.sin(theta_vec[1])]
+        ])
+        nf = self.nf
+        nEdges = self.A0l.shape[0]
+        N = self.N
+        ncfoot = nf * nEdges
+
+        if self.currentSupport.foot == "left":
+            A_f1 = self.A0r.dot(rotMat1)
+            A_f2 = self.A0l.dot(rotMat2)
+            B_f1 = self.ubB0r
+            B_f2 = self.ubB0l
+        else :
+            A_f1 = self.A0l.dot(rotMat1)
+            A_f2 = self.A0r.dot(rotMat2)
+            B_f1 = self.ubB0l
+            B_f2 = self.ubB0r
+
+        tmp1 = numpy.array( [A_f1[:,0],numpy.zeros((nEdges,),dtype=float)] )
+        tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A_f2[:,0]] )
+        tmp3 = numpy.array( [A_f1[:,1],numpy.zeros((nEdges,),dtype=float)] )
+        tmp4 = numpy.array( [numpy.zeros(nEdges,),A_f2[:,1]] )
+
+        X_mat = numpy.concatenate( (tmp1.T,tmp2.T) , 0)
+        A0x = X_mat.dot(matSelec)
+        Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
+        A0y = Y_mat.dot(matSelec)
+
+        B0full = numpy.concatenate( (B_f1, B_f2) , 0 )
+        B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
+
+        self.Afoot[...] = numpy.concatenate ((
+            numpy.zeros((ncfoot,N),dtype=float), A0x,
+            numpy.zeros((ncfoot,N),dtype=float), A0y
+            ), 1
+        )
+        self.ubBfoot[...] = B0
 
     def _solve_qp(self):
         """

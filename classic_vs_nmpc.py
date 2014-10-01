@@ -32,16 +32,16 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 # initial reference velocity
-velocity_reference = [0.2, 0.0,-0.6]
+velocity_reference = [0.1, 0.1, 0.0]
 
 # Pattern Generator Event Loop
 for i in range(160):
     print 'iteration: ', i
     # change reference velocities
     if 50 <= i < 100:
-        velocity_reference = [ 0.1, 0.0, 0.2]
+        velocity_reference = [ 0.1, -0.1, 0.0]
     if 100 <= i < 130:
-        velocity_reference = [-0.1, 0.0,-0.05]
+        velocity_reference = [ 0.0,-0.2,-0.0]
     if 130 <= i:
         velocity_reference = [ 0.3, 0.0, 0.0]
 

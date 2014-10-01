@@ -12,11 +12,11 @@ nmpc    = NMPCGenerator(fsm_state='L/R')
 classic = ClassicGenerator(fsm_state='L/R')
 
 # Pattern Generator Preparation
-nmpc.   set_security_margin(0.04, 0.04)
-classic.set_security_margin(0.04, 0.04)
+nmpc.   set_security_margin(0.09, 0.05)
+classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas  = False
+show_canvas = True
 save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 classic_p = Plotter(classic, show_canvas, save_to_file)
@@ -33,7 +33,7 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolClassic = Interpolation(0.005,classic)
-interpolNmpc    = Interpolation(0.005,nmpc)
+interpolNmpc = Interpolation(0.005,nmpc)
 # initial reference velocity
 velocity_reference = [0.2, 0.0,0.0]
 
@@ -45,11 +45,11 @@ for i in range(500):
     # change reference velocities
     if 25 <= i < 50:
         velocity_reference = [ 0.0, 0.2, 0.0]
-    if 50 <= i < 100:
-        velocity_reference = [-0.1, 0.0,0.2]
-    if 100 <= i < 150:
+    if 50 <= i < 150:
+        velocity_reference = [0.0, 0.0,0.2]
+    if 150 <= i < 200:
         velocity_reference = [ 0.2, 0.0, 0.0]
-    if 150 <= i :
+    if 200 <= i :
         velocity_reference = [ 0.0, 0.0, 0.0]
 
     # set reference velocities to zero
@@ -59,6 +59,10 @@ for i in range(500):
     # solve QP
     nmpc.   solve()
     classic.solve()
+    nmpc.   simulate()
+    classic.simulate()
+    interpolClassic.interpolate(time)
+    interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
@@ -72,9 +76,6 @@ for i in range(500):
     classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:
         classic_p.update()
-
-    interpolClassic.interpolate(time)
-    interpolNmpc.interpolate(time)
 
 nmpc.   data.save_to_file('./nmpc.json')
 classic.data.save_to_file('./classic.json')

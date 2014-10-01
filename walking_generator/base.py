@@ -696,6 +696,7 @@ class BaseGenerator(object):
         for i in range(self.N):
             if self.v_kp1[i] == 1:
                 self.supportDeque[i].foot = self.currentSupport.foot
+                self.supportDeque[i].stepNumber = 0
             else:
                 for j in range(self.nf):
                     if self.V_kp1[i][j] == 1 :

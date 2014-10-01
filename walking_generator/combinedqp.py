@@ -247,14 +247,11 @@ class NMPCGenerator(BaseGenerator):
         Hq[:,-nU_k_qL:] = 0.5 * U_k_qL.transpose().dot(Q_k_qL) + p_k_qL
 
         # fill matrices
-        # Hxx = Hx.T * Hx
-        # Hxq = Hx.T * Hq
-        # Hqx = Hq.T * Hx
-        # Hqq = Hq.T * Hq
-        Hxx[...] = Hx.transpose().dot(Hx)
-        Hxq[...] = Hx.transpose().dot(Hq)
-        Hqx[...] = Hxq.transpose()
-        Hqq[...] = Hq.transpose().dot(Hq)
+        Hxx[ :nU_k_x, :nU_k_x] = Q_k_x
+        Hxx[-nU_k_y:,-nU_k_y:] = Q_k_y
+
+        Hqq[ :nU_k_qR, :nU_k_qR] = Q_k_qR
+        Hqq[-nU_k_qL:,-nU_k_qL:] = Q_k_qL
         #self.qp_H[...] = numpy.eye(self.nv)
 
         # Gradient of Objective
@@ -265,12 +262,12 @@ class NMPCGenerator(BaseGenerator):
         gq = self.qp_g[-nU_k_q:]
 
         # gx = ( U_k_x.T Q_k_x + p_k_x )
-        gx[...] = Hx
+        gx[ :nU_k_x] = U_k_x.dot(Q_k_x) + p_k_x
+        gx[-nU_k_y:] = U_k_y.dot(Q_k_y) + p_k_y
 
         # gq = ( U_k_q.T Q_k_q + p_k_q )
-        gq[...] = Hq
-
-        #self.qp_g[...] = numpy.zeros(self.nv)
+        gq[ :nU_k_qR] = U_k_qR.dot(Q_k_qR) + p_k_qR
+        gq[-nU_k_qL:] = U_k_qL.dot(Q_k_qL) + p_k_qL
 
         # CONSTRAINTS
         A_xy   = self.qp_A  [:self.nc_pos,:nU_k_xy]
@@ -325,9 +322,9 @@ class NMPCGenerator(BaseGenerator):
         v_kp1 = self.v_kp1
         V_kp1 = self.V_kp1
 
-        dC_kp1_x_ref = self. dC_kp1_x_ref
-        dC_kp1_y_ref = self. dC_kp1_y_ref
-        dC_kp1_q_ref = self. dC_kp1_q_ref
+        dC_kp1_x_ref = self.dC_kp1_x_ref
+        dC_kp1_y_ref = self.dC_kp1_y_ref
+        dC_kp1_q_ref = self.dC_kp1_q_ref
 
         # POSITION QP MATRICES
         # Q_k_x = ( Q_k_xXX Q_k_xXF ) = Q_k_y

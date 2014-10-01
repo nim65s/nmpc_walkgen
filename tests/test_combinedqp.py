@@ -5,6 +5,7 @@ from numpy.testing import *
 import scipy.linalg as linalg
 import matplotlib.pyplot as plt
 
+from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
 from walking_generator.combinedqp import NMPCGenerator
 from walking_generator.utility import color_matrix
@@ -318,8 +319,77 @@ class TestNMPCGenerator(TestCase):
         assert_allclose(classic_ori_lbA, nmpc_lbA_ori, atol=ATOL, rtol=RTOL)
         assert_allclose(classic_ori_ubA, nmpc_ubA_ori, atol=ATOL, rtol=RTOL)
 
+    """
     def test_against_classic_generator_zero_angular_velocity(self):
-        pass
+        # instantiate pattern generator
+        nmpc    = NMPCGenerator(fsm_state='L/R')
+        classic = ClassicGenerator(fsm_state='L/R')
+
+        # Pattern Generator Preparation
+        # set reference velocities to zero
+        nmpc.   set_velocity_reference([0.2, 0.0, 0.0])
+        classic.set_velocity_reference([0.2, 0.0, 0.0])
+
+        nmpc.   set_security_margin(0.04, 0.04)
+        classic.set_security_margin(0.04, 0.04)
+
+        # set initial values
+        comx = [0.00949035, 0.0, 0.0]
+        comy = [0.095,      0.0, 0.0]
+        comz = 0.814
+        footx = 0.00949035
+        footy = 0.095
+        footq = 0.0
+
+        # instantiate plotter
+        show_canvas = True
+        save_to_file = False
+        #nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
+        #classic_p = Plotter(classic, show_canvas, save_to_file)
+
+        nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
+        classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
+
+        # Pattern Generator Event Loop
+        for i in range(160):
+            print 'iteration: ', i
+
+            # change reference velocities
+            if 50 <= i < 100:
+                nmpc.   set_velocity_reference([ 0.1, 0.0, 0.0])
+                classic.set_velocity_reference([ 0.1, 0.0, 0.0])
+
+            if 100 <= i < 130:
+                nmpc.   set_velocity_reference([-0.1, 0.0, 0.0])
+                classic.set_velocity_reference([-0.1, 0.0, 0.0])
+
+            if 130 <= i:
+                nmpc.   set_velocity_reference([ 0.3, 0.0, 0.0])
+                classic.set_velocity_reference([ 0.3, 0.0, 0.0])
+
+            # solve QP
+            nmpc.   solve()
+            classic.solve()
+
+            # initial value embedding by internal states and simulation
+            comx, comy, comz, footx, footy, footq, foot, comq= \
+            nmpc.update()
+            nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+            #nmpc_p.update()
+
+            comx, comy, comz, footx, footy, footq, foot, comq= \
+            classic.update()
+            classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+            #classic_p.update()
+
+            # compare DoFs
+            assert_allclose(nmpc.dddC_k_x, classic.dddC_k_x, atol=ATOL, rtol=RTOL)
+            assert_allclose(nmpc.F_k_x, classic.F_k_x, atol=ATOL, rtol=RTOL)
+            assert_allclose(nmpc.dddC_k_y, classic.dddC_k_y, atol=ATOL, rtol=RTOL)
+            assert_allclose(nmpc.F_k_y, classic.F_k_y, atol=ATOL, rtol=RTOL)
+            assert_allclose(nmpc.dddF_k_qR, classic.dddF_k_qR, atol=ATOL, rtol=RTOL)
+            assert_allclose(nmpc.dddF_k_qL, classic.dddF_k_qL, atol=ATOL, rtol=RTOL)
+        """
 
     def test_new_generator(self):
         # define initial values

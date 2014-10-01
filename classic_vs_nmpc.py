@@ -12,11 +12,11 @@ nmpc    = NMPCGenerator(fsm_state='L/R')
 classic = ClassicGenerator(fsm_state='L/R')
 
 # Pattern Generator Preparation
-nmpc.   set_security_margin(0.04, 0.04)
-classic.set_security_margin(0.04, 0.04)
+nmpc.   set_security_margin(0.09, 0.05)
+classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas = True
+show_canvas = False
 save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 classic_p = Plotter(classic, show_canvas, save_to_file)
@@ -59,6 +59,10 @@ for i in range(500):
     # solve QP
     nmpc.   solve()
     classic.solve()
+    nmpc.   simulate()
+    classic.simulate()
+    interpolClassic.interpolate(time)
+    interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
@@ -73,8 +77,7 @@ for i in range(500):
     if show_canvas:
         classic_p.update()
 
-    interpolClassic.interpolate(time)
-    interpolNmpc.interpolate(time)
+
 
 nmpc.   data.save_to_file('./nmpc.json')
 classic.data.save_to_file('./classic.json')

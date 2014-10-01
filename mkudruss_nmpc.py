@@ -34,6 +34,7 @@ gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(160):
+    time = i*0.005
     print 'iteration: ', i
 
     if 50 <= i < 100:
@@ -69,7 +70,7 @@ for i in range(160):
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
-    gen.update()
+    gen.update(time)
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     plot.update()
 

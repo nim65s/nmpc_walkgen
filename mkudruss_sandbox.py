@@ -72,7 +72,7 @@ for i in range(50):
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
-    gen.update()
+    gen.update(time)
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     plot.update()
 

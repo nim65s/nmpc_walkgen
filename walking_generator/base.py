@@ -390,9 +390,11 @@ class BaseGenerator(object):
 
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
+        self.currentSupport.timeLimit = self.T_step
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
+            self.supportDeque[i].timeLimit = self.T_step
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -679,6 +681,8 @@ class BaseGenerator(object):
             B0[i] =   sign * dc
 
     def _calculate_support_order(self):
+        self.currentSupport.timeLimit = self.supportDeque[0].timeLimit
+
         # find correct initial support foot
         if (self.currentSupport.foot == "left" ) :
             pair = "left"
@@ -686,8 +690,6 @@ class BaseGenerator(object):
         else :
             pair = "right"
             impair = "left"
-
-        timeLimit = self.supportDeque[0].timeLimit
 
         # define support feet for whole horizon
         for i in range(self.N):
@@ -702,11 +704,17 @@ class BaseGenerator(object):
                         else :
                             self.supportDeque[i].foot = impair
 
-            if i > 0 :
-                self.supportDeque[i].ds = self.supportDeque[i].stepNumber - self.supportDeque[i-1].stepNumber
+        if numpy.sum(self.v_kp1)==8 :
+            self.supportDeque[0].ds = 1
+        else :
+            self.supportDeque[0].ds = 0
+        for i in range (1,self.N):
+            self.supportDeque[i].ds = self.supportDeque[i].stepNumber - self.supportDeque[i-1].stepNumber
+
+        timeLimit = self.supportDeque[0].timeLimit
+        for i in range(self.N):
             if self.supportDeque[i].ds == 1 :
                 timeLimit = self.currentTime + self.T_step
-
             self.supportDeque[i].timeLimit = timeLimit
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
@@ -835,11 +843,14 @@ class BaseGenerator(object):
         # rebuild all constraints
         self.buildConstraints()
 
-    def update(self):
+    def update(self,time):
         """
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
+        # update the time to now when we land
+        self.currentTime = time
+
         # after solution simulate to get current states on horizon
         self.simulate()
 

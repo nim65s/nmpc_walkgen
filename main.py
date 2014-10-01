@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     for i in range(100):
         time = i * 0.1
-        gen.update()
+        gen.update(time)
         gen.solve()
         inter.interpolate(time)
 

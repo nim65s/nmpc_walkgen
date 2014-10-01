@@ -1,6 +1,6 @@
 import numpy
 from copy import deepcopy
-from base import CoMState, ZMPState, BaseTypeFoot
+from helper import CoMState, ZMPState, BaseTypeFoot
 from base import BaseGenerator
 import math
 
@@ -32,8 +32,8 @@ class Interpolation(object):
         self.curCoM.theta = self.gen.c_k_q
         self.curCoM.h_com = self.gen.h_com
         zmp = ZMPState()
-        zmp.x = self.curCoM.x
-        zmp.y = self.curCoM.y
+        zmp.x = self.curCoM.x[0] - self.curCoM.h_com / self.gen.g * self.curCoM.x[2]
+        zmp.y = self.curCoM.y[0] - self.curCoM.h_com / self.gen.g * self.curCoM.y[2]
 
         self.fi = FootInterpolation()
         self.curleft = BaseTypeFoot()
@@ -53,7 +53,6 @@ class Interpolation(object):
             self.curRight.y = self.gen.f_k_y + self.fi.feetDist * math.cos(self.gen.f_k_q)
             self.curRight.q = self.gen.f_k_q
 
-
         self.CoMbuffer = numpy.empty( (self.interval,) , dtype=CoMState ) #buffer containing the CoM trajectory over 100ms
         self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=ZMPState ) #buffer containing the ZMP trajectory over 100ms
         self.RFbuffer = numpy.empty( (self.interval,) , dtype=BaseTypeFoot ) #buffer containing the rigth foot trajectory over 100ms
@@ -70,10 +69,10 @@ class Interpolation(object):
         self.leftFootTraj = [] #buffer containing the full rigth foot trajectory
         self.rightFootTraj = [] #buffer containing the full left foot trajectory
 
-        self.comTraj = numpy.append(self.comTraj, deepcopy(self.CoMbuffer), axis=0)
-        self.zmpTraj = numpy.append(self.zmpTraj, deepcopy(self.ZMPbuffer), axis=0)
-        self.leftFootTraj = numpy.append(self.leftFootTraj, deepcopy(self.LFbuffer), axis=0)
-        self.rightFootTraj = numpy.append(self.rightFootTraj, deepcopy(self.RFbuffer), axis=0)
+        self.comTraj.extend(deepcopy(self.CoMbuffer))
+        self.zmpTraj.extend(deepcopy(self.ZMPbuffer))
+        self.leftFootTraj .extend(deepcopy(self.LFbuffer))
+        self.rightFootTraj.extend(deepcopy(self.RFbuffer))
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
         self.fi = FootInterpolation(genrator=self.gen)
@@ -89,20 +88,12 @@ class Interpolation(object):
                                     self.gen.F_k_x[0], self.gen.F_k_x[0], self.gen.F_k_q[0],
                                     self.LFbuffer, self.RFbuffer)
 
-#        for i in range ( self.LFbuffer.shape[0] ) :
-#            print self.LFbuffer[i].x
-
-
-        self.comTraj = numpy.append(self.comTraj, self.CoMbuffer, axis=0)
-        self.zmpTraj = numpy.append(self.zmpTraj, self.ZMPbuffer, axis=0)
-        self.leftFootTraj = numpy.append(self.leftFootTraj, self.LFbuffer, axis=0)
-        self.rightFootTraj = numpy.append(self.rightFootTraj, self.RFbuffer, axis=0)
+        self.comTraj.extend(deepcopy(self.CoMbuffer))
+        self.zmpTraj.extend(deepcopy(self.ZMPbuffer))
+        self.leftFootTraj .extend(deepcopy(self.LFbuffer))
+        self.rightFootTraj.extend(deepcopy(self.RFbuffer))
 
     def save_to_file(self):
-        for i in range (self.comTraj.shape[0]):
-            print self.comTraj[i].x
-
-
         comX   = numpy.asarray([item.x for item in self.comTraj])
         comY   = numpy.asarray([item.y for item in self.comTraj])
         comQ   = numpy.asarray([item.q for item in self.comTraj])
@@ -294,8 +285,6 @@ class FootInterpolation(object):
         * DSP : Double Support Phase
         '''
         timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
-        print "timelimit = " , timelimit
-
         for i in range(self.intervaleSize):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()
@@ -346,7 +335,6 @@ class FootInterpolation(object):
             self.polynomeX.setParameters(timeInterval,F_k_x,flyingFoot.x,flyingFoot.dx,flyingFoot.ddx)
             self.polynomeY.setParameters(timeInterval,F_k_y,flyingFoot.y,flyingFoot.dy,flyingFoot.ddy)
             self.polynomeQ.setParameters(timeInterval,PreviewAngle,flyingFoot.q,flyingFoot.dq,flyingFoot.ddq)
-            print "currentSupport.foot = " , currentSupport.foot
             for i in range(self.intervaleSize):
                 if currentSupport.foot == "left" :
                     flyingFootBuffer = RightFootBuffer

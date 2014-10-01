@@ -50,10 +50,6 @@ for i in range(150):
     gen.dddF_k_qL [...] = 1.0
     gen.dddF_k_qR [...] = 1.0
 
-    print gen.currentSupport.foot , " cs "
-    for i in range(gen.N):
-        print gen.supportDeque[i].foot
-
     # solve QP
     gen.solve()
     gen.simulate()
@@ -79,7 +75,7 @@ for i in range(150):
     comx, comy, comz, footx, footy, footq, foot, comq= \
     gen.update(time)
     gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    plot.update()
+    #plot.update()
 
 
     #raw_input('press key:')

@@ -462,7 +462,6 @@ class NMPCGenerator(BaseGenerator):
 
         # change entries according to support order changes in D_kp1
         theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
-        print [item.stepNumber for item in self.supportDeque]
         for i in range(self.N):
             theta = theta_vec[self.supportDeque[i].stepNumber]
 
@@ -540,8 +539,7 @@ class NMPCGenerator(BaseGenerator):
         # build CoP linear constraints
         # NOTE D_kp1 is member and D_kp1 = ( D_kp1x | D_kp1y )
         #      D_kp1x,y contains entries from support polygon
-        Acop   = D_kp1.dot(PzuV)
-        ubBcop = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
+        self.derv_Acop   = D_kp1.dot(PzuV)
 
         # FOOT POSITION CONSTRAINTS
         # defined on the horizon
@@ -551,7 +549,7 @@ class NMPCGenerator(BaseGenerator):
 
         matSelec = numpy.array([ [1, 0],[-1, 1] ])
         footSelec = numpy.array([ [self.f_k_x, 0],[self.f_k_y, 0] ])
-        theta_vec = [self.f_k_q,self.F_k_q[0]]
+        theta_vec = [self.f_k_q, self.F_k_q[0]]
 
         # rotation matrice from F_k+1 to F_k
         # NOTE THIS CHANGES DUE TO APPLYING THE DERIVATIVE!
@@ -579,13 +577,9 @@ class NMPCGenerator(BaseGenerator):
         if self.currentSupport.foot == "left":
             A_f1 = self.A0r.dot(rotMat1)
             A_f2 = self.A0l.dot(rotMat2)
-            B_f1 = self.ubB0r
-            B_f2 = self.ubB0l
         else :
             A_f1 = self.A0l.dot(rotMat1)
             A_f2 = self.A0r.dot(rotMat2)
-            B_f1 = self.ubB0l
-            B_f2 = self.ubB0r
 
         tmp1 = numpy.array( [A_f1[:,0],numpy.zeros((nEdges,),dtype=float)] )
         tmp2 = numpy.array( [numpy.zeros((nEdges,),dtype=float),A_f2[:,0]] )
@@ -597,15 +591,11 @@ class NMPCGenerator(BaseGenerator):
         Y_mat = numpy.concatenate( (tmp3.T,tmp4.T) , 0)
         A0y = Y_mat.dot(matSelec)
 
-        B0full = numpy.concatenate( (B_f1, B_f2) , 0 )
-        B0 = B0full + X_mat.dot(footSelec[0,:]) + Y_mat.dot(footSelec[1,:])
-
         self.Afoot[...] = numpy.concatenate ((
             numpy.zeros((ncfoot,N),dtype=float), A0x,
             numpy.zeros((ncfoot,N),dtype=float), A0y
             ), 1
         )
-        self.ubBfoot[...] = B0
 
     def _solve_qp(self):
         """

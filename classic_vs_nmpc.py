@@ -5,6 +5,7 @@ numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
 from walking_generator.combinedqp import NMPCGenerator
+from walking_generator.interpolation import Interpolation
 
 # instantiate pattern generator
 nmpc    = NMPCGenerator(fsm_state='L/R')
@@ -31,19 +32,25 @@ footq = 0.0
 nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
+interpolClassic = Interpolation(0.005,classic)
+interpolNmpc = Interpolation(0.005,nmpc)
 # initial reference velocity
-velocity_reference = [0.2, 0.0,-0.6]
+velocity_reference = [0.2, 0.0,0.0]
 
 # Pattern Generator Event Loop
-for i in range(160):
+for i in range(500):
     print 'iteration: ', i
+    time = i*0.1
+
     # change reference velocities
+    if 25 <= i < 50:
+        velocity_reference = [ 0.0, 0.2, 0.0]
     if 50 <= i < 100:
-        velocity_reference = [ 0.1, 0.0, 0.2]
-    if 100 <= i < 130:
-        velocity_reference = [-0.1, 0.0,-0.05]
-    if 130 <= i:
-        velocity_reference = [ 0.3, 0.0, 0.0]
+        velocity_reference = [-0.1, 0.0,0.2]
+    if 100 <= i < 150:
+        velocity_reference = [ 0.2, 0.0, 0.0]
+    if 150 <= i :
+        velocity_reference = [ 0.0, 0.0, 0.0]
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)
@@ -65,6 +72,9 @@ for i in range(160):
     classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:
         classic_p.update()
+
+    interpolClassic.interpolate(time)
+    interpolNmpc.interpolate(time)
 
 nmpc.   data.save_to_file('./nmpc.json')
 classic.data.save_to_file('./classic.json')
@@ -89,3 +99,6 @@ classic_p.update()
 
 nmpc_p   .create_data_plot()
 classic_p.create_data_plot()
+
+interpolClassic.save_to_file("./wieber2010python.csv")
+interpolNmpc.save_to_file("./NMPCpython.csv")

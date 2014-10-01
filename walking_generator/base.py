@@ -390,6 +390,7 @@ class BaseGenerator(object):
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
         self.currentSupport.timeLimit = 0
+        self.currentSupport.ds = 0
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()

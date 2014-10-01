@@ -66,8 +66,8 @@ class Interpolation(object):
 
         self.comTraj = [] #buffer containing the full CoM trajectory
         self.zmpTraj = [] #buffer containing the full ZMP trajectory
-        self.leftFootTraj = [] #buffer containing the full rigth foot trajectory
-        self.rightFootTraj = [] #buffer containing the full left foot trajectory
+        self.leftFootTraj = [] #buffer containing the full left foot trajectory
+        self.rightFootTraj = [] #buffer containing the full right foot trajectory
 
         for i in range(30):
             self.comTraj.extend(deepcopy(self.CoMbuffer))
@@ -86,7 +86,7 @@ class Interpolation(object):
         self.curleft, self.curRight, self.LFbuffer, self.RFbuffer =\
                         self.fi.interpolate(time, self.gen.currentSupport,
                                     self.curleft, self.curRight,
-                                    self.gen.F_k_x[0], self.gen.F_k_x[0], self.gen.F_k_q[0],
+                                    self.gen.F_k_x[0], self.gen.F_k_y[0], self.gen.F_k_q[0],
                                     self.LFbuffer, self.RFbuffer)
 
         self.comTraj.extend(deepcopy(self.CoMbuffer))
@@ -94,7 +94,7 @@ class Interpolation(object):
         self.leftFootTraj .extend(deepcopy(self.LFbuffer))
         self.rightFootTraj.extend(deepcopy(self.RFbuffer))
 
-    def save_to_file(self):
+    def save_to_file(self,filename):
         comX   = numpy.asarray([item.x for item in self.comTraj])
         comY   = numpy.asarray([item.y for item in self.comTraj])
         comQ   = numpy.asarray([item.q for item in self.comTraj])
@@ -129,11 +129,11 @@ class Interpolation(object):
         rfQ,       # 16
         lfX,       # 17
         lfY,       # 18
-        rfZ,       # 19
+        lfZ,       # 19
         lfQ   ]    # 20
 
         data = numpy.asarray(lst).transpose()
-        numpy.savetxt("./wieber2010python.csv", data, delimiter="   ")
+        numpy.savetxt(filename, data, delimiter="   ")
 
 class LIPM(object):
     """
@@ -265,7 +265,10 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
-        timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
+        if time == 0.0 :
+            timelimit = 0.0 ;
+        else :
+            timelimit = time + numpy.sum(self.gen.v_kp1) * self.T + self.T
         for i in range(self.intervaleSize):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()

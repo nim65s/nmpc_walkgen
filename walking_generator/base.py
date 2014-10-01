@@ -390,11 +390,12 @@ class BaseGenerator(object):
 
         # Current support state
         self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
-        self.currentSupport.timeLimit = self.T_step
+        self.currentSupport.timeLimit = 0
         self.supportDeque = numpy.empty( (N,) , dtype=object )
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
-            self.supportDeque[i].timeLimit = self.T_step
+        self.supportDeque[0].ds = 1
+        self.supportDeque[8].ds = 1
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -681,7 +682,7 @@ class BaseGenerator(object):
             B0[i] =   sign * dc
 
     def _calculate_support_order(self):
-        self.currentSupport.timeLimit = self.supportDeque[0].timeLimit
+        self.currentSupport.ds = deepcopy(self.supportDeque[0].ds)
 
         # find correct initial support foot
         if (self.currentSupport.foot == "left" ) :
@@ -714,7 +715,7 @@ class BaseGenerator(object):
         timeLimit = self.supportDeque[0].timeLimit
         for i in range(self.N):
             if self.supportDeque[i].ds == 1 :
-                timeLimit = self.currentTime + self.T_step
+                timeLimit = timeLimit + self.T_step
             self.supportDeque[i].timeLimit = timeLimit
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):

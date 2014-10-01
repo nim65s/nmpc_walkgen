@@ -68,7 +68,7 @@ class Interpolation(object):
             self.LFbuffer[i] = BaseTypeFoot()
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
-        self.fi = FootInterpolation()
+        self.fi = FootInterpolation(genrator=self.gen)
 
     def interpolate(self, time):
 
@@ -81,8 +81,8 @@ class Interpolation(object):
                                     self.gen.F_k_x[0], self.gen.F_k_x[0], self.gen.F_k_q[0],
                                     self.LFbuffer, self.RFbuffer)
 
-        for i in range ( self.LFbuffer.shape[0] ) :
-            print self.LFbuffer[i].x
+#        for i in range ( self.LFbuffer.shape[0] ) :
+#            print self.LFbuffer[i].x
 
 
         self.comTraj = numpy.append(self.comTraj, self.CoMbuffer, axis=0)
@@ -116,9 +116,37 @@ class Interpolation(object):
         lfdQ   = numpy.asarray([item. dq for item in self.leftFootTraj])
         lfddQ  = numpy.asarray([item.ddq for item in self.leftFootTraj])
 
-        lst = [comX[:,0], comX[:,1], comX[:,2], comY[:,0], comY[:,1], comY[:,2], comQ[:,0], comQ[:,1], comQ[:,2], zmpX ,zmpY ,zmpZ ,rfX ,rfdX ,rfddX,
-                rfY ,rfdY ,rfddY, rfQ ,rfdQ ,rfddQ, lfX, lfdX ,lfddX ,
-                lfY ,lfdY ,lfddY, lfQ ,lfdQ ,lfddQ ]
+        lst = [
+        comX[:,0], # 1
+        comX[:,1], # 2
+        comX[:,2], # 3
+        comY[:,0], # 1
+        comY[:,1], # 2
+        comY[:,2], # 3
+        comQ[:,0], # 1
+        comQ[:,1], # 2
+        comQ[:,2], # 3
+        zmpX,      # 1
+        zmpY,      # 2
+        zmpZ,      # 3
+        rfX,       # 1
+        rfdX,      # 2
+        rfddX,     # 3
+        rfY,       # 1
+        rfdY,      # 2
+        rfddY,     # 3
+        rfQ,       # 1
+        rfdQ,      # 2
+        rfddQ,     # 3
+        lfX,       # 1
+        lfdX,      # 2
+        lfddX,     # 3
+        lfY,       # 1
+        lfdY,      # 2
+        lfddY,     # 3
+        lfQ,       # 1
+        lfdQ,      # 2
+        lfddQ ]    # 3
 
         data = numpy.asarray(lst).transpose()
         numpy.savetxt("./wieber2010python.csv", data, delimiter="   ")
@@ -221,7 +249,7 @@ class FootInterpolation(object):
     of the pattern generator. It interpolate the feet trajectory during the QP period
     """
 
-    def __init__(self, QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
+    def __init__(self, genrator=BaseGenerator(), QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
         FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
 
         self.T = QPsamplingPeriod # QP sampling period
@@ -235,7 +263,7 @@ class FootInterpolation(object):
         self.TSS = stepTime - doubleSupportTime # Time of single support
         self.TDS = doubleSupportTime # Time of double support
         self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
-
+        self.gen = genrator
     '''
     Update the currentState to be valide at the next iteration
     and fill up the queue containing all the intermediate values
@@ -253,14 +281,15 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
-        print currentSupport.timeLimit
+        timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
+        print "timelimit = " , timelimit
 
         for i in range(self.intervaleSize):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()
 
         # in case of double support the policy is to stay still
-        if time+1.5*self.T > currentSupport.timeLimit :
+        if time+1.5*self.T > timelimit :
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(curLeft)
                 RightFootBuffer[i] = deepcopy(curRight)
@@ -269,13 +298,13 @@ class FootInterpolation(object):
             # during the whole singletime
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
 
-        elif time+1.5*self.T < currentSupport.timeLimit :
+        elif time+1.5*self.T < timelimit :
 
             # Deal with the lift off time and the landing time. During those period
             # the foot do not move along the x and y axis.
 
             # this is counted from the last double support phase
-            localInterpolationStartTime = time - (currentSupport.timeLimit -(self.TSS+self.TDS) )
+            localInterpolationStartTime = time - (timelimit -(self.TSS+self.TDS) )
             # this coeffincient indicates how long you allow the foot
             # to take off AND land (in %)
             moduleSupportCoefficient = 0.9

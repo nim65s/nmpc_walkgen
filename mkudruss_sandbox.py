@@ -28,8 +28,9 @@ footx = 0.00949035
 footy = 0.095
 footq = 0.0
 gen.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
-sampling_period = 0.005
-interpol = Interpolation(sampling_period,gen)
+#gen._update_selection_matrices()
+sampling_period = 0.1
+interpol = Interpolation(0.005,gen)
 gen.simulate()
 gen._update_data()
 
@@ -48,6 +49,10 @@ for i in range(50):
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0
     gen.dddF_k_qR [...] = 1.0
+
+    print gen.currentSupport.foot , " cs "
+    for i in range(gen.N):
+        print gen.supportDeque[i].foot
 
     # solve QP
     gen.solve()

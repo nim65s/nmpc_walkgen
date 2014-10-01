@@ -34,7 +34,7 @@ gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(160):
-    time = i*0.005
+    time = i*0.1
     print 'iteration: ', i
 
     if 50 <= i < 100:

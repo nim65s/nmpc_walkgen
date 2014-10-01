@@ -845,13 +845,13 @@ class BaseGenerator(object):
         # rebuild all constraints
         self.buildConstraints()
 
-    def update(self,time):
+    def update(self):
         """
         Update all interior matrices, vectors.
         Has to be used to prepare the QP after each iteration
         """
-        # update the time to now when we land
-        self.currentTime = time
+#        # update the time to now when we land
+#        self.currentTime = time
 
         # after solution simulate to get current states on horizon
         self.simulate()

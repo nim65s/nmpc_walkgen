@@ -35,7 +35,7 @@ gen.simulate()
 gen._update_data()
 
 # Pattern Generator Event Loop
-for i in range(150):
+for i in range(500):
     time = i*sampling_period
     print 'iteration: ', i
 
@@ -43,8 +43,11 @@ for i in range(150):
         gen.set_velocity_reference([0.0,0.2,0.0])
     if 50 <= i < 70:
         gen.set_velocity_reference([0.0,0.0,0.0])
-    if 100 <= i:
+    if 100 <= i < 150:
         gen.set_velocity_reference([0.2,0.0,-0.2])
+    if 150 <= i :
+        gen.set_velocity_reference([0.0,0.0,0.0])
+
 
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0

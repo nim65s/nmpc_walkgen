@@ -16,7 +16,7 @@ nmpc.   set_security_margin(0.04, 0.04)
 classic.set_security_margin(0.04, 0.04)
 
 # instantiate plotter
-show_canvas = True
+show_canvas  = False
 save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 classic_p = Plotter(classic, show_canvas, save_to_file)
@@ -33,7 +33,7 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolClassic = Interpolation(0.005,classic)
-interpolNmpc = Interpolation(0.005,nmpc)
+interpolNmpc    = Interpolation(0.005,nmpc)
 # initial reference velocity
 velocity_reference = [0.2, 0.0,0.0]
 

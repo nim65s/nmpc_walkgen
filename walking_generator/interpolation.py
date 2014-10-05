@@ -89,10 +89,10 @@ class Interpolation(object):
                                     self.gen.F_k_x[0], self.gen.F_k_y[0], self.gen.F_k_q[0],
                                     self.LFbuffer, self.RFbuffer)
 
-#        for i in range ( self.LFbuffer.shape[0] ) :
-#            self.CoMbuffer[i].q[0] = 0.5*(self.LFbuffer[i].q + self.RFbuffer[i].q)
-#            self.CoMbuffer[i].q[1] = 0.5*(self.LFbuffer[i].dq + self.RFbuffer[i].dq)
-#            self.CoMbuffer[i].q[2] = 0.5*(self.LFbuffer[i].ddq + self.RFbuffer[i].ddq)
+        for i in range ( self.LFbuffer.shape[0] ) :
+            self.CoMbuffer[i].q[0] = 0.5*(self.LFbuffer[i].q + self.RFbuffer[i].q)
+            self.CoMbuffer[i].q[1] = 0.5*(self.LFbuffer[i].dq + self.RFbuffer[i].dq)
+            self.CoMbuffer[i].q[2] = 0.5*(self.LFbuffer[i].ddq + self.RFbuffer[i].ddq)
 
 
         self.comTraj.extend(deepcopy(self.CoMbuffer))

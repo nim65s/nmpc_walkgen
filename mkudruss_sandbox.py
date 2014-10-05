@@ -16,7 +16,7 @@ plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-velocity_reference = [0.2,0.0,0.0]
+velocity_reference = [0.2,0.0,0.2]
 gen.set_velocity_reference(velocity_reference)
 
 gen.set_security_margin(0.09, 0.05)
@@ -36,17 +36,17 @@ gen.simulate()
 gen._update_data()
 
 # Pattern Generator Event Loop
-for i in range(500):
+for i in range(220):
     print 'iteration: ', i
     time = i*0.1
 
     # change reference velocities
     if 25 <= i < 50:
-        velocity_reference = [ 0.0, 0.2, 0.0]
+        velocity_reference = [ 0.2, 0.0, -0.2]
     if 50 <= i < 100:
-        velocity_reference = [-0.1, 0.0,0.2]
+        velocity_reference = [0.1, 0.2,-0.4]
     if 100 <= i < 150:
-        velocity_reference = [ 0.2, 0.0, 0.0]
+        velocity_reference = [ 0.0, 0.2, 0.0]
     if 150 <= i :
         velocity_reference = [ 0.0, 0.0, 0.0]
 

@@ -930,10 +930,6 @@ class BaseGenerator(object):
         self. dC_kp1_y = self.Pvs.dot(self.c_k_y) + self.Pvu.dot(self.dddC_k_y)
         self.ddC_kp1_y = self.Pas.dot(self.c_k_y) + self.Pau.dot(self.dddC_k_y)
 
-        self.  C_kp1_q = self.Pps.dot(self.c_k_q) + self.Ppu.dot(self.dddC_k_q)
-        self. dC_kp1_q = self.Pvs.dot(self.c_k_q) + self.Pvu.dot(self.dddC_k_q)
-        self.ddC_kp1_q = self.Pas.dot(self.c_k_q) + self.Pau.dot(self.dddC_k_q)
-
         # get feet orientation states from feet jerks
         self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
         self. dF_kp1_qL = self.Pvs.dot(self.f_k_qL) + self.Pvu.dot(self.dddF_k_qL)
@@ -942,6 +938,10 @@ class BaseGenerator(object):
         self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
         self. dF_kp1_qR = self.Pvs.dot(self.f_k_qR) + self.Pvu.dot(self.dddF_k_qR)
         self.ddF_kp1_qR = self.Pas.dot(self.f_k_qR) + self.Pau.dot(self.dddF_k_qR)
+
+        self.  C_kp1_q = 0.5 * ( self.  F_kp1_qL + self.  F_kp1_qR )
+        self. dC_kp1_q = 0.5 * ( self. dF_kp1_qL + self. dF_kp1_qR )
+        self.ddC_kp1_q = 0.5 * ( self.ddF_kp1_qL + self.ddF_kp1_qR )
 
         # get support foot orientation
         self.F_kp1_q = self.E_FR_bar.dot(self.F_kp1_qR) \

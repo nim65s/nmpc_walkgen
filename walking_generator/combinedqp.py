@@ -245,18 +245,6 @@ class NMPCGenerator(BaseGenerator):
         Hqx = self.qp_H[nU_k_xy:,:nU_k_xy]
         Hqq = self.qp_H[nU_k_xy:,nU_k_xy:]
 
-        # Hx = ( U_k_xy.T Q_k_xy + p_k_xy )
-        #    = ( U_k_x.T Q_k_x + p_k_x | U_k_y.T Q_k_y + p_k_y)
-        Hx = self.Hx
-        Hx[:, :nU_k_x] = 0.5 * U_k_x.transpose().dot(Q_k_x) + p_k_x
-        Hx[:,-nU_k_x:] = 0.5 * U_k_y.transpose().dot(Q_k_y) + p_k_y
-
-        # Hq = ( U_k_q.T Q_k_q + p_k_q )
-        #    = ( U_k_qR.T Q_k_qR + p_k_qR | U_k_qL.T Q_k_qL + p_k_qL)
-        Hq = self.Hq
-        Hq[:, :nU_k_qR] = 0.5 * U_k_qR.transpose().dot(Q_k_qR) + p_k_qR
-        Hq[:,-nU_k_qL:] = 0.5 * U_k_qL.transpose().dot(Q_k_qL) + p_k_qL
-
         # fill matrices
         Hxx[ :nU_k_x, :nU_k_x] = Q_k_x
         Hxx[-nU_k_y:,-nU_k_y:] = Q_k_y
@@ -273,12 +261,12 @@ class NMPCGenerator(BaseGenerator):
         gq = self.qp_g[-nU_k_q:]
 
         # gx = ( U_k_x.T Q_k_x + p_k_x )
-        gx[ :nU_k_x] = U_k_x.dot(Q_k_x) + p_k_x
-        gx[-nU_k_y:] = U_k_y.dot(Q_k_y) + p_k_y
+        gx[ :nU_k_x] = 0.5*U_k_x.dot(Q_k_x) + p_k_x
+        gx[-nU_k_y:] = 0.5*U_k_y.dot(Q_k_y) + p_k_y
 
         # gq = ( U_k_q.T Q_k_q + p_k_q )
-        gq[ :nU_k_qR] = U_k_qR.dot(Q_k_qR) + p_k_qR
-        gq[-nU_k_qL:] = U_k_qL.dot(Q_k_qL) + p_k_qL
+        gq[ :nU_k_qR] = 0.5*U_k_qR.dot(Q_k_qR) + p_k_qR
+        gq[-nU_k_qL:] = 0.5*U_k_qL.dot(Q_k_qL) + p_k_qL
 
         # CONSTRAINTS
         # A = ( A_xy, A_xyq )

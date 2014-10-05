@@ -16,7 +16,7 @@ nmpc.   set_security_margin(0.09, 0.05)
 classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas = True
+show_canvas  = True
 save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 classic_p = Plotter(classic, show_canvas, save_to_file)

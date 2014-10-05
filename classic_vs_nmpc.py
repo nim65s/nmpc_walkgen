@@ -16,7 +16,7 @@ nmpc.   set_security_margin(0.09, 0.05)
 classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas = False
+show_canvas = True
 save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 classic_p = Plotter(classic, show_canvas, save_to_file)
@@ -35,7 +35,7 @@ classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 interpolClassic = Interpolation(0.005,classic)
 interpolNmpc = Interpolation(0.005,nmpc)
 # initial reference velocity
-velocity_reference = [0.2, 0.0,0.2]
+velocity_reference = [0.2, 0.0, 0.2]
 
 # Pattern Generator Event Loop
 for i in range(220):
@@ -59,8 +59,6 @@ for i in range(220):
     # solve QP
     nmpc.   solve()
     classic.solve()
-    nmpc.   simulate()
-    classic.simulate()
     interpolClassic.interpolate(time)
     interpolNmpc.interpolate(time)
 

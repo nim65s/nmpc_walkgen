@@ -153,23 +153,23 @@ class Interpolation(object):
         lfX,       # 17
         lfY,       # 18
         lfZ,       # 19
-        lfQ,       # 20
-        rfdX,      # 21
-        rfdY ,     # 22
-        rfdZ  ,    # 23
-        rfdQ  ,    # 24
-        lfdX  ,    # 25
-        lfdY  ,    # 26
-        lfdZ  ,    # 27
-        lfdQ  ,    # 28
-        rfddX ,    # 29
-        rfddY ,    # 30
-        rfddZ ,    # 31
-        rfddQ ,    # 32
-        lfddX ,    # 33
-        lfddY ,    # 34
-        lfddZ ,    # 35
-        lfddQ ]    # 36
+        lfQ]       # 20
+#        rfdX,      # 21
+#        rfdY ,     # 22
+#        rfdZ  ,    # 23
+#        rfdQ  ,    # 24
+#        lfdX  ,    # 25
+#        lfdY  ,    # 26
+#        lfdZ  ,    # 27
+#        lfdQ  ,    # 28
+#        rfddX ,    # 29
+#        rfddY ,    # 30
+#        rfddZ ,    # 31
+#        rfddQ ,    # 32
+#        lfddX ,    # 33
+#        lfddY ,    # 34
+#        lfddZ ,    # 35
+#        lfddQ ]    # 36
 
         data = numpy.asarray(lst).transpose()
         numpy.savetxt(filename, data, delimiter="   ")
@@ -305,10 +305,7 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
-        if time == 0.0 :
-            timelimit = 0.8 ;
-        else :
-            timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
+        timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
         for i in range(self.intervaleSize):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()

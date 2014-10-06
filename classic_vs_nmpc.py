@@ -47,7 +47,7 @@ interpolNmpc = Interpolation(0.005,nmpc)
 velocity_reference = [0.2, 0.0, 0.2]
 
 # Pattern Generator Event Loop
-for i in range(220):
+for i in range(230):
     print 'iteration: ', i
     time = i*0.1
 
@@ -59,7 +59,10 @@ for i in range(220):
     if 150 <= i < 200:
         velocity_reference = [ 0.0, 0.2, 0.0]
     if 200 <= i :
+        nmpc.   c = 1e+02
+        classic.c = 1e+02
         velocity_reference = [ 0.0, 0.0, 0.0]
+
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)
@@ -86,6 +89,8 @@ for i in range(220):
 
 nmpc.   data.save_to_file('./nmpc.json')
 classic.data.save_to_file('./classic.json')
+
+raw_input('Hi:')
 
 show_canvas  = False
 save_to_file = True

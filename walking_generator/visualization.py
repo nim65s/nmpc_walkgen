@@ -267,6 +267,19 @@ class Plotter(object):
         self.bird_view_lines = {}
         self.bird_view_polys = {}
 
+        self.bird_view_limits = None
+        self.bird_view_limits = ((-0.8, 3.5), (-0.5, 0.8))
+        self.bird_view_axis.set_xlim()
+
+        if not self.bird_view_limits:
+            self.bird_view_axis.relim()
+            self.bird_view_axis.autoscale_view()
+        else:
+            self.bird_view_axis.set_xlim(self.bird_view_limits[0])
+            self.bird_view_axis.set_ylim(self.bird_view_limits[1])
+
+        self.bird_view_axis.set_aspect('equal')
+
         for item in self.bird_view_mapping:
             # get mapping for x values
             name      = item[0][0]
@@ -310,7 +323,7 @@ class Plotter(object):
         name = self._fname
         cnt  = self.picture_cnt
         fmt  = self._ffmt
-        return '{name}{cnt}.{fmt}'.format(name=name, cnt=cnt, fmt=fmt)
+        return '{name}{cnt:04d}.{fmt}'.format(name=name, cnt=cnt, fmt=fmt)
 
     def _save_to_file(self, figure=None):
         """ save figure as pdf """
@@ -549,8 +562,10 @@ class Plotter(object):
 
         # AFTERMATH
         # recalculate x and y limits
-        self.bird_view_axis.relim()
-        self.bird_view_axis.autoscale_view()
+        if not self.bird_view_limits:
+            self.bird_view_axis.relim()
+            self.bird_view_axis.autoscale_view()
+
         self.bird_view_axis.set_aspect('equal')
 
         # define legend

@@ -265,6 +265,7 @@ class Plotter(object):
         self.bird_view_axis  = ax
         self.bird_view_background = self.fig.canvas.copy_from_bbox(ax.bbox)
         self.bird_view_lines = {}
+        self.bird_view_polys = {}
 
         for item in self.bird_view_mapping:
             # get mapping for x values
@@ -290,6 +291,12 @@ class Plotter(object):
 
             # store lines for later update
             self.bird_view_lines[name] = line
+
+        # add current preview to plot
+        for key in self.polygons_mapping.keys():
+            self.bird_view_polys[key] = {}
+            for key1 in self.polygons_mapping[key].keys():
+                self.bird_view_polys[key][key1] = {}
 
         # show plot canvas with tght layout
         self.fig.tight_layout()
@@ -422,14 +429,22 @@ class Plotter(object):
                         T[1,0] = s; T[1,1] =  c
 
                         hull = numpy.asarray(self.data[poly_name][i])
+                        hull = numpy.vstack((hull, hull[0,:]))
                         points = numpy.asarray((x_data[i], y_data[i]))
 
                         # first rotate
                         hull = T.dot(hull.transpose()).transpose()
                         hull = hull + points
 
-                        poly = plt.Polygon(hull, **poly_map)
-                        self.bird_view_axis.add_patch(poly)
+                        # is there already a polygon for this index
+                        if i in self.bird_view_polys[x_name][poly_name]:
+                            poly = self.bird_view_polys[x_name][poly_name][i]
+                            if (poly.get_xy != hull).any():
+                                poly.set_xy(hull)
+                        else:
+                            poly = plt.Polygon(hull, **poly_map)
+                            self.bird_view_polys[x_name][poly_name][i] = poly
+                            self.bird_view_axis.add_patch(poly)
 
             # add last value to preview plot for blending
             dummy = {x_name : x_data, y_name : y_data}
@@ -485,7 +500,9 @@ class Plotter(object):
                 q_data.extend([0]*len(x_data))
 
             # assemble and transform polygons
-            points = numpy.asarray(zip(x_data, y_data))
+            points = numpy.asarray(
+                zip(self.data[x_name][-1], self.data[y_name][-1])
+            )
 
             # if we plot foot positions draw also foot hull
             for poly_name, poly_map in self.polygons_mapping.get(x_name, {}).iteritems():
@@ -506,6 +523,7 @@ class Plotter(object):
 
                 # get hull as numpy array
                 hull = numpy.asarray(self.data[poly_name][i])
+                hull = numpy.vstack((hull, hull[0,:]))
 
                 # iterate over all
                 for j in range(points.shape[0]):
@@ -516,8 +534,15 @@ class Plotter(object):
                     # for preview add dotted linestyle
                     poly_map['ls'] = 'dotted'
 
-                    poly = plt.Polygon(dummy, **poly_map)
-                    self.bird_view_axis.add_patch(poly)
+                    # is there already a polygon for this index
+                    if j in self.bird_view_polys[x_name][poly_name]:
+                        poly = self.bird_view_polys[x_name][poly_name][j]
+                        if (poly.get_xy != dummy).any():
+                            poly.set_xy(dummy)
+                    else:
+                        poly = plt.Polygon(dummy, **poly_map)
+                        self.bird_view_polys[x_name][poly_name][j] = poly
+                        self.bird_view_axis.add_patch(poly)
 
             line.set_xdata(x_data)
             line.set_ydata(y_data)
@@ -534,6 +559,8 @@ class Plotter(object):
         # show canvas
         if self.show_canvas:
             # TODO problem of background is not refreshed
+            self.bird_view_axis.draw_artist(self.bird_view_axis.patch)
+            #ax.draw_artist(line)
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 

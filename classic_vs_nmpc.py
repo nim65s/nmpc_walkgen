@@ -16,7 +16,7 @@ nmpc.   set_security_margin(0.09, 0.05)
 classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas  = True
+show_canvas  = False
 save_to_file = False
 fmt='jpeg'
 dpi=200
@@ -47,7 +47,7 @@ interpolNmpc = Interpolation(0.005,nmpc)
 velocity_reference = [0.2, 0.0, 0.2]
 
 # Pattern Generator Event Loop
-for i in range(230):
+for i in range(500):
     print 'iteration: ', i
     time = i*0.1
 
@@ -62,7 +62,6 @@ for i in range(230):
         nmpc.   c = 1e+02
         classic.c = 1e+02
         velocity_reference = [ 0.0, 0.0, 0.0]
-
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)
@@ -89,8 +88,6 @@ for i in range(230):
 
 nmpc.   data.save_to_file('./nmpc.json')
 classic.data.save_to_file('./classic.json')
-
-raw_input('Hi:')
 
 show_canvas  = False
 save_to_file = True

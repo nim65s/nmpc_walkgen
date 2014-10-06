@@ -1064,7 +1064,7 @@ class BaseGenerator(object):
         # B <= A x <= B
         # Support_Foot(k+1) = Support_Foot(k)
         itBeforeLanding = numpy.sum(self.v_kp1)
-        itBeforeLandingThreshold = 2
+        itBeforeLandingThreshold = 3
         if ( itBeforeLanding < itBeforeLandingThreshold ) :
             self.eqAfoot[0,   self.N        ] = 1.
             self.eqAfoot[1, 2*self.N+self.nf] = 1.

@@ -90,5 +90,5 @@ for i in range(220):
     #time.sleep(0.1)
 
 gen.data.save_to_file('./data.json')
-interpol.save_to_file("./wieber2010python2.csv")
+interpol.save_to_file("./wieber2010python.csv")
 

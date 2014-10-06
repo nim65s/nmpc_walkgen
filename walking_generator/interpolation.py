@@ -116,6 +116,23 @@ class Interpolation(object):
         lfZ    = numpy.asarray([item.  z for item in self.leftFootTraj])
         lfQ    = numpy.asarray([item.  q for item in self.leftFootTraj])
 
+        rfdX    = numpy.asarray([item. dx for item in self.rightFootTraj])
+        rfdY    = numpy.asarray([item. dy for item in self.rightFootTraj])
+        rfdZ    = numpy.asarray([item. dz for item in self.rightFootTraj])
+        rfdQ    = numpy.asarray([item. dq for item in self.rightFootTraj])
+        lfdX    = numpy.asarray([item. dx for item in self.leftFootTraj])
+        lfdY    = numpy.asarray([item. dy for item in self.leftFootTraj])
+        lfdZ    = numpy.asarray([item. dz for item in self.leftFootTraj])
+        lfdQ    = numpy.asarray([item. dq for item in self.leftFootTraj])
+        rfddX    = numpy.asarray([item.ddx for item in self.rightFootTraj])
+        rfddY    = numpy.asarray([item.ddy for item in self.rightFootTraj])
+        rfddZ    = numpy.asarray([item.ddz for item in self.rightFootTraj])
+        rfddQ    = numpy.asarray([item.ddq for item in self.rightFootTraj])
+        lfddX    = numpy.asarray([item.ddx for item in self.leftFootTraj])
+        lfddY    = numpy.asarray([item.ddy for item in self.leftFootTraj])
+        lfddZ    = numpy.asarray([item.ddz for item in self.leftFootTraj])
+        lfddQ    = numpy.asarray([item.ddq for item in self.leftFootTraj])
+
         lst = [
         comX[:,0], # 1
         comX[:,1], # 2
@@ -136,7 +153,23 @@ class Interpolation(object):
         lfX,       # 17
         lfY,       # 18
         lfZ,       # 19
-        lfQ   ]    # 20
+        lfQ,       # 20
+        rfdX,      # 21
+        rfdY ,     # 22
+        rfdZ  ,    # 23
+        rfdQ  ,    # 24
+        lfdX  ,    # 25
+        lfdY  ,    # 26
+        lfdZ  ,    # 27
+        lfdQ  ,    # 28
+        rfddX ,    # 29
+        rfddY ,    # 30
+        rfddZ ,    # 31
+        rfddQ ,    # 32
+        lfddX ,    # 33
+        lfddY ,    # 34
+        lfddZ ,    # 35
+        lfddQ ]    # 36
 
         data = numpy.asarray(lst).transpose()
         numpy.savetxt(filename, data, delimiter="   ")
@@ -254,6 +287,7 @@ class FootInterpolation(object):
         self.TDS = doubleSupportTime # Time of double support
         self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
         self.gen = genrator
+        self.polynomeZ.setParameters(self.TSS,self.stepHeigth,0.0,0.0)
     '''
     Update the currentState to be valide at the next iteration
     and fill up the queue containing all the intermediate values
@@ -272,13 +306,15 @@ class FootInterpolation(object):
         * DSP : Double Support Phase
         '''
         if time == 0.0 :
-            timelimit = 0.0 ;
+            timelimit = 0.8 ;
         else :
-            timelimit = time + numpy.sum(self.gen.v_kp1) * self.T + self.T
+            timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
         for i in range(self.intervaleSize):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()
 
+        print timelimit
+        print self.gen.v_kp1
         # in case of double support the policy is to stay still
         if time+1.5*self.T > timelimit :
             for i in range(self.intervaleSize):
@@ -286,7 +322,7 @@ class FootInterpolation(object):
                 RightFootBuffer[i] = deepcopy(curRight)
             # we define the z trajectory in the double support phase
             # to allow the robot to take off and land
-            # during the whole singletime
+            # during the whole single support duration
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
 
         elif time+1.5*self.T < timelimit :

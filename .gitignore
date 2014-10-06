@@ -5,6 +5,7 @@
 *.orig
 *~
 *.json
+*.jpeg
 *.png
 *.pdf
 

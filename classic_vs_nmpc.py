@@ -55,9 +55,9 @@ for i in range(500):
     if 25 <= i < 50:
         velocity_reference = [ 0.2, 0.0, -0.2]
     if 50 <= i < 100:
-        velocity_reference = [0.1, 0.2,-0.4]
+        velocity_reference = [0.1, 0.1,-0.4]
     if 150 <= i < 200:
-        velocity_reference = [ 0.0, 0.2, 0.0]
+        #velocity_reference = [ 0.0, 0.2, 0.0]
         #nmpc.   c = 1e+02
         #classic.c = 1e+02
         velocity_reference = [ 0.0, 0.0, 0.0]

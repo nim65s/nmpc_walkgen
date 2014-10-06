@@ -27,10 +27,10 @@ class Interpolation(object):
         # the beginning of the qp
         # and updated inside the class
         self.curCoM = CoMState()
-        self.curCoM.x = self.gen.c_k_x
-        self.curCoM.y = self.gen.c_k_y
-        self.curCoM.theta = self.gen.c_k_q
-        self.curCoM.h_com = self.gen.h_com
+        self.curCoM.x = deepcopy(self.gen.c_k_x)
+        self.curCoM.y = deepcopy(self.gen.c_k_y)
+        self.curCoM.theta = deepcopy(self.gen.c_k_q)
+        self.curCoM.h_com = deepcopy(self.gen.h_com)
         zmp = ZMPState()
         zmp.x = self.curCoM.x[0] - self.curCoM.h_com / self.gen.g * self.curCoM.x[2]
         zmp.y = self.curCoM.y[0] - self.curCoM.h_com / self.gen.g * self.curCoM.y[2]
@@ -39,19 +39,19 @@ class Interpolation(object):
         self.curleft = BaseTypeFoot()
         self.curRight = BaseTypeFoot()
         if self.gen.currentSupport.foot == "left" :
-            self.curleft.x = self.gen.f_k_x
-            self.curleft.y = self.gen.f_k_y
-            self.curleft.q = self.gen.f_k_q
-            self.curRight.x = self.gen.f_k_x + self.fi.feetDist * math.sin(self.gen.f_k_q)
-            self.curRight.y = self.gen.f_k_y - self.fi.feetDist * math.cos(self.gen.f_k_q)
-            self.curRight.q = self.gen.f_k_q
+            self.curleft.x = deepcopy(self.gen.f_k_x)
+            self.curleft.y = deepcopy(self.gen.f_k_y)
+            self.curleft.q = deepcopy(self.gen.f_k_q)
+            self.curRight.x = deepcopy(self.gen.f_k_x + self.fi.feetDist * math.sin(self.gen.f_k_q) )
+            self.curRight.y = deepcopy(self.gen.f_k_y - self.fi.feetDist * math.cos(self.gen.f_k_q) )
+            self.curRight.q = deepcopy(self.gen.f_k_q)
         else :
-            self.curleft.x = self.gen.f_k_x
-            self.curleft.y = self.gen.f_k_y
-            self.curleft.q = self.gen.f_k_q
-            self.curRight.x = self.gen.f_k_x - self.fi.feetDist * math.sin(self.gen.f_k_q)
-            self.curRight.y = self.gen.f_k_y + self.fi.feetDist * math.cos(self.gen.f_k_q)
-            self.curRight.q = self.gen.f_k_q
+            self.curleft.x = deepcopy(self.gen.f_k_x)
+            self.curleft.y = deepcopy(self.gen.f_k_y)
+            self.curleft.q = deepcopy(self.gen.f_k_q)
+            self.curRight.x = deepcopy(self.gen.f_k_x - self.fi.feetDist * math.sin(self.gen.f_k_q) )
+            self.curRight.y = deepcopy(self.gen.f_k_y + self.fi.feetDist * math.cos(self.gen.f_k_q) )
+            self.curRight.q = deepcopy(self.gen.f_k_q)
 
         self.CoMbuffer = numpy.empty( (self.interval,) , dtype=CoMState ) #buffer containing the CoM trajectory over 100ms
         self.ZMPbuffer = numpy.empty( (self.interval,) , dtype=ZMPState ) #buffer containing the ZMP trajectory over 100ms
@@ -285,6 +285,7 @@ class FootInterpolation(object):
         self.polynomeZ     = Polynome4() # order 5 for a defined middle point
         self.TSS = stepTime - doubleSupportTime # Time of single support
         self.TDS = doubleSupportTime # Time of double support
+        self.stepTime = stepTime
         self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
         self.gen = genrator
         self.polynomeZ.setParameters(self.TSS,self.stepHeigth,0.0,0.0)
@@ -312,8 +313,13 @@ class FootInterpolation(object):
 
         print timelimit
         print self.gen.v_kp1
+        print self.gen.V_kp1
+        print timelimit - self.stepTime
+        print self.stepTime
+        epsilon = 0.02
         # in case of double support the policy is to stay still
-        if time+1.5*self.T > timelimit :
+        if time + epsilon < timelimit - self.stepTime + self.T :
+            print "double support"
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(curLeft)
                 RightFootBuffer[i] = deepcopy(curRight)
@@ -322,13 +328,15 @@ class FootInterpolation(object):
             # during the whole single support duration
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
 
-        elif time+1.5*self.T < timelimit :
+            return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
+        elif time + epsilon > timelimit - self.stepTime + self.T :
+            print "single support"
             # Deal with the lift off time and the landing time. During those period
             # the foot do not move along the x and y axis.
 
             # this is counted from the last double support phase
-            localInterpolationStartTime = time - (timelimit -(self.TSS+self.TDS) )
+            localInterpolationStartTime = time - (timelimit - self.TSS)
             # this coeffincient indicates how long you allow the foot
             # to take off AND land (in %)
             moduleSupportCoefficient = 0.9
@@ -390,7 +398,7 @@ class FootInterpolation(object):
             else:
                 flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize)
 
-        return curLeft,curRight,LeftFootBuffer, RightFootBuffer
+            return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
 
     def computeXYQ(self,foot,t):

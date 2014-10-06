@@ -20,7 +20,7 @@ show_canvas  = False
 save_to_file = False
 fmt='jpeg'
 dpi=200
-limits = ((-0.8, 3.5), (-0.5, 0.8))
+limits = None#((-0.8, 3.5), (-0.5, 0.8))
 
 nmpc_p    = Plotter(nmpc,    show_canvas=show_canvas, save_to_file=save_to_file,
         filename='./nmpc/nmpc.png', fmt=fmt, dpi=dpi, limits=limits
@@ -56,9 +56,10 @@ for i in range(500):
         velocity_reference = [ 0.2, 0.0, -0.2]
     if 50 <= i < 100:
         velocity_reference = [0.1, 0.2,-0.4]
-    if 100 <= i < 150:
+    if 150 <= i < 200:
         velocity_reference = [ 0.0, 0.2, 0.0]
-    if 150 <= i :
+        #nmpc.   c = 1e+02
+        #classic.c = 1e+02
         velocity_reference = [ 0.0, 0.0, 0.0]
 
 

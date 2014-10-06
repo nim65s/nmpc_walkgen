@@ -17,9 +17,16 @@ classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
 show_canvas  = True
-save_to_file = False
-nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
-classic_p = Plotter(classic, show_canvas, save_to_file)
+save_to_file = True
+fmt='png'
+dpi=200
+nmpc_p    = Plotter(nmpc,    show_canvas=show_canvas, save_to_file=save_to_file,
+        filename='./nmpc/nmpc.png', fmt=fmt, dpi=dpi
+)
+classic_p = Plotter(classic, show_canvas=show_canvas, save_to_file=save_to_file,
+        filename='./classic/classic.png', fmt=fmt, dpi=dpi
+)
+
 
 # set initial values
 comx = [0.00949035, 0.0, 0.0]
@@ -66,13 +73,13 @@ for i in range(220):
     comx, comy, comz, footx, footy, footq, foot, comq= \
     nmpc.update()
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    if show_canvas:
+    if show_canvas or save_to_file:
         nmpc_p.update()
 
     comx, comy, comz, footx, footy, footq, foot, comq= \
     classic.update()
     classic.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    if show_canvas:
+    if show_canvas or save_to_file:
         classic_p.update()
 
 nmpc.   data.save_to_file('./nmpc.json')

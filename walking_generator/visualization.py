@@ -171,7 +171,7 @@ class Plotter(object):
 
     def __init__(self,
         generator=None, show_canvas=True, save_to_file=False, filename='',
-        fmt='png'
+        fmt='png', dpi=200
     ):
         """
         Real time plotter for pattern generator data. Can create plots online or
@@ -204,8 +204,8 @@ class Plotter(object):
         matplotlib.rc('text', usetex=False)
 
         # some plotting options
-        self.figsize = (8.0, 5.0)
-        self.dpi = 100
+        #self.figsize = (8.0, 5.0)
+        self.dpi = dpi
 
         # save reference to pattern generator
         # NOTE used for online plotting
@@ -559,8 +559,6 @@ class Plotter(object):
         # show canvas
         if self.show_canvas:
             # TODO problem of background is not refreshed
-            self.bird_view_axis.draw_artist(self.bird_view_axis.patch)
-            #ax.draw_artist(line)
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 

@@ -16,15 +16,17 @@ nmpc.   set_security_margin(0.09, 0.05)
 classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas  = False
+show_canvas  = True
 save_to_file = True
 fmt='jpeg'
 dpi=200
+limits = ((-0.8, 3.5), (-0.5, 0.8))
+
 nmpc_p    = Plotter(nmpc,    show_canvas=show_canvas, save_to_file=save_to_file,
-        filename='./nmpc/nmpc.png', fmt=fmt, dpi=dpi
+        filename='./nmpc/nmpc.png', fmt=fmt, dpi=dpi, limits=limits
 )
 classic_p = Plotter(classic, show_canvas=show_canvas, save_to_file=save_to_file,
-        filename='./classic/classic.png', fmt=fmt, dpi=dpi
+        filename='./classic/classic.png', fmt=fmt, dpi=dpi, limits=limits
 )
 
 # set initial values

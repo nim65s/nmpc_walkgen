@@ -171,7 +171,7 @@ class Plotter(object):
 
     def __init__(self,
         generator=None, show_canvas=True, save_to_file=False, filename='',
-        fmt='png', dpi=200
+        fmt='png', dpi=200, limits=None
     ):
         """
         Real time plotter for pattern generator data. Can create plots online or
@@ -267,9 +267,8 @@ class Plotter(object):
         self.bird_view_lines = {}
         self.bird_view_polys = {}
 
-        self.bird_view_limits = None
+        self.bird_view_limits = limits
         self.bird_view_limits = ((-0.8, 3.5), (-0.5, 0.8))
-        self.bird_view_axis.set_xlim()
 
         if not self.bird_view_limits:
             self.bird_view_axis.relim()

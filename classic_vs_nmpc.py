@@ -54,14 +54,13 @@ for i in range(500):
     # change reference velocities
     if 25 <= i < 50:
         velocity_reference = [ 0.2, 0.0, -0.2]
-    if 50 <= i < 150:
+    if 50 <= i < 100:
         velocity_reference = [0.1, 0.2,-0.4]
-    if 150 <= i < 175:
-        velocity_reference = [ 0.0, 0.0, 0.2]
-    if 175 <= i < 200:
-        velocity_reference = [ 0.2, 0.0, 0.0]
-    if 200 <= i :
+    if 100 <= i < 150:
+        velocity_reference = [ 0.0, 0.2, 0.0]
+    if 150 <= i :
         velocity_reference = [ 0.0, 0.0, 0.0]
+
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)

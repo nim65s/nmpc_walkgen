@@ -765,10 +765,13 @@ class BaseGenerator(object):
         flyingFoot = self.E_FR.dot(self.F_kp1_qR) + self.E_FL.dot(self.F_kp1_qL)
         supportFoot = self.E_FR_bar.dot(self.F_kp1_qR) + self.E_FL_bar.dot(self.F_kp1_qL)
         q = (flyingFoot[0] + supportFoot[0])*0.5
-        self.dC_kp1_x_ref[...] = local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q)
-        self.dC_kp1_y_ref[...] = local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q)
-        self.dC_kp1_q_ref[...] = local_vel_ref[2]
+        self.dC_kp1_x_ref[...] = deepcopy( local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q) )
+        self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
+        self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
 
+        print self.dC_kp1_x_ref[...]
+        print self.dC_kp1_y_ref[...]
+        print self.dC_kp1_q_ref[...]
     def set_initial_values(self,
         com_x, com_y , com_z,
         foot_x, foot_y, foot_q, foot='left',

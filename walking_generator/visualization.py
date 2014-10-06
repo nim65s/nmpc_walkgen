@@ -268,7 +268,6 @@ class Plotter(object):
         self.bird_view_polys = {}
 
         self.bird_view_limits = limits
-        self.bird_view_limits = ((-0.8, 3.5), (-0.5, 0.8))
 
         if not self.bird_view_limits:
             self.bird_view_axis.relim()

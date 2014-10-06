@@ -16,7 +16,7 @@ nmpc.   set_security_margin(0.09, 0.05)
 classic.set_security_margin(0.09, 0.05)
 
 # instantiate plotter
-show_canvas  = True
+show_canvas  = False
 save_to_file = True
 fmt='jpeg'
 dpi=200
@@ -44,7 +44,7 @@ interpolClassic = Interpolation(0.005,classic)
 interpolNmpc = Interpolation(0.005,nmpc)
 
 # initial reference velocity
-velocity_reference = [0.2, 0.0, 0.2]
+velocity_reference = [0.2, 0.0, 0.0]
 
 # Pattern Generator Event Loop
 for i in range(220):
@@ -53,13 +53,13 @@ for i in range(220):
 
     # change reference velocities
     if 25 <= i < 50:
-        velocity_reference = [ 0.2, 0.0, -0.2]
+        velocity_reference = [ 0.2, 0.0, 0.0]
     if 50 <= i < 150:
-        velocity_reference = [0.1, 0.2,-0.4]
+        velocity_reference = [0.2, 0.0,0.0]
     if 150 <= i < 200:
-        velocity_reference = [ 0.0, 0.2, 0.0]
+        velocity_reference = [ 0.2, 0.0, 0.0]
     if 200 <= i :
-        velocity_reference = [ 0.0, 0.0, 0.0]
+        velocity_reference = [ 0.2, 0.0, 0.0]
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)

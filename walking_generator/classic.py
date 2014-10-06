@@ -61,7 +61,7 @@ class ClassicGenerator(BaseGenerator):
         self.nwsr     = 100      # number of working set recalculations
         self.options = Options()
         self.options.setToMPC()
-        #self.options.printLevel = PrintLevel.LOW
+        self.options.printLevel = PrintLevel.LOW
 
         # FOR ORIENTATIONS
         # define dimensions

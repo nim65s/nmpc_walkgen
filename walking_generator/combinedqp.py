@@ -620,6 +620,8 @@ class NMPCGenerator(BaseGenerator):
         """
         Solve QP first run with init functionality and other runs with warmstart
         """
+        self.cpu_time = 2.9 # ms
+        self.nwsr = 1000 # unlimited bounded
         if not self._qp_is_initialized:
             ret, nwsr, cputime = self.qp.init(
                 self.qp_H, self.qp_g, self.qp_A,
@@ -641,7 +643,7 @@ class NMPCGenerator(BaseGenerator):
 
         # save qp solver data
         self.qp_nwsr    = nwsr          # working set recalculations
-        self.qp_cputime = cputime*1000. # in milliseconds
+        self.qp_cputime = cputime*1000. # in milliseconds (set to 2.9ms)
 
     def _postprocess_solution(self):
         """ Get solution and put it back into generator data structures """

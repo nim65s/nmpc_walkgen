@@ -47,7 +47,7 @@ interpolNmpc = Interpolation(0.005,nmpc)
 velocity_reference = [0.2, 0.0, 0.2]
 
 # Pattern Generator Event Loop
-for i in range(500):
+for i in range(220):
     print 'iteration: ', i
     time = i*0.1
 

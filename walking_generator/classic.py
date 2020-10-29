@@ -61,7 +61,7 @@ class ClassicGenerator(BaseGenerator):
         self.nwsr     = numpy.array([100])      # number of working set recalculations
         self.options = Options()
         self.options.setToMPC()
-        self.options.printLevel = PrintLevel.LOW
+        # self.options.printLevel = PrintLevel.LOW
 
         # FOR ORIENTATIONS
         # define dimensions
@@ -457,20 +457,23 @@ class ClassicGenerator(BaseGenerator):
         """
         #sys.stdout.write('Solve for orientations:\n')
         if not self._ori_qp_is_initialized:
-            ret, nwsr, cputime = self.ori_qp.init(
+            
+            self.ori_qp.init(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr,cputime  = self.nwsr,self.cpu_time
             self._ori_qp_is_initialized = True
         else:
-            ret, nwsr, cputime = self.ori_qp.hotstart(
+            self.ori_qp.hotstart(
                 self.ori_H, self.ori_g, self.ori_A,
                 self.ori_lb, self.ori_ub,
                 self.ori_lbA, self.ori_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr,cputime  = self.nwsr,self.cpu_time
 
         # orientation primal solution
         self.ori_qp.getPrimalSolution(self.ori_dofs)
@@ -481,20 +484,22 @@ class ClassicGenerator(BaseGenerator):
 
         #sys.stdout.write('Solve for positions:\n')
         if not self._pos_qp_is_initialized:
-            ret, nwsr, cputime = self.pos_qp.init(
+            self.pos_qp.init(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr,cputime  = self.nwsr,self.cpu_time
             self._pos_qp_is_initialized = True
         else:
-            ret, nwsr, cputime = self.pos_qp.hotstart(
+            self.pos_qp.hotstart(
                 self.pos_H, self.pos_g, self.pos_A,
                 self.pos_lb, self.pos_ub,
                 self.pos_lbA, self.pos_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr,cputime  = self.nwsr,self.cpu_time
 
         # position primal solution
         self.pos_qp.getPrimalSolution(self.pos_dofs)

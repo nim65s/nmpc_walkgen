@@ -52,8 +52,8 @@ class NMPCGenerator(BaseGenerator):
         nf = self.nf
 
         # define some qpOASES specific things
-        self.cpu_time = 0.1 # upper bound on CPU time, 0 is no upper limit
-        self.nwsr     = 100 # # of working set recalculations
+        self.cpu_time = numpy.array([0.1]) # upper bound on CPU time, 0 is no upper limit
+        self.nwsr     = numpy.array([100])# # of working set recalculations
         self.options = Options()
         self.options.setToMPC()
         #self.options.printLevel = PrintLevel.LOW
@@ -98,8 +98,8 @@ class NMPCGenerator(BaseGenerator):
         self._qp_is_initialized = False
 
         # save computation time and working set recalculations
-        self.qp_nwsr    = 0.0
-        self.qp_cputime = 0.0
+        self.qp_nwsr    = numpy.array([0.0])
+        self.qp_cputime = numpy.array([0.0])
 
         # setup analyzer for solution analysis
         analyser = SolutionAnalysis()
@@ -623,20 +623,22 @@ class NMPCGenerator(BaseGenerator):
         self.cpu_time = 2.9 # ms
         self.nwsr = 1000 # unlimited bounded
         if not self._qp_is_initialized:
-            ret, nwsr, cputime = self.qp.init(
+            self.qp.init(
                 self.qp_H, self.qp_g, self.qp_A,
                 self.qp_lb, self.qp_ub,
                 self.qp_lbA, self.qp_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr, cputime = self.nwsr, self.cpu_time
             self._qp_is_initialized = True
         else:
-            ret, nwsr, cputime = self.qp.hotstart(
+            self.qp.hotstart(
                 self.qp_H, self.qp_g, self.qp_A,
                 self.qp_lb, self.qp_ub,
                 self.qp_lbA, self.qp_ubA,
                 self.nwsr, self.cpu_time
             )
+            nwsr, cputime = self.nwsr, self.cpu_time
 
         # orientation primal solution
         self.qp.getPrimalSolution(self.dofs)

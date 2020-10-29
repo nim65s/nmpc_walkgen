@@ -298,7 +298,7 @@ class Plotter(object):
             settings  = item[0][1]
 
             # layout line with empty data, but right settings
-            line, = ax.plot([], [], **settings)
+            # line, = ax.plot([], [], **settings)
 
             # store lines for later update
             self.bird_view_lines[name] = line

@@ -57,8 +57,8 @@ class ClassicGenerator(BaseGenerator):
         nf = self.nf
 
         # define some qpOASES specific things
-        self.cpu_time = 0.1 # upper bound on CPU time, 0 is no upper limit
-        self.nwsr     = 100      # number of working set recalculations
+        self.cpu_time = numpy.array([0.1]) # upper bound on CPU time, 0 is no upper limit
+        self.nwsr     = numpy.array([100])      # number of working set recalculations
         self.options = Options()
         self.options.setToMPC()
         self.options.printLevel = PrintLevel.LOW
@@ -88,8 +88,8 @@ class ClassicGenerator(BaseGenerator):
         self._ori_qp_is_initialized = False
 
         # save computation time and working set recalculations
-        self.ori_qp_nwsr    = 0.0
-        self.ori_qp_cputime = 0.0
+        self.ori_qp_nwsr    = numpy.array([0.0])
+        self.ori_qp_cputime = numpy.array([0.0])
 
         # FOR POSITIONS
         # define dimensions
@@ -116,8 +116,8 @@ class ClassicGenerator(BaseGenerator):
         self._pos_qp_is_initialized = False
 
         # save computation time and working set recalculations
-        self.pos_qp_nwsr    = 0.0
-        self.pos_qp_cputime = 0.0
+        self.pos_qp_nwsr    = numpy.array([0.0])
+        self.pos_qp_cputime = numpy.array([0.0])
 
         # dummy matrices
         self._ori_Q = numpy.zeros((2*self.N, 2*self.N))

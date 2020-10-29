@@ -15,7 +15,7 @@ classic.set_security_margin(0.09, 0.05)
 # instantiate plotter
 show_canvas  = True
 save_to_file = False
-classic_p = Plotter(classic, show_canvas, save_to_file)
+# classic_p = Plotter(classic, show_canvas, save_to_file)
 
 # set initial values
 comx = [0.00949035, 0.0, 0.0]
@@ -66,10 +66,10 @@ classic.data.save_to_file('./classic_alone.json')
 show_canvas  = False
 save_to_file = True
 
-classic_p = Plotter(
-    generator=None, show_canvas=show_canvas, save_to_file=save_to_file,
-    filename='./classic_alone', fmt='pdf'
-)
+# classic_p = Plotter(
+#     generator=None, show_canvas=show_canvas, save_to_file=save_to_file,
+#     filename='./classic_alone', fmt='pdf'
+# )
 classic_p.load_from_file('./classic_alone.json')
 classic_p.update()
 classic_p.create_data_plot()

@@ -7,7 +7,7 @@ from helper import BaseTypeFoot, BaseTypeSupportFoot
 from helper import ZMPState, CoMState
 from visualization import PlotData
 
-class BaseGenerator(object):
+class BaseGeneratorTraj(object):
     """
     Base class of walking pattern generator for humanoids, cf.
     LAAS-UHEI walking report.
@@ -43,9 +43,9 @@ class BaseGenerator(object):
         'dddC_k_x',
         'dddC_k_y',
         'dddC_k_q',
-        'dC_kp1_x_ref',
-        'dC_kp1_y_ref',
-        'dC_kp1_q_ref',
+        'C_kp1_x_ref',
+        'C_kp1_y_ref',
+        'C_kp1_q_ref',
         'f_k_qL',
         'f_k_qR',
         'F_k_qL',
@@ -183,10 +183,15 @@ class BaseGenerator(object):
 
         # reference matrices
 
-        self. dC_kp1_x_ref = numpy.zeros((N,), dtype=float)
-        self. dC_kp1_y_ref = numpy.zeros((N,), dtype=float)
-        self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
-        self.local_vel_ref = numpy.zeros((3,), dtype=float)
+        # self. dC_kp1_x_ref = numpy.zeros((N,), dtype=float)
+        # self. dC_kp1_y_ref = numpy.zeros((N,), dtype=float)
+        # self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
+        # self.local_vel_ref = numpy.zeros((3,), dtype=float)
+
+        self. C_kp1_x_ref = numpy.zeros((N,), dtype=float)
+        self. C_kp1_y_ref = numpy.zeros((N,), dtype=float)
+        self. C_kp1_q_ref = numpy.zeros((N,), dtype=float)
+        self.traj_ref = numpy.zeros((3,N), dtype=float)
 
 
         # feet matrices
@@ -747,33 +752,43 @@ class BaseGenerator(object):
         # rebuild constraints
         self.buildConstraints()
 
-    def set_velocity_reference(self,local_vel_ref):
-        """
-        Velocity reference update and computed from a local frame to a global frame using the
-        current support foot frame
+    # def set_velocity_reference(self,local_vel_ref):
+    #     """
+    #     Velocity reference update and computed from a local frame to a global frame using the
+    #     current support foot frame
 
-        Parameters
-        ----------
+    #     Parameters
+    #     ----------
 
-        vel_ref: [dx,dy,dq]
-            reference velocity in x, y and q
-        """
-        # get feet orientation states from feet jerks
-        self.local_vel_ref = local_vel_ref
-        self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
-        self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
+    #     vel_ref: [dx,dy,dq]
+    #         reference velocity in x, y and q
+    #     """
+    #     # get feet orientation states from feet jerks
+    #     self.local_vel_ref = local_vel_ref
+    #     self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
+    #     self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
 
-        flyingFoot = self.E_FR.dot(self.F_kp1_qR) + self.E_FL.dot(self.F_kp1_qL)
-        supportFoot = self.E_FR_bar.dot(self.F_kp1_qR) + self.E_FL_bar.dot(self.F_kp1_qL)
-        q = (flyingFoot[0] + supportFoot[0])*0.5
-        self.dC_kp1_x_ref[...] = deepcopy( local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q) )
-        self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
-        self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
+    #     flyingFoot = self.E_FR.dot(self.F_kp1_qR) + self.E_FL.dot(self.F_kp1_qL)
+    #     supportFoot = self.E_FR_bar.dot(self.F_kp1_qR) + self.E_FL_bar.dot(self.F_kp1_qL)
+    #     q = (flyingFoot[0] + supportFoot[0])*0.5
+    #     self.dC_kp1_x_ref[...] = deepcopy( local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q) )
+    #     self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
+    #     self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
 
-        print self.dC_kp1_x_ref[...]
-        print self.dC_kp1_y_ref[...]
-        print self.dC_kp1_q_ref[...]
+    #     print self.dC_kp1_x_ref[...]
+    #     print self.dC_kp1_y_ref[...]
+    #     print self.dC_kp1_q_ref[...]
 
+    def set_trajectory_reference(self,traj_ref):
+
+        self.traj_ref = traj_ref
+        self.C_kp1_x_ref[...] = deepcopy(traj_ref[0])
+        self.C_kp1_y_ref[...] = deepcopy(traj_ref[1])
+        self.C_kp1_q_ref[...] = deepcopy(traj_ref[2])
+
+        print self.C_kp1_x_ref[...]
+        print self.C_kp1_y_ref[...]
+        print self.C_kp1_q_ref[...]        
 
     def set_initial_values(self,
         com_x, com_y , com_z,
@@ -916,7 +931,8 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
 
-        self.set_velocity_reference(self.local_vel_ref)
+        self.set_trajectory_reference(self.traj_ref)
+        # self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
 
     def _update_data(self):

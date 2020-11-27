@@ -56,7 +56,7 @@ class NMPCGenerator(BaseGenerator):
         self.nwsr     = numpy.array([100])# # of working set recalculations
         self.options = Options()
         self.options.setToMPC()
-        #self.options.printLevel = PrintLevel.LOW
+        self.options.printLevel = PrintLevel.LOW
 
         # define variable dimensions
         # variables of:     position + orientation

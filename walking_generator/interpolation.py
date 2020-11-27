@@ -311,11 +311,11 @@ class FootInterpolation(object):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()
 
-        print timelimit
-        print self.gen.v_kp1
-        print self.gen.V_kp1
-        print timelimit - self.stepTime
-        print self.stepTime
+        print ("t_lim:",timelimit)
+        print ("v:",self.gen.v_kp1)
+        print ("V:",self.gen.V_kp1)
+        print ("dt:",timelimit - self.stepTime)
+        print ("step time",self.stepTime)
         epsilon = 0.02
         # in case of double support the policy is to stay still
         if time + epsilon < timelimit - self.stepTime + self.T :

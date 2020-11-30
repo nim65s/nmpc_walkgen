@@ -46,10 +46,10 @@ def resizeTraj(traj,velocity_ref):
 
 
 # Load reference trajectory
-path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_2,3,1.57_0.1_pos.dat'
+path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
-velocity_ref = 0.3 # velocity we want the robot to walk
+velocity_ref = 0.1 # velocity we want the robot to walk
 
 resized_traj = resizeTraj(traj, velocity_ref)   
 
@@ -63,6 +63,8 @@ nmpc.   set_security_margin(0.09, 0.05)
 show_canvas  = True
 save_to_file = False
 nmpc_p    = PlotterTraj(nmpc, traj, show_canvas, save_to_file)
+
+raw_input("Press Enter to start")
 
 # set initial values
 comx = [0.00949035, 0.0, 0.0]
@@ -82,7 +84,8 @@ interpolNmpc = Interpolation(0.005,nmpc)
 # Pattern Generator Event Loop
 for i in range(16,len(resized_traj[0])):
     trajectory_reference = resized_traj[:,i-16:i]
-    
+    time = (i-16)*0.1
+
     # print(i-16,i,len(resized_traj[0]),len(trajectory_reference[0]))
 
     # plt.plot(traj[0],traj[1])
@@ -108,30 +111,30 @@ for i in range(16,len(resized_traj[0])):
 
     nmpc.   set_trajectory_reference(trajectory_reference)
 
-#     # solve QP
-#     nmpc.   solve()
-#     nmpc.   simulate()
-#     interpolNmpc.interpolate(time)
+    # solve QP
+    nmpc.   solve()
+    nmpc.   simulate()
+    interpolNmpc.interpolate(time)
 
-#     # initial value embedding by internal states and simulation
-#     comx, comy, comz, footx, footy, footq, foot, comq= \
-#     nmpc.update()
-#     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-#     if show_canvas:
-#         nmpc_p.update()
+    # initial value embedding by internal states and simulation
+    comx, comy, comz, footx, footy, footq, foot, comq= \
+    nmpc.update()
+    nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+    if show_canvas:
+        nmpc_p.update()
 
-# nmpc.   data.save_to_file('./nmpc_alone.json')
+nmpc.   data.save_to_file('./nmpc_alone.json')
 
-# show_canvas  = False
-# save_to_file = True
+show_canvas  = False
+save_to_file = True
 
-# nmpc_p    = Plotter(
-#     generator=None, show_canvas=show_canvas, save_to_file=save_to_file,
-#     filename='./nmpc_alone',    fmt='pdf'
-# )
+nmpc_p    = Plotter(
+    generator=None, show_canvas=show_canvas, save_to_file=save_to_file,
+    filename='./nmpc_alone',    fmt='pdf'
+)
 
-# nmpc_p   .load_from_file('./nmpc_alone.json')
-# nmpc_p   .update()
-# nmpc_p   .create_data_plot()
+nmpc_p   .load_from_file('./nmpc_alone.json')
+nmpc_p   .update()
+nmpc_p   .create_data_plot()
 
-# interpolNmpc.save_to_file("./nmpc_alone.csv")
+interpolNmpc.save_to_file("./nmpc_alone.csv")

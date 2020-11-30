@@ -310,8 +310,8 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         E_FR = self.E_FR
         E_FL = self.E_FL
 
-        Pvs = self.Pvs
-        Pvu = self.Pvu
+        Pps = self.Pps
+        Ppu = self.Ppu
         Pzs = self.Pzs
         Pzu = self.Pzu
 
@@ -388,20 +388,20 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         p_k_yF[...] =-gamma * V_kp1.transpose().dot(Pzs.dot(c_k_y) - v_kp1.dot(f_k_y))
 
         # ORIENTATION QP MATRICES
-        # Q_k_qR = ( 0.5 * a * Pvu^T * E_FR^T *  E_FR * Pvu )
+        # # Q_k_qR = ( 0.5 * a * Pvu^T * E_FR^T *  E_FR * Pvu )
         Q_k_qR = self.Q_k_qR
-        Q_k_qR[...] = alpha * Pvu.transpose().dot(E_FR.transpose()).dot(E_FR).dot(Pvu)
+        Q_k_qR[...] = alpha * Ppu.transpose().dot(E_FR.transpose()).dot(E_FR).dot(Ppu)
 
-        # p_k_qR = (       a * Pvu^T * E_FR^T * (E_FR * Pvs * f_k_qR + dC_kp1_q_ref) )
+        # # p_k_qR = (       a * Pvu^T * E_FR^T * (E_FR * Pvs * f_k_qR + dC_kp1_q_ref) )
         p_k_qR = self.p_k_qR
-        p_k_qR[...] = alpha * Pvu.transpose().dot(E_FR.transpose()).dot(E_FR.dot(Pvs).dot(f_k_qR) - dC_kp1_q_ref)
+        p_k_qR[...] = alpha * Ppu.transpose().dot(E_FR.transpose()).dot(E_FR.dot(Pps).dot(f_k_qR) - C_kp1_q_ref)
 
-        # Q_k_qL = ( 0.5 * a * Pvu^T * E_FL^T *  E_FL * Pvu )
+        # # Q_k_qL = ( 0.5 * a * Pvu^T * E_FL^T *  E_FL * Pvu )
         Q_k_qL = self.Q_k_qL
-        Q_k_qL[...] = alpha * Pvu.transpose().dot(E_FL.transpose()).dot(E_FL).dot(Pvu)
-        # p_k_qL = (       a * Pvu^T * E_FL^T * (E_FL * Pvs * f_k_qL + dC_kp1_q_ref) )
+        Q_k_qL[...] = alpha * Ppu.transpose().dot(E_FL.transpose()).dot(E_FL).dot(Ppu)
+        # # p_k_qL = (       a * Pvu^T * E_FL^T * (E_FL * Pvs * f_k_qL + dC_kp1_q_ref) )
         p_k_qL = self.p_k_qL
-        p_k_qL[...] = alpha * Pvu.transpose().dot(E_FL.transpose()).dot(E_FL.dot(Pvs).dot(f_k_qL) - dC_kp1_q_ref)
+        p_k_qL[...] = alpha * Ppu.transpose().dot(E_FL.transpose()).dot(E_FL.dot(Pps).dot(f_k_qL) - C_kp1_q_ref)
 
         # LINEAR CONSTRAINTS
         # CoP constraints

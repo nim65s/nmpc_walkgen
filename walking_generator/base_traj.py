@@ -225,6 +225,7 @@ class BaseGeneratorTraj(object):
         # foot angular velocity selection matrices objective
         # E_F = ( E_FR    0 )
         #       (    0 E_FL )
+        # c est faux par rapport a la def en dessous...
 
         self.E_F  = numpy.zeros((self.N, 2*self.N), dtype=float)
         self.E_FR = self.E_F[:, :self.N]

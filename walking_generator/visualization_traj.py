@@ -71,9 +71,9 @@ class PlotData(object):
             json.dump(self.data, f, sort_keys=True, indent=2)
 
 
-class Plotter(object):
+class PlotterTraj(object):
     """
-    Real time plotter for pattern generator data. Can create plots online or
+    Real time PlotterTraj for pattern generator data. Can create plots online or
     from saved data in json format.
     """
 
@@ -174,7 +174,7 @@ class Plotter(object):
         fmt='png', dpi=200, limits=None
     ):
         """
-        Real time plotter for pattern generator data. Can create plots online or
+        Real time PlotterTraj for pattern generator data. Can create plots online or
         from saved data in json format.
 
         Parameters

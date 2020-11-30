@@ -786,9 +786,9 @@ class BaseGeneratorTraj(object):
         self.C_kp1_y_ref[...] = deepcopy(traj_ref[1])
         self.C_kp1_q_ref[...] = deepcopy(traj_ref[2])
 
-        print self.C_kp1_x_ref[...]
-        print self.C_kp1_y_ref[...]
-        print self.C_kp1_q_ref[...]        
+        # print self.C_kp1_x_ref[...]
+        # print self.C_kp1_y_ref[...]
+        # print self.C_kp1_q_ref[...]        
 
     def set_initial_values(self,
         com_x, com_y , com_z,

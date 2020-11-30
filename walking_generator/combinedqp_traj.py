@@ -325,9 +325,9 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         v_kp1 = self.v_kp1
         V_kp1 = self.V_kp1
 
-        dC_kp1_x_ref = self.dC_kp1_x_ref
-        dC_kp1_y_ref = self.dC_kp1_y_ref
-        dC_kp1_q_ref = self.dC_kp1_q_ref
+        C_kp1_x_ref = self.C_kp1_x_ref
+        C_kp1_y_ref = self.C_kp1_y_ref
+        C_kp1_q_ref = self.C_kp1_q_ref
 
         # POSITION QP MATRICES
         # Q_k_x = ( Q_k_xXX Q_k_xXF ) = Q_k_y
@@ -350,12 +350,12 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         c = N; d = N+nf
         Q_k_xFF = Q_k_x[a:b,c:d]
 
-        # Q_k_xXX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
+        # # Q_k_xXX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
         # Q_k_xXF = ( -0.5 * c * Pzu^T * V_kp1 )
         # Q_k_xFX = ( -0.5 * c * Pzu^T * V_kp1 )^T
         # Q_k_xFF = (  0.5 * c * V_kp1^T * V_kp1 )
         Q_k_xXX[...] = (
-              alpha * Pvu.transpose().dot(Pvu)
+              alpha * Ppu.transpose().dot(Ppu)
             + gamma * Pzu.transpose().dot(Pzu)
             + delta * numpy.eye(N)
         )
@@ -369,10 +369,10 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         p_k_xX = p_k_x[   :N]
         p_k_xF = p_k_x[-nf: ]
 
-        # p_k_xX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
-        # p_k_xF = ( -0.5 * c * Pzu^T * V_kp1 )
-        p_k_xX[...] = alpha * Pvu.transpose().dot(  Pvs.dot(c_k_x) - dC_kp1_x_ref) \
-                    + gamma * Pzu.transpose().dot(  Pzs.dot(c_k_x) - v_kp1.dot(f_k_x))
+        # # p_k_xX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
+        # # p_k_xF = ( -0.5 * c * Pzu^T * V_kp1 )
+        p_k_xX[...] = alpha * Ppu.transpose().dot(Pps.dot(c_k_x) - C_kp1_x_ref) \
+                    + gamma * Pzu.transpose().dot(Pzs.dot(c_k_x) - v_kp1.dot(f_k_x))
         p_k_xF[...] =-gamma * V_kp1.transpose().dot(Pzs.dot(c_k_x) - v_kp1.dot(f_k_x))
 
         # p_k_y = ( p_k_yX )
@@ -381,9 +381,9 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         p_k_yX = p_k_y[   :N]
         p_k_yF = p_k_y[-nf: ]
 
-        # p_k_yX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
-        # p_k_yF = ( -0.5 * c * Pzu^T * V_kp1 )
-        p_k_yX[...] = alpha * Pvu.transpose().dot(  Pvs.dot(c_k_y) - dC_kp1_y_ref) \
+        # # p_k_yX = (  0.5 * a * Pvu^T * Pvu + c * Pzu^T * Pzu + d * I )
+        # # p_k_yF = ( -0.5 * c * Pzu^T * V_kp1 )
+        p_k_yX[...] = alpha * Ppu.transpose().dot(  Pps.dot(c_k_y) - C_kp1_y_ref) \
                     + gamma * Pzu.transpose().dot(  Pzs.dot(c_k_y) - v_kp1.dot(f_k_y))
         p_k_yF[...] =-gamma * V_kp1.transpose().dot(Pzs.dot(c_k_y) - v_kp1.dot(f_k_y))
 

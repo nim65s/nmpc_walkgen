@@ -123,18 +123,18 @@ for i in range(16,len(resized_traj[0])):
     if show_canvas:
         nmpc_p.update()
 
-nmpc.   data.save_to_file('./nmpc_alone.json')
+nmpc.   data.save_to_file('./nmpc_traj.json')
 
 show_canvas  = False
 save_to_file = True
 
-nmpc_p    = Plotter(
-    generator=None, show_canvas=show_canvas, save_to_file=save_to_file,
-    filename='./nmpc_alone',    fmt='pdf'
+nmpc_p    = PlotterTraj(
+    generator=None, trajectory=traj, show_canvas=show_canvas, save_to_file=save_to_file,
+    filename='./nmpc_traj',    fmt='pdf'
 )
 
-nmpc_p   .load_from_file('./nmpc_alone.json')
+nmpc_p   .load_from_file('./nmpc_traj.json')
 nmpc_p   .update()
 nmpc_p   .create_data_plot()
 
-interpolNmpc.save_to_file("./nmpc_alone.csv")
+interpolNmpc.save_to_file("./nmpc_traj.csv")

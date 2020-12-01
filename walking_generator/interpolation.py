@@ -311,15 +311,15 @@ class FootInterpolation(object):
             LeftFootBuffer[i] = BaseTypeFoot()
             RightFootBuffer[i] = BaseTypeFoot()
 
-        print ("t_lim:",timelimit)
-        print ("v:",self.gen.v_kp1)
-        print ("V:",self.gen.V_kp1)
-        print ("dt:",timelimit - self.stepTime)
-        print ("step time",self.stepTime)
+        # print ("t_lim:",timelimit)
+        # print ("v:",self.gen.v_kp1)
+        # print ("V:",self.gen.V_kp1)
+        # print ("dt:",timelimit - self.stepTime)
+        # print ("step time",self.stepTime)
         epsilon = 0.02
         # in case of double support the policy is to stay still
         if time + epsilon < timelimit - self.stepTime + self.T :
-            print "double support"
+            # print "double support"
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(curLeft)
                 RightFootBuffer[i] = deepcopy(curRight)
@@ -331,7 +331,7 @@ class FootInterpolation(object):
             return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
         elif time + epsilon > timelimit - self.stepTime + self.T :
-            print "single support"
+            # print "single support"
             # Deal with the lift off time and the landing time. During those period
             # the foot do not move along the x and y axis.
 

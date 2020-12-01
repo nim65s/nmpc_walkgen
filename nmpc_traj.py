@@ -37,16 +37,27 @@ def resizeTraj(traj,velocity_ref):
     # plt.plot(traj[0],traj[1])
     # plt.plot(x,y,linestyle=':', marker='o')
     # plt.show()
-    # plt.plot(numpy.linspace(0,1,traj_length),traj[2])
+
+    # time = numpy.linspace(0,1,traj_length)
+    # plt.plot(time,traj[2])
     # plt.plot(unew,theta,linestyle=':', marker='o')
     # plt.show()
+
+    # time_diff = numpy.linspace(0,1,len(numpy.diff(x)))
+    # plt.plot(time_diff,numpy.sqrt(numpy.diff(x)**2+numpy.diff(y)**2))
+    # plt.show()
+
+    # plt.plot(time_diff,numpy.diff(theta))
+    # plt.show()
+
     new_traj = numpy.zeros((3,new_length), dtype=float)
     new_traj[0],new_traj[1],new_traj[2] = x,y,theta
     return new_traj
 
 
 # Load reference trajectory
-path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat'
+# path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
+path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
 velocity_ref = 0.1 # velocity we want the robot to walk

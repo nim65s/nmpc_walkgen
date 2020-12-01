@@ -16,7 +16,7 @@ plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-gen.set_velocity_reference([0.2,0.0,-0.6])
+gen.set_velocity_reference([0.1,0.0,-0.15])
 
 gen.set_security_margin(0.04, 0.04)
 

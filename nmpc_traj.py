@@ -54,15 +54,26 @@ def resizeTraj(traj,velocity_ref):
     new_traj[0],new_traj[1],new_traj[2] = x,y,theta
     return new_traj
 
+def translate(traj):
+    traj[0] = traj[0] - traj[0][0]
+    traj[1] = traj[1] - traj[1][0]   
+    # traj[2] = traj[2] - traj[2][0]    
+    return traj 
+
+
 
 # Load reference trajectory
 # path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos.dat'
+path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/DdpResult_from_-4.006,-3.072,-1.58_to_0,0,1.57_pos.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
-velocity_ref = 0.1 # velocity we want the robot to walk
+# traj = translate(traj)
+# print(traj)
 
-resized_traj = resizeTraj(traj, velocity_ref)   
+velocity_ref = 0.15 # velocity we want the robot to walk
+
+# resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
+resized_traj = resizeTraj(traj, velocity_ref)
 
 # instantiate pattern generator
 nmpc    = NMPCGeneratorTraj(fsm_state='L/R')
@@ -78,11 +89,11 @@ nmpc_p    = PlotterTraj(nmpc, traj, show_canvas, save_to_file)
 raw_input("Press Enter to start")
 
 # set initial values
-comx = [0.00949035, 0.0, 0.0]
-comy = [0.095,      0.0, 0.0]
+comx = [traj[0][0]+0.00949035, 0.0, 0.0]
+comy = [traj[1][0]+0.095,0.0, 0.0]
 comz = 0.814
-footx = 0.00949035
-footy = 0.095
+footx = traj[0][0]+0.00949035
+footy = traj[1][0]+0.095
 footq = 0.0
 
 nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
@@ -96,6 +107,7 @@ interpolNmpc = Interpolation(0.005,nmpc)
 for i in range(16,len(resized_traj[0])):
     trajectory_reference = resized_traj[:,i-16:i]
     time = (i-16)*0.1
+    # print(trajectory_reference)
 
     # print(i-16,i,len(resized_traj[0]),len(trajectory_reference[0]))
 
@@ -130,6 +142,7 @@ for i in range(16,len(resized_traj[0])):
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
     nmpc.update()
+    # print("------",comx, comy, comz, footx, footy, footq, foot, comq)
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:
         nmpc_p.update()

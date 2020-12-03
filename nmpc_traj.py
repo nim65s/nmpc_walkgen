@@ -10,184 +10,7 @@ from math import sqrt,floor
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
-def resizeTraj(traj,velocity_ref,velocity_low):
-    traj_length = len(traj[0])
-    x,y,theta = traj[0],traj[1],traj[2]
-
-    # time_diff = numpy.linspace(0,1,len(numpy.diff(theta)))
-    # plt.plot(time_diff,numpy.diff(theta))
-    # plt.show()   
-
-    okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
-    x,y = x[okay],y[okay]
-    tck, u = splprep([x, y], s=0)
-    unew = numpy.linspace(0,1,traj_length)
-    data = splev(unew, tck)
-    x,y = data[0],data[1]
-
-    # x2 = numpy.interp(numpy.linspace(0,1,20),unew,x)
-    # y2 = numpy.interp(numpy.linspace(0,1,20),unew,y)
-
-    # plt.plot(traj[0],traj[1],linestyle=':', marker='o')
-    # plt.plot(x,y,linestyle=':', marker='o')   
-    # plt.plot(x2,y2,linestyle=':', marker='o')
-    # plt.show()
-
-    print(traj_length,len(x),len(theta))
-
-    ind = numpy.where(numpy.abs(numpy.diff(theta))>0.1)
-    print(ind)
-
-    ind_partition, d  = [[0]], []
-    i,previous = 0,"ref"
-    while i < traj_length-1:
-        if numpy.sum(numpy.isin(ind,i)) == 0:
-            if previous == "ref":
-                ind_partition[-1].append(i+1) 
-                # d[-1] += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
-                # print("1",i+1,i)
-            else:          
-                ind_partition.append([])  
-                # d.append(sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2))           
-                ind_partition[-1].append(i)
-                ind_partition[-1].append(i+1)
-                # print("2",i+1,i)
-            previous = "ref"
-            i+=1
-        else:
-            if previous == "ref":
-                ind_partition.append([])
-                # d.append(sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2))                   
-                ind_partition[-1].append(i)
-                ind_partition[-1].append(i+1)
-                # ind_partition[-1].append(i+2)
-                # ind_partition[-1].append(i+3)
-                # ind_partition[-1].append(i+4)     
-                # ind_partition[-1].append(i+5)                
-
-                # print("3",i+1,i)
-            else:    
-                ind_partition[-1].append(i+1)                             
-                # d[-1] += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)    
-                # print("4",i+1,i)
-            previous = "low"
-            i+=1
-
-        # i += 1
-
-    print(ind_partition)
-    new_length_list = []
-
-    for k in range(len(ind_partition)):
-        d.append(0)
-        for i in ind_partition[k][:-1]:
-            # print(i)
-            d[-1] += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
-        if k%2 == 0:
-            t = d[-1]/velocity_ref
-        else:
-            t = d[-1]/velocity_low
-        new_length_list.append(int((floor(t/0.1))))        
-
-    print(d)
-    print(new_length_list)
-    
-    new_x,new_y,new_theta = numpy.array([]),numpy.array([]),numpy.array([])
-    i = 0
-    for length in new_length_list:
-        if length != 0:
-            ind = numpy.array(ind_partition[i])
-            # print(ind,len(x),len(theta))
-            current_x,current_y,current_theta = x[ind],y[ind],theta[ind]
-            # print(current_x,current_y,length)                     
-
-            # okay = numpy.where(numpy.abs(numpy.diff(current_x)) + numpy.abs(numpy.diff(current_y)) > 0)
-            # print(okay)
-            # current_x,current_y = current_x[okay],current_y[okay]
-            # print(current_x,current_y) 
-            # tck, u = splprep([current_x, current_y], s=0)
-            # unew = numpy.linspace(0,1,length)
-            # data = splev(unew, tck)
-            # current_x,current_y = data[0],data[1]
-            new_time = numpy.linspace(0,1,length)
-            old_time = numpy.linspace(0,1,len(ind))
-            current_x = numpy.interp(new_time,old_time,current_x) 
-            current_y = numpy.interp(new_time,old_time,current_y)              
-            current_theta = numpy.interp(new_time,old_time,current_theta)  
-
-            new_x = numpy.concatenate((new_x,current_x))
-            new_y = numpy.concatenate((new_y,current_y))
-            new_theta = numpy.concatenate((new_theta,current_theta))
-
-            # print(current_x)
-        i += 1
-
-    # print(new_x)
-
-
-
-    # d_vref = 0
-
-    # d_tot = 0
-    # for i in range(0,traj_length-1):
-    #     if numpy.sum(numpy.isin(ind,i)) == 0:
-    #         d_vref += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
-    # print(d_vref)
-
-
-
-        
-    #     # print(sqrt((traj[0][i]-traj[0][i-1])**2 + (traj[1][i]-traj[1][i-1])**2))
-
-    # t_tot = d_vref/velocity_ref # total time necessary to walk the trajectory according the average velocity
-    # new_length = int((floor(t_tot/0.1)))
-    # true_vel = d_tot/(new_length*0.1)
-    # # print(len(traj[0]),d_tot,t_tot,new_length,int(16*(floor(t_tot/1.6)+1)),true_vel)
-
-
-
-
-
-    # okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
-    # x,y = x[okay],y[okay]
-    # tck, u = splprep([x, y], s=0)
-    # unew = numpy.linspace(0,1,new_length)
-    # data = splev(unew, tck)
-    # x,y = data[0],data[1]
-
-    # theta = numpy.interp(unew,numpy.linspace(0,1,traj_length),theta)    
-
-    # plt.plot(traj[0],traj[1])
-    # plt.plot(new_x,new_y,linestyle=':', marker='o')
-    # plt.show()
-
-    # time = numpy.linspace(0,1,traj_length)
-    # plt.plot(time,traj[2])
-    # plt.plot(numpy.linspace(0,1,len(new_theta)),new_theta,linestyle=':', marker='o')
-    # plt.show()
-
-    # time_diff = numpy.linspace(0,1,len(numpy.diff(x)))
-    # plt.plot(time_diff,numpy.sqrt(numpy.diff(x)**2+numpy.diff(y)**2))
-    # plt.show()
-
-    # plt.plot(time_diff,numpy.diff(theta))
-    # plt.show()
-
-    new_traj = numpy.zeros((3,len(new_x)), dtype=float)
-    new_traj[0],new_traj[1],new_traj[2] = new_x,new_y,new_theta
-    return new_traj
-
-def translate(traj):
-    x_0,y_0,theta_0 = traj[0][0],traj[1][0],traj[2][0]
-    # print(traj[1]-y_0,traj[0]-x_0)
-    traj[0],traj[1] = (traj[0]-x_0)*numpy.cos(theta_0) + (traj[1]-y_0)\
-        *numpy.sin(theta_0), -(traj[0]-x_0)*numpy.sin(theta_0) + \
-        (traj[1]-y_0)*numpy.cos(theta_0)
-    # print(-(traj[0][0]-x_0)*numpy.sin(theta_0) + (traj[1][0]-y_0)*numpy.cos(theta_0))
-    traj[2] = traj[2] - theta_0 
-    return traj 
-
-# def resizeTraj(traj,velocity_ref):
+# def resizeTraj1(traj,velocity_ref):
 #     traj_length = len(traj[0])
 #     x,y,theta = traj[0],traj[1],traj[2]
 #     d_tot = 0
@@ -229,10 +52,200 @@ def translate(traj):
 #     return new_traj
 
 
+def resizeTraj2(traj,velocity_ref):
+    traj_length = len(traj[0])
+    x,y,theta = traj[0],traj[1],traj[2]
+
+    # time_diff = numpy.linspace(0,1,len(numpy.diff(theta)))
+    # plt.plot(time_diff,numpy.diff(theta))
+    # plt.show()   
+
+    okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
+    x,y = x[okay],y[okay]
+    tck, u = splprep([x, y], s=0)
+    unew = numpy.linspace(0,1,traj_length)
+    data = splev(unew, tck)
+    x,y = data[0],data[1]
+
+    # x2 = numpy.interp(numpy.linspace(0,1,20),unew,x)
+    # y2 = numpy.interp(numpy.linspace(0,1,20),unew,y)
+
+    # plt.plot(traj[0],traj[1],linestyle=':', marker='o')
+    # plt.plot(x,y,linestyle=':', marker='o')   
+    # plt.plot(x2,y2,linestyle=':', marker='o')
+    # plt.show()
+
+    print(traj_length,len(x),len(theta))
+
+    ind = numpy.where(numpy.abs(numpy.diff(theta))>0.2)
+    print(ind)
+
+    max_delta_ori = numpy.max(numpy.abs(numpy.diff(theta)))
+    if max_delta_ori < 0.8:
+        velocity_low = 0.05
+    elif max_delta_ori < 1.7:
+        velocity_low = 0.001
+    elif max_delta_ori < 2.8:
+        velocity_low = 0.0005
+    else:
+        velocity_low = 0.0001
+
+    print(max_delta_ori,velocity_low)
+
+    ind_partition, d  = [[0]], []
+    i,previous = 0,"ref"
+    while i < traj_length-1:
+        if numpy.sum(numpy.isin(ind,i)) == 0:
+            if previous == "low":     
+                ind_partition.append([])           
+                ind_partition[-1].append(i)
+            ind_partition[-1].append(i+1)
+            previous = "ref"
+            i+=1
+        else:
+            if previous == "ref":
+                ind_partition.append([])              
+                ind_partition[-1].append(i)
+            ind_partition[-1].append(i+1)                           
+            previous = "low"
+            i+=1
+
+    print(ind_partition)
+    new_length_list = []
+
+    for k in range(len(ind_partition)):
+        d.append(0)
+        for i in ind_partition[k][:-1]:
+            d[-1] += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
+        if k%2 == 0:
+            t = d[-1]/velocity_ref
+        else:
+            t = d[-1]/velocity_low
+        new_length_list.append(int((floor(t/0.1))))        
+
+    print(d)
+    print(new_length_list)
+    
+    new_x,new_y,new_theta = numpy.array([]),numpy.array([]),numpy.array([])
+    i = 0
+    for length in new_length_list:
+        if length != 0:
+            ind = numpy.array(ind_partition[i])
+            current_x,current_y,current_theta = x[ind],y[ind],theta[ind]
+
+            new_time = numpy.linspace(0,1,length)
+            old_time = numpy.linspace(0,1,len(ind))
+            current_x = numpy.interp(new_time,old_time,current_x) 
+            current_y = numpy.interp(new_time,old_time,current_y)              
+            current_theta = numpy.interp(new_time,old_time,current_theta)  
+
+            new_x = numpy.concatenate((new_x,current_x))
+            new_y = numpy.concatenate((new_y,current_y))
+            new_theta = numpy.concatenate((new_theta,current_theta))
+        i += 1
+
+    # plt.plot(traj[0],traj[1])
+    # plt.plot(new_x,new_y,linestyle=':', marker='o')
+    # plt.show()
+
+    # time = numpy.linspace(0,1,traj_length)
+    # new_time = numpy.linspace(0,1,len(new_theta))
+    # plt.plot(time,traj[2])
+    # # plt.plot(new_time,new_x)
+    # plt.plot(new_time,new_theta,linestyle=':', marker='o')
+    # plt.show()
+
+    new_traj = numpy.zeros((3,len(new_x)), dtype=float)
+    new_traj[0],new_traj[1],new_traj[2] = new_x,new_y,new_theta
+    return new_traj
+
+
+# def resizeTraj3(traj,velocity_ref,velocity_low):
+#     traj_length = len(traj[0])
+#     x,y,theta = traj[0],traj[1],traj[2]
+
+#     # time_diff = numpy.linspace(0,1,len(numpy.diff(theta)))
+#     # plt.plot(time_diff,numpy.diff(theta))
+#     # plt.show()   
+
+#     okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
+#     x,y = x[okay],y[okay]
+#     tck, u = splprep([x, y], s=0)
+#     unew = numpy.linspace(0,1,traj_length)
+#     data = splev(unew, tck)
+#     x,y = data[0],data[1]
+
+#     # x2 = numpy.interp(numpy.linspace(0,1,20),unew,x)
+#     # y2 = numpy.interp(numpy.linspace(0,1,20),unew,y)
+
+#     # plt.plot(traj[0],traj[1],linestyle=':', marker='o')
+#     # plt.plot(x,y,linestyle=':', marker='o')   
+#     # plt.plot(x2,y2,linestyle=':', marker='o')
+#     # plt.show()
+
+#     print(traj_length,len(x),len(theta))
+
+#     i_05, d = 0, 0
+
+#     for i in range(traj_length-1):
+#         if d <= 0.5:
+#             i_05 = i+1
+#         d += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
+#     d_start,d_end = 0.5, d-0.5 
+#     t_start,t_end = d_start/velocity_low,d_end/velocity_ref # total time necessary to walk the trajectory according the average velocity
+#     new_length_list = [int((floor(t_start/0.1))),int((floor(t_end/0.1)))]
+#     print(new_length_list)
+    
+#     new_x,new_y,new_theta = numpy.array([]),numpy.array([]),numpy.array([])
+#     first_loop = True
+#     for length in new_length_list:
+#         if first_loop:
+#             current_x,current_y,current_theta = x[:i_05],y[:i_05],theta[:i_05]
+#         else:
+#             current_x,current_y,current_theta = x[i_05:],y[i_05:],theta[i_05:]
+
+#         new_time = numpy.linspace(0,1,length)
+#         old_time = numpy.linspace(0,1,len(current_x))
+#         current_x = numpy.interp(new_time,old_time,current_x) 
+#         current_y = numpy.interp(new_time,old_time,current_y)              
+#         current_theta = numpy.interp(new_time,old_time,current_theta)  
+
+#         new_x = numpy.concatenate((new_x,current_x))
+#         new_y = numpy.concatenate((new_y,current_y))
+#         new_theta = numpy.concatenate((new_theta,current_theta))
+#         first_loop = False
+
+
+
+#     # plt.plot(traj[0],traj[1])
+#     # plt.plot(new_x,new_y,linestyle=':', marker='o')
+#     # plt.show()
+
+#     # time = numpy.linspace(0,1,traj_length)
+#     # new_time = numpy.linspace(0,1,len(new_theta))
+#     # plt.plot(time,traj[2])
+#     # # plt.plot(new_time,new_x)
+#     # plt.plot(new_time,new_theta,linestyle=':', marker='o')
+#     # plt.show()
+
+#     new_traj = numpy.zeros((3,len(new_x)), dtype=float)
+#     new_traj[0],new_traj[1],new_traj[2] = new_x,new_y,new_theta
+#     return new_traj
+
+def translate(traj):
+    x_0,y_0,theta_0 = traj[0][0],traj[1][0],traj[2][0]
+    # print(traj[1]-y_0,traj[0]-x_0)
+    traj[0],traj[1] = (traj[0]-x_0)*numpy.cos(theta_0) + (traj[1]-y_0)\
+        *numpy.sin(theta_0), -(traj[0]-x_0)*numpy.sin(theta_0) + \
+        (traj[1]-y_0)*numpy.cos(theta_0)
+    # print(-(traj[0][0]-x_0)*numpy.sin(theta_0) + (traj[1][0]-y_0)*numpy.cos(theta_0))
+    traj[2] = traj[2] - theta_0 
+    return traj 
+
 
 # Load reference trajectory
 # path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-name = 'DdpResult_from_-4.11,-0.68,0.0_to_0,0,1.57_pos'
+name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
 path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
@@ -246,12 +259,12 @@ traj = translate(traj)
 # plt.show()
 
 
-velocity_ref = 0.2 # velocity we want the robot to walk
-velocity_low = 0.0005 # velocity we want the robot to walk
+velocity_ref = 0.15 # velocity we want the robot to walk
+# velocity_low = 0.001 # velocity we want the robot to walk
 
 # resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
 # resized_traj = resizeTraj(traj, velocity_ref)
-resized_traj = resizeTraj(traj, velocity_ref,velocity_low)
+resized_traj = resizeTraj2(traj, velocity_ref)
 
 # instantiate pattern generator
 nmpc    = NMPCGeneratorTraj(fsm_state='L/R')

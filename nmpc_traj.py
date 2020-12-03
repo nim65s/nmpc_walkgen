@@ -10,49 +10,8 @@ from math import sqrt,floor
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
-# def resizeTraj1(traj,velocity_ref):
-#     traj_length = len(traj[0])
-#     x,y,theta = traj[0],traj[1],traj[2]
-#     d_tot = 0
-#     for i in range(0,traj_length-1):
-#         d_tot += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
-    
-#     t_tot = d_tot/velocity_ref # total time necessary to walk the trajectory according the average velocity
-#     new_length = int((floor(t_tot/0.1)))
-#     true_vel = d_tot/(new_length*0.1)
-#     # print(len(traj[0]),d_tot,t_tot,new_length,int(16*(floor(t_tot/1.6)+1)),true_vel)
 
-#     okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
-#     x,y = x[okay],y[okay]
-#     tck, u = splprep([x, y], s=0)
-#     unew = numpy.linspace(0,1,new_length)
-#     data = splev(unew, tck)
-#     x,y = data[0],data[1]
-
-#     theta = numpy.interp(unew,numpy.linspace(0,1,traj_length),theta)    
-
-#     # plt.plot(traj[0],traj[1])
-#     # plt.plot(x,y,linestyle=':', marker='o')
-#     # plt.show()
-
-#     # time = numpy.linspace(0,1,traj_length)
-#     # plt.plot(time,traj[2])
-#     # plt.plot(numpy.linspace(0,1,len(theta)),theta,linestyle=':', marker='o')
-#     # plt.show()
-
-#     # time_diff = numpy.linspace(0,1,len(numpy.diff(x)))
-#     # plt.plot(time_diff,numpy.sqrt(numpy.diff(x)**2+numpy.diff(y)**2))
-#     # plt.show()
-
-#     # plt.plot(time_diff,numpy.diff(theta))
-#     # plt.show()
-
-#     new_traj = numpy.zeros((3,new_length), dtype=float)
-#     new_traj[0],new_traj[1],new_traj[2] = x,y,theta
-#     return new_traj
-
-
-def resizeTraj2(traj,velocity_ref):
+def resizeTraj1(traj,velocity_ref):
     traj_length = len(traj[0])
     x,y,theta = traj[0],traj[1],traj[2]
 
@@ -159,79 +118,6 @@ def resizeTraj2(traj,velocity_ref):
     new_traj[0],new_traj[1],new_traj[2] = new_x,new_y,new_theta
     return new_traj
 
-
-# def resizeTraj3(traj,velocity_ref,velocity_low):
-#     traj_length = len(traj[0])
-#     x,y,theta = traj[0],traj[1],traj[2]
-
-#     # time_diff = numpy.linspace(0,1,len(numpy.diff(theta)))
-#     # plt.plot(time_diff,numpy.diff(theta))
-#     # plt.show()   
-
-#     okay = numpy.where(numpy.abs(numpy.diff(x)) + numpy.abs(numpy.diff(y)) > 0)
-#     x,y = x[okay],y[okay]
-#     tck, u = splprep([x, y], s=0)
-#     unew = numpy.linspace(0,1,traj_length)
-#     data = splev(unew, tck)
-#     x,y = data[0],data[1]
-
-#     # x2 = numpy.interp(numpy.linspace(0,1,20),unew,x)
-#     # y2 = numpy.interp(numpy.linspace(0,1,20),unew,y)
-
-#     # plt.plot(traj[0],traj[1],linestyle=':', marker='o')
-#     # plt.plot(x,y,linestyle=':', marker='o')   
-#     # plt.plot(x2,y2,linestyle=':', marker='o')
-#     # plt.show()
-
-#     print(traj_length,len(x),len(theta))
-
-#     i_05, d = 0, 0
-
-#     for i in range(traj_length-1):
-#         if d <= 0.5:
-#             i_05 = i+1
-#         d += sqrt((x[i+1]-x[i])**2 + (y[i+1]-y[i])**2)
-#     d_start,d_end = 0.5, d-0.5 
-#     t_start,t_end = d_start/velocity_low,d_end/velocity_ref # total time necessary to walk the trajectory according the average velocity
-#     new_length_list = [int((floor(t_start/0.1))),int((floor(t_end/0.1)))]
-#     print(new_length_list)
-    
-#     new_x,new_y,new_theta = numpy.array([]),numpy.array([]),numpy.array([])
-#     first_loop = True
-#     for length in new_length_list:
-#         if first_loop:
-#             current_x,current_y,current_theta = x[:i_05],y[:i_05],theta[:i_05]
-#         else:
-#             current_x,current_y,current_theta = x[i_05:],y[i_05:],theta[i_05:]
-
-#         new_time = numpy.linspace(0,1,length)
-#         old_time = numpy.linspace(0,1,len(current_x))
-#         current_x = numpy.interp(new_time,old_time,current_x) 
-#         current_y = numpy.interp(new_time,old_time,current_y)              
-#         current_theta = numpy.interp(new_time,old_time,current_theta)  
-
-#         new_x = numpy.concatenate((new_x,current_x))
-#         new_y = numpy.concatenate((new_y,current_y))
-#         new_theta = numpy.concatenate((new_theta,current_theta))
-#         first_loop = False
-
-
-
-#     # plt.plot(traj[0],traj[1])
-#     # plt.plot(new_x,new_y,linestyle=':', marker='o')
-#     # plt.show()
-
-#     # time = numpy.linspace(0,1,traj_length)
-#     # new_time = numpy.linspace(0,1,len(new_theta))
-#     # plt.plot(time,traj[2])
-#     # # plt.plot(new_time,new_x)
-#     # plt.plot(new_time,new_theta,linestyle=':', marker='o')
-#     # plt.show()
-
-#     new_traj = numpy.zeros((3,len(new_x)), dtype=float)
-#     new_traj[0],new_traj[1],new_traj[2] = new_x,new_y,new_theta
-#     return new_traj
-
 def translate(traj):
     x_0,y_0,theta_0 = traj[0][0],traj[1][0],traj[2][0]
     # print(traj[1]-y_0,traj[0]-x_0)
@@ -264,7 +150,7 @@ velocity_ref = 0.15 # velocity we want the robot to walk
 
 # resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
 # resized_traj = resizeTraj(traj, velocity_ref)
-resized_traj = resizeTraj2(traj, velocity_ref)
+resized_traj = resizeTraj(traj, velocity_ref)
 
 # instantiate pattern generator
 nmpc    = NMPCGeneratorTraj(fsm_state='L/R')

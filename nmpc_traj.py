@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
 
-def resizeTraj1(traj,velocity_ref):
+def resizeTraj(traj,velocity_ref):
     traj_length = len(traj[0])
     x,y,theta = traj[0],traj[1],traj[2]
 
@@ -157,6 +157,7 @@ nmpc    = NMPCGeneratorTraj(fsm_state='L/R')
 
 # Pattern Generator Preparation
 nmpc.   set_security_margin(0.09, 0.05)
+# nmpc.   set_security_margin(0.04, 0.04)
 
 # instantiate plotter
 show_canvas  = True
@@ -164,11 +165,13 @@ save_to_file = False
 nmpc_p    = PlotterTraj(nmpc, traj, show_canvas, save_to_file)
 
 raw_input("Press Enter to start")
+# >>> robot.dynamic.com.value
+# [ -1.98477637e-03   7.22356707e-05   8.92675352e-01]
 
 # set initial values
 comx = [0.00949035, 0.0, 0.0]
 comy = [0.095,0.0, 0.0]
-comz = 0.814
+comz = 8.92675352e-01
 footx = 0.00949035
 footy = 0.095
 footq = 0.0

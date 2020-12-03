@@ -150,16 +150,17 @@ class BaseGeneratorTraj(object):
         #      position of HRP-2 and the case, that its hip is not equal to its
         #      center of mass. z position is fixed because of LIPM approximation.
 
+
         self.c_k_x = numpy.array(
-            (0.00124774, 0.0, 0.0),
+            (-1.98477637e-03, 0.0, 0.0),
             dtype=float
         )
         self.c_k_y = numpy.array(
-            (0.00157175, 0.0, 0.0),
+            (7.22356707e-05, 0.0, 0.0),
             dtype=float
         )
         self.c_k_q = numpy.zeros((3,), dtype=float)
-        self.h_com = 0.814
+        self.h_com = 8.92675352e-01
 
         # center of mass matrices
 

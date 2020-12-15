@@ -34,22 +34,22 @@ def resizeTraj(traj,velocity_ref):
     # plt.plot(x2,y2,linestyle=':', marker='o')
     # plt.show()
 
-    print(traj_length,len(x),len(theta))
+    # print(traj_length,len(x),len(theta))
 
     ind = numpy.where(numpy.abs(numpy.diff(theta))>0.2)
-    print(ind)
+    # print(ind)
 
     max_delta_ori = numpy.max(numpy.abs(numpy.diff(theta)))
-    if max_delta_ori < 0.8:
-        velocity_low = 0.05
-    elif max_delta_ori < 1.7:
-        velocity_low = 0.001
-    elif max_delta_ori < 2.8:
-        velocity_low = 0.0005
-    else:
-        velocity_low = 0.0001
+    # if max_delta_ori < 0.8:
+    #     velocity_low = 0.05
+    # elif max_delta_ori < 1.7:
+    #     velocity_low = 0.001
+    # elif max_delta_ori < 2.8:
+    #     velocity_low = 0.0005
+    # else:
+    #     velocity_low = 0.0001
 
-    print(max_delta_ori,velocity_low)
+    # print(max_delta_ori,velocity_low)
 
     ind_partition, d  = [[0]], []
     i,previous = 0,"ref"
@@ -69,7 +69,7 @@ def resizeTraj(traj,velocity_ref):
             previous = "low"
             i+=1
 
-    print(ind_partition)
+    # print(ind_partition)
     new_length_list = []
 
     for k in range(len(ind_partition)):
@@ -82,8 +82,8 @@ def resizeTraj(traj,velocity_ref):
             t = d[-1]/velocity_low
         new_length_list.append(int((floor(t/0.1))))        
 
-    print(d)
-    print(new_length_list)
+    # print(d)
+    # print(new_length_list)
     
     new_x,new_y,new_theta = numpy.array([]),numpy.array([]),numpy.array([])
     i = 0
@@ -130,9 +130,9 @@ def translate(traj):
 
 
 # Load reference trajectory
-# path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
-path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
+path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
+# name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
+# path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
 # plt.subplot(1,2,1)

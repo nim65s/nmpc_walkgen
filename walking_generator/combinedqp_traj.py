@@ -64,7 +64,7 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
 
         # define constraint dimensions
         self.nc_pos = (
-              self.nc_cop
+              2*self.nc_cop
             + self.nc_foot_position
             + self.nc_fchange_eq
         )
@@ -411,16 +411,23 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         self.lbA_pos[a:b] = self.lbBcop
         self.ubA_pos[a:b] = self.ubBcop
 
-        #foot inequality constraints
+        # CP terminal constraint
         a = self.nc_cop
-        b = self.nc_cop + self.nc_foot_position
+        b = 2*self.nc_cop
+        self.A_pos_x[a:b] = self.Adcm
+        self.lbA_pos[a:b] = self.lbBdcm
+        self.ubA_pos[a:b] = self.ubBdcm
+
+        #foot inequality constraints
+        a = 2*self.nc_cop
+        b = 2*self.nc_cop + self.nc_foot_position
         self.A_pos_x[a:b] = self.Afoot
         self.lbA_pos[a:b] = self.lbBfoot
         self.ubA_pos[a:b] = self.ubBfoot
 
         #foot equality constraints
-        a = self.nc_cop + self.nc_foot_position
-        b = self.nc_cop + self.nc_foot_position + self.nc_fchange_eq
+        a = 2*self.nc_cop + self.nc_foot_position
+        b = 2*self.nc_cop + self.nc_foot_position + self.nc_fchange_eq
         self.A_pos_x[a:b] = self.eqAfoot
         self.lbA_pos[a:b] = self.eqBfoot
         self.ubA_pos[a:b] = self.eqBfoot

@@ -963,7 +963,9 @@ class BaseGeneratorTraj(object):
 
         self.set_trajectory_reference(self.traj_ref)
         # self.set_velocity_reference(self.local_vel_ref)
-        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
+        zmp_k_x = self.  Z_kp1_x[0]
+
+        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, zmp_k_x
 
     def _update_data(self):
         self.data.update()
@@ -1133,8 +1135,8 @@ class BaseGeneratorTraj(object):
 
         # # build Capture point linear constraints
         # # A VERIFIER SI CORRECT
-        self.Adcm[-4:,:]   = (D_kp1.dot(Pcpu))[-4:,:]
-        self.ubBdcm[-4:] = (self.b_kp1 - D_kp1.dot(PcpsC) + D_kp1.dot(v_kp1fc))[-4:]     
+        # self.Adcm[-4:,:]   = (D_kp1.dot(Pcpu))[-4:,:]
+        # self.ubBdcm[-4:] = (self.b_kp1 - D_kp1.dot(PcpsC) + D_kp1.dot(v_kp1fc))[-4:]     
 
     def buildFootEqConstraint(self):
         """

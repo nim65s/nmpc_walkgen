@@ -40,14 +40,14 @@ def resizeTraj(traj,velocity_ref):
     # print(ind)
 
     max_delta_ori = numpy.max(numpy.abs(numpy.diff(theta)))
-    # if max_delta_ori < 0.8:
-    #     velocity_low = 0.05
-    # elif max_delta_ori < 1.7:
-    #     velocity_low = 0.001
-    # elif max_delta_ori < 2.8:
-    #     velocity_low = 0.0005
-    # else:
-    #     velocity_low = 0.0001
+    if max_delta_ori < 0.8:
+        velocity_low = 0.05
+    elif max_delta_ori < 1.7:
+        velocity_low = 0.001
+    elif max_delta_ori < 2.8:
+        velocity_low = 0.0005
+    else:
+        velocity_low = 0.0001
 
     # print(max_delta_ori,velocity_low)
 
@@ -130,9 +130,9 @@ def translate(traj):
 
 
 # Load reference trajectory
-path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-# name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
-# path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
+# path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
+name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
+path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
 # plt.subplot(1,2,1)
@@ -157,7 +157,7 @@ nmpc    = NMPCGeneratorTraj(fsm_state='L/R')
 
 # Pattern Generator Preparation
 nmpc.   set_security_margin(0.09, 0.05)
-# nmpc.   set_security_margin(0.04, 0.04)
+# nmpc.   set_security_margin(0.04, 0.04) #on peut monter à v_ref=0.2
 
 # instantiate plotter
 show_canvas  = True
@@ -195,24 +195,6 @@ for i in range(16,len(resized_traj[0])):
     # plt.plot(traj[0],traj[1])
     # plt.plot(trajectory_reference[0],trajectory_reference[1],linestyle=':', marker='o')
     # plt.show() 
-
-# for i in range(220):
-#     print 'iteration: ', i
-#     time = i*0.1
-
-    # # change reference velocities
-    # if 25 <= i < 50:
-    #     velocity_reference = [ 0.2, 0.0, -0.2]
-    # if 50 <= i < 150:
-    #     velocity_reference = [0.1, 0.2,-0.4]
-    # if 150 <= i < 200:
-    #     velocity_reference = [ 0.0, 0.2, 0.0]
-    # if 200 <= i :
-    #     velocity_reference = [ 0.0, 0.0, 0.0]
-
-    # # set reference velocities to zero
-    # nmpc.   set_velocity_reference(velocity_reference)
-
     nmpc.   set_trajectory_reference(trajectory_reference)
 
     # solve QP
@@ -221,8 +203,9 @@ for i in range(16,len(resized_traj[0])):
     interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq= \
+    comx, comy, comz, footx, footy, footq, foot, comq, zmpx= \
     nmpc.update()
+    print(comx,footx,zmpx)
     # print("------",comx, comy, comz, footx, footy, footq, foot, comq)
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:

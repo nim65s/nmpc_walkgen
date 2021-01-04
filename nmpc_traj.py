@@ -202,9 +202,13 @@ for i in range(16,len(resized_traj[0])):
     interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy, cpx, cpy = \
+    comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy,\
+        cpx, cpy, comx_N, comy_N, zmpx_N, zmpy_N, cpx_N, cpy_N = \
     nmpc.update()
-    print("------",comx,footx,zmpx,cpx)
+    print("--- 0 (x) ---",comx,footx,zmpx,cpx)
+    print("--- 0 (y) ---",comy,footy,zmpy,cpy)
+    print("--- N (x) ---",comx_N, zmpx_N, cpx_N)
+    print("--- N (y) ---",comy_N, zmpy_N, cpy_N)    
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:
         nmpc_p.update()

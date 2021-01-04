@@ -1190,12 +1190,15 @@ class BaseGeneratorTraj(object):
         # PxiuV = ( PxisCx ) = ( Pxis * c_k_x)
         #        ( PxisCy )   ( Pxis * c_k_y)
         PxisCx[...] = self.Pxis.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
-        PzsCy[...] = self.Pxis.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
+        PxisCy[...] = self.Pxis.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
 
         # # build CP linear constraints
 
-        # self.Adcm[...]   = D_kp1[-self.nFootEdge:,:].dot(PxiuV)
-        # self.ubBdcm[...] = self.b_kp1[-self.nFootEdge] - D_kp1[-self.nFootEdge:,:].dot(PxisC) + D_kp1[-self.nFootEdge:,:].dot(v_kp1fc)
+        self.Adcm[...]   = D_kp1[-self.nFootEdge:,:].dot(PxiuV)
+        self.ubBdcm[...] = self.b_kp1[-self.nFootEdge:] - D_kp1[-self.nFootEdge:,:].dot(PxisC) + D_kp1[-self.nFootEdge:,:].dot(v_kp1fc)
+
+        # print("cop",self.Acop[-self.nFootEdge:,:])
+        # print("dcm",self.Adcm)
 
     def buildFootEqConstraint(self):
         """[-self.nFootEdge

@@ -145,7 +145,7 @@ traj = translate(traj)
 # plt.show()
 
 
-velocity_ref = 0.15 # velocity we want the robot to walk
+velocity_ref = 0.2 # velocity we want the robot to walk
 
 # resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
 # resized_traj = resizeTraj(traj, velocity_ref)

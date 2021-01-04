@@ -146,7 +146,6 @@ traj = translate(traj)
 
 
 velocity_ref = 0.15 # velocity we want the robot to walk
-# velocity_low = 0.001 # velocity we want the robot to walk
 
 # resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
 # resized_traj = resizeTraj(traj, velocity_ref)
@@ -157,7 +156,7 @@ nmpc    = NMPCGeneratorTraj(fsm_state='L/R')
 
 # Pattern Generator Preparation
 nmpc.   set_security_margin(0.09, 0.05)
-# nmpc.   set_security_margin(0.04, 0.04) #on peut monter à v_ref=0.2
+# nmpc.   set_security_margin(0.04, 0.04) #on peut monter a v_ref=0.2
 
 # instantiate plotter
 show_canvas  = True
@@ -203,10 +202,9 @@ for i in range(16,len(resized_traj[0])):
     interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq, zmpx= \
+    comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy, cpx, cpy = \
     nmpc.update()
-    print(comx,footx,zmpx)
-    # print("------",comx, comy, comz, footx, footy, footq, foot, comq)
+    print("------",comx,footx,zmpx,cpx)
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
     if show_canvas:
         nmpc_p.update()

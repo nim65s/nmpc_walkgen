@@ -30,6 +30,8 @@ class BaseGeneratorTraj(object):
         'f_k_q',
         'z_k_x',
         'z_k_y',
+        'xi_k_x',
+        'xi_k_y',
         'h_com',
         'C_kp1_x',
         'dC_kp1_x',
@@ -64,6 +66,8 @@ class BaseGeneratorTraj(object):
         'F_k_q',
         'Z_kp1_x',
         'Z_kp1_y',
+        'Xi_kp1_x',
+        'Xi_kp1_y',        
         'fsm_state',
         'fsm_states',
     ]
@@ -162,8 +166,6 @@ class BaseGeneratorTraj(object):
         self.c_k_q = numpy.zeros((3,), dtype=float)
         self.h_com = 8.92675352e-01
 
-        self.omega = sqrt(self.h_com/self.g)
-
         # center of mass matrices
 
         self.  C_kp1_x = numpy.zeros((N,), dtype=float)
@@ -247,6 +249,15 @@ class BaseGeneratorTraj(object):
 
         self.Z_kp1_x = numpy.zeros((N,), dtype=float)
         self.Z_kp1_y = numpy.zeros((N,), dtype=float)
+
+        # capture point matrices #NEW
+
+        self.omega = sqrt(self.h_com/self.g)
+        self.xi_k_x = self.c_k_x[0] + self.omega *self.c_k_x[1]
+        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]
+
+        self.Xi_kp1_x = numpy.zeros((N,), dtype=float)
+        self.Xi_kp1_y = numpy.zeros((N,), dtype=float)
 
         # transformation matrices
 
@@ -367,24 +378,6 @@ class BaseGeneratorTraj(object):
         self.v_kp1fc_x = self.v_kp1fc[:self.N]
         self.v_kp1fc_y = self.v_kp1fc[self.N:]
 
-        # Pcpu = ( Pcpux )
-        #        ( Pcpuy )
-        #      = ( Pcpu | -V_kp1 |   0 |      0 )
-        #        (   0 |      0 | Pcpu | -V_kp1 )
-        # Pcpu = Ppu+Pvu/omega
-        self.Pcpu  = numpy.zeros((2*self.N, 2*(self.N + self.nf)), dtype=float )
-        self.Pcpux = self.Pcpu[:self.N,:]
-        self.Pcpuy = self.Pcpu[self.N:,:]
-
-        # PcpsC = ( PcpsCx )
-        #        ( PcpsCy )
-        #      = ( PcpsC*c_k_x + v_kp1*f_k_x )
-        #      = ( PcpsC*c_k_y + v_kp1*f_k_y )
-        # PcpsC = Pps+Pvs/omega
-        self.PcpsC  = numpy.zeros((2*self.N,), dtype=float )
-        self.PcpsCx = self.PcpsC[:self.N]
-        self.PcpsCy = self.PcpsC[self.N:]
-
         # D_kp1 = (D_kp1x, Dkp1_y)
         self.D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
         self.D_kp1x = self.D_kp1[:, :N] # view on big matrix
@@ -445,6 +438,7 @@ class BaseGeneratorTraj(object):
         # state transformation matrices, constraints, etc.
         self._initialize_constant_matrices()
         self._initialize_cop_matrices()
+        self._initialize_cp_matrices()
         self._initialize_selection_matrix()
         self._initialize_convex_hull_systems()
 
@@ -516,6 +510,14 @@ class BaseGeneratorTraj(object):
             for j in range(N):
                 if j <= i:
                     self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
+    
+    def _initialize_cp_matrices(self):
+        """
+        Initialize capture point matrices, which are dependent on current
+        height of center of mass (self.h_com).
+        """
+        self.Pxis = self.Pps + 1./self.omega * self.Pvs
+        self.Pxiu = self.Ppu + 1./self.omega * self.Pvu       
 
     def _initialize_selection_matrix(self):
         """ Initialize selection vector and matrix. """
@@ -889,9 +891,12 @@ class BaseGeneratorTraj(object):
         self._calculate_support_order()
 
         # update current CoP values
-        # TODO any other ideas of where to get it?
         self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
         self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
+
+        # update current CP values
+        self.xi_k_x = self.c_k_x[0] + self.omega * self.c_k_x[1]
+        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]       
 
         # rebuild all constraints
         self.buildConstraints()
@@ -962,10 +967,14 @@ class BaseGeneratorTraj(object):
         self.currentSupport.q = self.f_k_q
 
         self.set_trajectory_reference(self.traj_ref)
-        # self.set_velocity_reference(self.local_vel_ref)
-        zmp_k_x = self.  Z_kp1_x[0]
 
-        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, zmp_k_x
+        #NEW
+        zmp_k_x = self.  Z_kp1_x[0]
+        zmp_k_y = self.  Z_kp1_y[0]
+        cp_k_x = self.  Xi_kp1_x[0]
+        cp_k_y = self.  Xi_kp1_y[0]
+
+        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, zmp_k_x, zmp_k_x, cp_k_x, cp_k_y
 
     def _update_data(self):
         self.data.update()
@@ -1012,6 +1021,10 @@ class BaseGeneratorTraj(object):
         # get ZMP states from jerks
         self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
         self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
+
+        # get CP states from jerks
+        self.Xi_kp1_x = self.Pxis.dot(self.c_k_x) + self.Pxiu.dot(self.dddC_k_x)
+        self.Xi_kp1_y = self.Pxis.dot(self.c_k_y) + self.Pxiu.dot(self.dddC_k_y)       
 
     def buildConstraints(self):
         """
@@ -1078,13 +1091,6 @@ class BaseGeneratorTraj(object):
         PzsCx = self.PzsCx
         PzsCy = self.PzsCy  
 
-        Pcpu  = self.Pcpu
-        Pcpux = self.Pcpux
-        Pcpuy = self.Pcpuy
-        PcpsC  = self.PcpsC
-        PcpsCx = self.PcpsCx
-        PcpsCy = self.PcpsCy
-
         v_kp1fc   = self.v_kp1fc
         v_kp1fc_x = self.v_kp1fc_x
         v_kp1fc_y = self.v_kp1fc_y
@@ -1105,20 +1111,7 @@ class BaseGeneratorTraj(object):
         #        ( PzsCy )   ( Pzs * c_k_y)
         PzsCx[...] = self.Pzs.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
         PzsCy[...] = self.Pzs.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
-
-        # PcpuV = ( Pcpux )
-        #        ( Pcpuy )
-        # Pcpux = ( Pcpu | -V_kp1 |   0 |      0 )
-        Pcpux[:,      :self.N        ] =  self.Ppu+self.Pvu/self.h_com/self.g
-        Pcpux[:,self.N:self.N+self.nf] = -self.V_kp1
-
-        # Pcpuy = (   0 |      0 | Pcpu | -V_kp1 )
-        Pcpuy[:,-self.N-self.nf:-self.nf] =  self.Ppu+self.Pvu/self.h_com/self.g 
-        Pcpuy[:,       -self.nf:       ] = -self.V_kp1
-
-        PcpsCx[...] = (self.Pps+self.Pvs/self.h_com/self.g).dot(self.c_k_x) 
-        PcpsCy[...] = (self.Pps+self.Pvs/self.h_com/self.g).dot(self.c_k_y) 
-    
+   
 
         # v_kp1fc = ( v_kp1fc_x ) = ( v_kp1 * f_k_x)
         #           ( v_kp1fc_y )   ( v_kp1 * f_k_y)
@@ -1131,12 +1124,6 @@ class BaseGeneratorTraj(object):
         self.Acop[...]   = D_kp1.dot(PzuV)
         self.ubBcop[...] = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
-        # print(self.Acop[-8:,:])
-
-        # # build Capture point linear constraints
-        # # A VERIFIER SI CORRECT
-        # self.Adcm[-4:,:]   = (D_kp1.dot(Pcpu))[-4:,:]
-        # self.ubBdcm[-4:] = (self.b_kp1 - D_kp1.dot(PcpsC) + D_kp1.dot(v_kp1fc))[-4:]     
 
     def buildFootEqConstraint(self):
         """

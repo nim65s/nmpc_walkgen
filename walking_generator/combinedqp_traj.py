@@ -137,11 +137,22 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         # reinitialize plot data structure
         self.data = PlotData(self)
 
+        self.count = 0
+        self.previous_return_value = 0
+
     def solve(self):
         """ Process and solve problem, s.t. pattern generator data is consistent """
         self._preprocess_solution()
-        self._solve_qp()
+        return_value = self._solve_qp()
+        # print("------------------",return_value,"------------------")
+        if return_value != 0:
+            self.count += 1
+        elif self.previous_return_value != 0:
+            self.count = 0
         self._postprocess_solution()
+        self.previous_return_value = return_value
+        # print("***",self.count,"***")
+        return self.count
 
     def _preprocess_solution(self):
         """ Update matrices and get them into the QP data structures """
@@ -629,8 +640,9 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         """
         self.cpu_time = 2.9 # ms
         self.nwsr = 1000 # unlimited bounded
+
         if not self._qp_is_initialized:
-            self.qp.init(
+            return_value = self.qp.init(
                 self.qp_H, self.qp_g, self.qp_A,
                 self.qp_lb, self.qp_ub,
                 self.qp_lbA, self.qp_ubA,
@@ -639,13 +651,15 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
             nwsr, cputime = self.nwsr, self.cpu_time
             self._qp_is_initialized = True
         else:
-            self.qp.hotstart(
-                self.qp_H, self.qp_g, self.qp_A,
-                self.qp_lb, self.qp_ub,
-                self.qp_lbA, self.qp_ubA,
-                self.nwsr, self.cpu_time
-            )
-            nwsr, cputime = self.nwsr, self.cpu_time
+                return_value = self.qp.hotstart(
+                    self.qp_H, self.qp_g, self.qp_A,
+                    self.qp_lb, self.qp_ub,
+                    self.qp_lbA, self.qp_ubA,
+                    self.nwsr, self.cpu_time
+                )
+                nwsr, cputime = self.nwsr, self.cpu_time
+                if return_value != 0:
+                    print("--- Error ! ---")
 
         # orientation primal solution
         self.qp.getPrimalSolution(self.dofs)
@@ -653,6 +667,8 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         # save qp solver data
         self.qp_nwsr    = nwsr          # working set recalculations
         self.qp_cputime = cputime*1000. # in milliseconds (set to 2.9ms)
+
+        return return_value
 
     def _postprocess_solution(self):
         """ Get solution and put it back into generator data structures """

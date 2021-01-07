@@ -156,15 +156,15 @@ class BaseGeneratorTraj(object):
 
 
         self.c_k_x = numpy.array(
-            (-1.98477637e-03, 0.0, 0.0),
+            (-1.98477637e-03, 0.0, 0.0), # 0.00124774 (HRP2) | -1.98477637e-03 (Pyrene)
             dtype=float
         )
         self.c_k_y = numpy.array(
-            (7.22356707e-05, 0.0, 0.0),
+            (7.22356707e-05, 0.0, 0.0), # 0.00157175(HRP2) | 7.22356707e-05 (Pyrene)
             dtype=float
         )
         self.c_k_q = numpy.zeros((3,), dtype=float)
-        self.h_com = 8.92675352e-01
+        self.h_com = 8.92675352e-01 # 0.814 (HRP2) | 8.92675352e-01 (Pyrene)
 
         # center of mass matrices
 
@@ -319,9 +319,9 @@ class BaseGeneratorTraj(object):
 
         # Position of the foot in the local foot frame
         self.nFootEdge    = 4
-        self.footWidth    = 0.2172
-        self.footHeight   = 0.1380
-        self.footDistance = 0.2000
+        self.footWidth    = 0.2 # 0.2172 (HRP2) | 0.2 (Pyrene)
+        self.footHeight   = 0.12 # 0.1380 (HRP2) | 0.12 (Pyrene)
+        self.footDistance = 0.19 # 0.2000 (HRP2) | 0.19 (Pyrene)
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot

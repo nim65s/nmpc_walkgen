@@ -49,6 +49,7 @@ def resizeTraj(traj,velocity_ref):
     else:
         velocity_low = 0.0001
 
+
     # print(max_delta_ori,velocity_low)
 
     ind_partition, d  = [[0]], []
@@ -145,7 +146,7 @@ traj = translate(traj)
 # plt.show()
 
 
-velocity_ref = 0.2 # velocity we want the robot to walk
+velocity_ref = 0.25 # velocity we want the robot to walk
 
 # resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
 # resized_traj = resizeTraj(traj, velocity_ref)
@@ -167,7 +168,7 @@ raw_input("Press Enter to start")
 # >>> robot.dynamic.com.value
 # [ -1.98477637e-03   7.22356707e-05   8.92675352e-01]
 
-# set initial values
+# set initial values # pourquoi com = foot? 
 comx = [0.00949035, 0.0, 0.0]
 comy = [0.095,0.0, 0.0]
 comz = 8.92675352e-01
@@ -181,6 +182,8 @@ interpolNmpc = Interpolation(0.005,nmpc)
 
 # initial reference velocity
 # velocity_reference = [0.2, 0.0,0.2]
+
+sucess = True
 
 # Pattern Generator Event Loop
 for i in range(16,len(resized_traj[0])):
@@ -197,21 +200,31 @@ for i in range(16,len(resized_traj[0])):
     nmpc.   set_trajectory_reference(trajectory_reference)
 
     # solve QP
-    nmpc.   solve()
-    nmpc.   simulate()
-    interpolNmpc.interpolate(time)
+    nb_failures = nmpc.   solve()
 
-    # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy,\
-        cpx, cpy, comx_N, comy_N, zmpx_N, zmpy_N, cpx_N, cpy_N = \
-    nmpc.update()
-    print("--- 0 (x) ---",comx,footx,zmpx,cpx)
-    print("--- 0 (y) ---",comy,footy,zmpy,cpy)
-    print("--- N (x) ---",comx_N, zmpx_N, cpx_N)
-    print("--- N (y) ---",comy_N, zmpy_N, cpy_N)    
-    nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
-    if show_canvas:
-        nmpc_p.update()
+    if nb_failures <= 2:
+        nmpc.   simulate()
+        interpolNmpc.interpolate(time)
+
+        # initial value embedding by internal states and simulation
+        comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy,\
+            cpx, cpy, comx_N, comy_N, zmpx_N, zmpy_N, cpx_N, cpy_N = \
+        nmpc.update()
+        # print("--- 0 (x) ---",comx,footx,zmpx,cpx)
+        # print("--- 0 (y) ---",comy,footy,zmpy,cpy)
+        # print("--- N (x) ---",comx_N, zmpx_N, cpx_N)
+        # print("--- N (y) ---",comy_N, zmpy_N, cpy_N)    
+        nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+        if show_canvas:
+            nmpc_p.update()
+    else:
+        sucess = False
+        break
+
+if sucess :
+    print("Process terminated with sucess !!! :)")
+else:
+    print("Process terminated because of infeasible QP :'(")
 
 nmpc.   data.save_to_file('./nmpc_traj.json')
 

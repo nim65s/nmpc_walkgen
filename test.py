@@ -3,6 +3,7 @@ from qpoases import PySQProblem as SQProblem
 from qpoases import PyOptions as Options
 from qpoases import PyPrintLevel as PrintLevel
 
+
 #Setup data of first QP.
 
 H   = np.array([1.0, 0.0, 0.0, 0.5 ]).reshape((2,2))
@@ -42,10 +43,10 @@ print("\nxOpt = [ %e, %e ];  objVal = %e\n\n"%(xOpt[0],xOpt[1],example.getObjVal
 
 # Solve second QP.
 nWSR = np.array([10])
-example.hotstart(H, g_new,A, lb_new, ub_new, lbA_new, ubA_new, nWSR)
+print(example.hotstart(H, g_new,A, lb_new, ub_new, lbA_new, ubA_new, nWSR))
 
 # Get and print solution of second QP.
 
-example.getPrimalSolution(xOpt)
-print("\nxOpt = [ %e, %e ];  objVal = %e\n\n"%(xOpt[0],xOpt[1],example.getObjVal()))
+print(example.getPrimalSolution(xOpt))
+# print("\nxOpt = [ %e, %e ];  objVal = %e\n\n"%(xOpt[0],xOpt[1],example.getObjVal()))
 example.printOptions()

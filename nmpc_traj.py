@@ -4,7 +4,7 @@ import numpy
 numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization_traj import PlotterTraj
 from walking_generator.combinedqp_traj import NMPCGeneratorTraj
-from walking_generator.interpolation import Interpolation
+from walking_generator.interpolation_traj import Interpolation
 
 from math import sqrt,floor
 import matplotlib.pyplot as plt

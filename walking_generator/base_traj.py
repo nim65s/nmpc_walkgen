@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
 from helper import ZMPState, CoMState
-from visualization import PlotData
+from visualization_traj import PlotData
 
 class BaseGeneratorTraj(object):
     """

@@ -272,7 +272,7 @@ class FootInterpolation(object):
     of the pattern generator. It interpolate the feet trajectory during the QP period
     """
 
-    def __init__(self, genrator=BaseGenerator(), QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
+    def __init__(self, genrator=BaseGeneratorTraj(), QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
         FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
 
         self.T = QPsamplingPeriod # QP sampling period

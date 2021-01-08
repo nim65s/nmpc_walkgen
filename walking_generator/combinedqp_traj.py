@@ -4,7 +4,7 @@ import utility
 import matplotlib.pyplot as plt
 
 from base_traj import BaseGeneratorTraj
-from visualization import PlotData
+from visualization_traj import PlotData
 from walking_generator.utility import color_matrix
 
 # Try to get qpOASES SQP Problem class

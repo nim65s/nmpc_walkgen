@@ -10,6 +10,10 @@ from math import sqrt,floor
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
+
+
 
 def resizeTraj(traj,velocity_ref):
     traj_length = len(traj[0])
@@ -132,7 +136,7 @@ def translate(traj):
 
 # Load reference trajectory
 # path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-name = 'DdpResult_from_-3.962,1.141,1.57_to_0,0,1.57_pos'
+name = 'DdpResult_from_-1.46,-0.556,-1.58_to_0,0,1.57_pos'
 path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 
@@ -169,8 +173,8 @@ raw_input("Press Enter to start")
 # [ -1.98477637e-03   7.22356707e-05   8.92675352e-01]
 
 # set initial values # pourquoi com = foot? 
-comx = [0.00949035, 0.0, 0.0]
-comy = [0.095,0.0, 0.0]
+comx = [0.00679821, 0.0, 0.0]
+comy = [0.08693283,0.0, 0.0]
 comz = 8.92675352e-01
 footx = 0.00949035
 footy = 0.095
@@ -185,11 +189,13 @@ interpolNmpc = Interpolation(0.005,nmpc)
 
 sucess = True
 
+N = 16
+
 # Pattern Generator Event Loop
-for i in range(16,len(resized_traj[0])):
+for i in range(N,len(resized_traj[0])):
     # print(i)
-    trajectory_reference = resized_traj[:,i-16:i]
-    time = (i-16)*0.1
+    trajectory_reference = resized_traj[:,i-N:i]
+    time = (i-N)*0.1
     # print(trajectory_reference)
 
     # print(i-16,i,len(resized_traj[0]),len(trajectory_reference[0]))
@@ -207,13 +213,15 @@ for i in range(16,len(resized_traj[0])):
         interpolNmpc.interpolate(time)
 
         # initial value embedding by internal states and simulation
-        comx, comy, comz, footx, footy, footq, foot, comq, zmpx, zmpy,\
-            cpx, cpy, comx_N, comy_N, zmpx_N, zmpy_N, cpx_N, cpy_N = \
+        comx, comy, comz, footx, footy, footq, foot, comq, future_footx,\
+            future_footy, future_footq = \
         nmpc.update()
         # print("--- 0 (x) ---",comx,footx,zmpx,cpx)
         # print("--- 0 (y) ---",comy,footy,zmpy,cpy)
         # print("--- N (x) ---",comx_N, zmpx_N, cpx_N)
-        # print("--- N (y) ---",comy_N, zmpy_N, cpy_N)    
+        # print("--- N (y) ---",comy_N, zmpy_N, cpy_N) 
+        # print("actual : ",foot, footx, footy)
+        # print("future : ", future_footx, future_footy)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
         if show_canvas:
             nmpc_p.update()

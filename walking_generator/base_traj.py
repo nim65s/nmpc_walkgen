@@ -657,6 +657,8 @@ class BaseGeneratorTraj(object):
             self.f_k_y = self.F_k_y[0]
             self.f_k_q = self.F_k_q[0]
 
+            # print("---",self.f_k_x,"---")
+
             self.currentSupport.x = self.f_k_x
             self.currentSupport.y = self.f_k_y
             self.currentSupport.q = self.f_k_q
@@ -996,29 +998,50 @@ class BaseGeneratorTraj(object):
 
         self.set_trajectory_reference(self.traj_ref)
 
-        #NEW
-        zmp_k_x = self.  Z_kp1_x[0]
-        zmp_k_y = self.  Z_kp1_y[0]
-        cp_k_x = self.  Xi_kp1_x[0]
-        cp_k_y = self.  Xi_kp1_y[0]
+        # # ZMP_k and CP_k
+        # zmp_k_x = self.  Z_kp1_x[0]
+        # zmp_k_y = self.  Z_kp1_y[0]
+        # cp_k_x = self.  Xi_kp1_x[0]
+        # cp_k_y = self.  Xi_kp1_y[0]
 
-        zmp_N_x = self.  Z_kp1_x[-1]
-        zmp_N_y = self.  Z_kp1_y[-1]       
-        cp_N_x = self.  Xi_kp1_x[-1]
-        cp_N_y = self.  Xi_kp1_y[-1]
+        # # ZMP_k+N and CP_k+N
+        # zmp_N_x = self.  Z_kp1_x[-1]
+        # zmp_N_y = self.  Z_kp1_y[-1]       
+        # cp_N_x = self.  Xi_kp1_x[-1]
+        # cp_N_y = self.  Xi_kp1_y[-1]
 
-        c_N_x = numpy.zeros((3,), dtype=float)
-        c_N_x[0] = self.  C_kp1_x[-1]
-        c_N_x[1] = self. dC_kp1_x[-1]
-        c_N_x[2] = self.ddC_kp1_x[-1]
+        # # CoM_k+N
+        # c_N_x = numpy.zeros((3,), dtype=float)
+        # c_N_x[0] = self.  C_kp1_x[-1]
+        # c_N_x[1] = self. dC_kp1_x[-1]
+        # c_N_x[2] = self.ddC_kp1_x[-1]
 
-        c_N_y = numpy.zeros((3,), dtype=float)
-        c_N_y[0] = self.  C_kp1_y[-1]
-        c_N_y[1] = self. dC_kp1_y[-1]
-        c_N_y[2] = self.ddC_kp1_y[-1]
+        # c_N_y = numpy.zeros((3,), dtype=float)
+        # c_N_y[0] = self.  C_kp1_y[-1]
+        # c_N_y[1] = self. dC_kp1_y[-1]
+        # c_N_y[2] = self.ddC_kp1_y[-1]
+
+        # Future steps
+
+        if(numpy.sum(self.v_kp1) != 8):
+            F_k_x, F_k_y = self.F_k_x[0], self.F_k_y[0]
+        else :
+            F_k_x, F_k_y = self.F_k_x[1], self.F_k_y[1]
+        # print("------")
+        # print(self.v_kp1,numpy.sum(self.v_kp1))
+        # print("actual",f_k_x,f_k_q,self.f_k_q,foot)
+        # print(f_k_qR[0],f_k_qL[0])
+        # print("future",self.F_k_x)
+        # print(self.F_kp1_qR,self.F_kp1_qL)
+
+        if self.currentSupport.foot == "left" :
+            F_k_q = self.F_kp1_qR[numpy.sum(self.v_kp1)-1]
+        else:
+            F_k_q = self.F_kp1_qL[numpy.sum(self.v_kp1)-1]
+        # print(F_k_q)
 
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot,\
-            c_k_q, zmp_k_x, zmp_k_y, cp_k_x, cp_k_y, c_N_x, c_N_y, zmp_N_x, zmp_N_y, cp_N_x, cp_N_y
+            c_k_q, F_k_x, F_k_y, F_k_q
 
     def _update_data(self):
         self.data.update()

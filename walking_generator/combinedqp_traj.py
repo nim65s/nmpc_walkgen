@@ -25,7 +25,7 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
     each timestep. Calculates derivatives and updates states in each step.
     """
     def __init__(
-        self, N=16, T=0.1, T_step=0.8,
+        self, N=16, T=0.2, T_step=1.6,
         fsm_state='D', fsm_sl=1
     ):
         """
@@ -335,6 +335,10 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
 
         v_kp1 = self.v_kp1
         V_kp1 = self.V_kp1
+
+        # print(v_kp1)
+        # print(V_kp1)
+        # print(f_k_x,f_k_y)
 
         C_kp1_x_ref = self.C_kp1_x_ref
         C_kp1_y_ref = self.C_kp1_y_ref
@@ -693,6 +697,8 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
         # x values
         self.dddC_k_x[:]  += alpha * self.dofs[0  :0+N   ]
         self.F_k_x[:]     += alpha * self.dofs[0+N:0+N+nf]
+
+        # print(self.F_k_x)
 
         # y values
         a = N + nf

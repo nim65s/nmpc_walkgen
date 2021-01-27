@@ -152,8 +152,6 @@ traj = translate(traj)
 
 velocity_ref = 0.25 # velocity we want the robot to walk
 
-# resized_traj = numpy.flip(resizeTraj(traj, velocity_ref),1)   
-# resized_traj = resizeTraj(traj, velocity_ref)
 resized_traj = resizeTraj(traj, velocity_ref)
 
 # instantiate pattern generator
@@ -169,10 +167,8 @@ save_to_file = False
 nmpc_p    = PlotterTraj(nmpc, traj, show_canvas, save_to_file)
 
 raw_input("Press Enter to start")
-# >>> robot.dynamic.com.value
-# [ -1.98477637e-03   7.22356707e-05   8.92675352e-01]
 
-# set initial values # pourquoi com = foot? 
+# set initial values  
 comx = [0.00679821, 0.0, 0.0]
 comy = [0.08693283,0.0, 0.0]
 comz = 8.92675352e-01
@@ -184,10 +180,11 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolNmpc = Interpolation(0.005,nmpc)
 
-# initial reference velocity
-# velocity_reference = [0.2, 0.0,0.2]
-
 sucess = True
+
+f = open("data/nmpc_traj.dat", "w")
+f.write("")
+f.close()
 
 N = 16
 
@@ -223,6 +220,22 @@ for i in range(N,len(resized_traj[0])):
         # print("actual : ",foot, footx, footy)
         # print("future : ", future_footx, future_footy)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+
+        if foot == "left":
+            phase = 1
+        else:
+            phase = -1
+
+        f = open("data/nmpc_traj.dat", "a")
+        line = str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
+            str(comy[0])+ "  " + str(comy[1])+ "  " + str(comy[2])+ "  " +\
+            str(comz)+ "  0  0  " + str(comq[0]) + "  " + str(comq[1]) + "  " +\
+            str(comq[2]) + "  " + str(footx) + "  " + str(footy)+ "  " +\
+            str(footq)+ "  " + str(phase)+ "  " + str(future_footx)+ "  " +\
+            str(future_footy)+ "  " + str(future_footq) + " \n"
+        f.write(line)
+        f.close()
+
         if show_canvas:
             nmpc_p.update()
     else:

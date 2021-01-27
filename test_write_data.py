@@ -1,7 +1,7 @@
 import numpy as np
 
 f = open("demofile.dat", "w")
-f.write("1 2 3 4 5 \n")
+f.write(str(2) + "1 2 3 4 5 \n")
 f.close()
 
 f = open("demofile.dat", "a")

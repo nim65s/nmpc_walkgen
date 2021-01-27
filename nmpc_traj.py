@@ -136,7 +136,7 @@ def translate(traj):
 
 # Load reference trajectory
 # path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/Clothoid/Clothoid_from_0,0,-1.58_to_1,2,1.57_0.1_pos.dat' #Clothoid
-name = 'DdpResult_from_-1.46,-0.556,-1.58_to_0,0,1.57_pos'
+name = 'DdpResult_from_-3.928,1.353,-1.58_to_0,0,1.57_pos'
 path = '/local/imaroger/catkin_ws/src/trajectory_generation/data/DdpResult/'+name+'.dat'
 traj = numpy.transpose(numpy.loadtxt(path))
 

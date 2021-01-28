@@ -178,7 +178,7 @@ footq = 0.0
 
 nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
-interpolNmpc = Interpolation(0.005,nmpc)
+interpolNmpc = Interpolation(0.001,nmpc)
 
 sucess = True
 
@@ -187,12 +187,13 @@ f.write("")
 f.close()
 
 N = 16
+T = 0.2
 
 # Pattern Generator Event Loop
 for i in range(N,len(resized_traj[0])):
     # print(i)
     trajectory_reference = resized_traj[:,i-N:i]
-    time = (i-N)*0.1
+    time = (i-N)*T
     # print(trajectory_reference)
 
     # print(i-16,i,len(resized_traj[0]),len(trajectory_reference[0]))

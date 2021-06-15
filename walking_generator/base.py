@@ -1,6 +1,6 @@
 import os, sys
 import numpy
-from math import cos, sin
+from math import cos, sin, sqrt
 from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
@@ -140,10 +140,14 @@ class BaseGenerator(object):
 
         # objective weights
 
-        self.a = 1.0   # weight for CoM velocity tracking
+        # self.a = 1.0   # weight for CoM velocity tracking
+        # self.b = 0.0   # weight for CoM average velocity tracking
+        # self.c = 1e-06 # weight for ZMP reference tracking
+        # self.d = 1e-05 # weight for jerk minimization
+        self.a = 5.0   # weight for CoM velocity tracking
         self.b = 0.0   # weight for CoM average velocity tracking
-        self.c = 1e-06 # weight for ZMP reference tracking
-        self.d = 1e-05 # weight for jerk minimization
+        self.c = 1e03 # weight for ZMP reference tracking
+        self.d = 1e-08 # weight for jerk minimization
 
         # center of mass initial values
         # NOTE they are not all equal to zero, because of half-sitting initial
@@ -151,15 +155,15 @@ class BaseGenerator(object):
         #      center of mass. z position is fixed because of LIPM approximation.
 
         self.c_k_x = numpy.array(
-            (0.00124774, 0.0, 0.0),
+            (-1.98477637e-03, 0.0, 0.0),# 0.00124774 (HRP2) | -1.98477637e-03 (Pyrene)
             dtype=float
         )
         self.c_k_y = numpy.array(
-            (0.00157175, 0.0, 0.0),
+            (7.22356707e-05, 0.0, 0.0),# 0.00157175(HRP2) | 7.22356707e-05 (Pyrene)
             dtype=float
         )
         self.c_k_q = numpy.zeros((3,), dtype=float)
-        self.h_com = 0.814
+        self.h_com = 8.786810585901939641e-01 # 0.814 (HRP2) | 8.92675352e-01 (Pyrene)
 
         # center of mass matrices
 
@@ -239,6 +243,15 @@ class BaseGenerator(object):
         self.Z_kp1_x = numpy.zeros((N,), dtype=float)
         self.Z_kp1_y = numpy.zeros((N,), dtype=float)
 
+        # capture point matrices #NEW
+
+        self.omega = sqrt(self.h_com/self.g)
+        self.xi_k_x = self.c_k_x[0] + self.omega *self.c_k_x[1]
+        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]
+
+        self.Xi_kp1_x = numpy.zeros((N,), dtype=float)
+        self.Xi_kp1_y = numpy.zeros((N,), dtype=float)
+
         # transformation matrices
 
         self.Pps = numpy.zeros((N,3), dtype=float)
@@ -296,9 +309,9 @@ class BaseGenerator(object):
 
         # Position of the foot in the local foot frame
         self.nFootEdge    = 4
-        self.footWidth    = 0.2172
-        self.footHeight   = 0.1380
-        self.footDistance = 0.2000
+        self.footWidth    = 0.2 # 0.2172 (HRP2) | 0.2 (Pyrene)
+        self.footHeight   = 0.12 # 0.1380 (HRP2) | 0.12 (Pyrene)
+        self.footDistance = 0.17 # 0.2000 (HRP2) | 0.19 (Pyrene)
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
@@ -358,6 +371,29 @@ class BaseGenerator(object):
         self.v_kp1fc_x = self.v_kp1fc[:self.N]
         self.v_kp1fc_y = self.v_kp1fc[self.N:]
 
+
+        # transformation matrix for the CP constraints in buildCoPconstraint()
+        # constant in variables but varying in time, because of V_kp1
+        # PxiuV = ( PxiuVx )
+        #        ( PxiuVy )
+        #      = ( Pxiu | -V_kp1 |   0 |      0 )
+        #        (   0 |      0 | Pxiu | -V_kp1 )
+
+        self.PxiuV  = numpy.zeros((2*self.N, 2*(self.N + self.nf)), dtype=float )
+        self.PxiuVx = self.PxiuV[:self.N,:]
+        self.PxiuVy = self.PxiuV[self.N:,:]
+
+        # TODO tidy this up, because lots of redundant matrices
+        # PxisC = ( PxisCx )
+        #        ( PxisCy )
+        #      = ( Pxis*c_k_x + v_kp1*f_k_x )
+        #      = ( Pxis*c_k_y + v_kp1*f_k_y )
+        self.PxisC  = numpy.zeros((2*self.N,), dtype=float )
+        self.PxisCx = self.PxisC[:self.N]
+        self.PxisCy = self.PxisC[self.N:]
+
+
+
         # D_kp1 = (D_kp1x, Dkp1_y)
         self.D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
         self.D_kp1x = self.D_kp1[:, :N] # view on big matrix
@@ -372,6 +408,15 @@ class BaseGenerator(object):
         )
         self.lbBcop = -numpy.ones((self.nc_cop), dtype=float)*1e+08
         self.ubBcop =  numpy.zeros((self.nc_cop), dtype=float)
+
+        # Terminal Constraint : capture point
+        self.nc_dcm = self.nFootEdge
+        self.Adcm = numpy.zeros(
+            (self.nc_dcm, 2*(self.N+self.nf)),
+             dtype=float
+        )
+        self.lbBdcm = -numpy.ones((self.nc_dcm), dtype=float)*1e+08
+        self.ubBdcm =  numpy.zeros((self.nc_dcm), dtype=float)
 
         # foot rotation constraints
         self.nc_fvel_eq = self.N # velocity constraints on support foot
@@ -410,6 +455,7 @@ class BaseGenerator(object):
         # state transformation matrices, constraints, etc.
         self._initialize_constant_matrices()
         self._initialize_cop_matrices()
+        self._initialize_cp_matrices()        
         self._initialize_selection_matrix()
         self._initialize_convex_hull_systems()
 
@@ -467,20 +513,31 @@ class BaseGenerator(object):
         height of center of mass (self.h_com).
         """
         # renaming for convenience
-        T_step = self.T_step
-        T = self.T
-        N = self.N
-        nf = self.nf
-        h_com = self.h_com
-        g = self.g
+        # T_step = self.T_step
+        # T = self.T
+        # N = self.N
+        # nf = self.nf
+        # h_com = self.h_com
+        # g = self.g
 
-        for i in range(N):
-            j = i+1
-            self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
+        # for i in range(N):
+        #     j = i+1
+        #     self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
 
-            for j in range(N):
-                if j <= i:
-                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
+        #     for j in range(N):
+        #         if j <= i:
+        #             self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
+        self.Pzs = self.Pps - self.omega**2 * self.Pas
+        self.Pzu = self.Ppu - self.omega**2 * self.Pau
+
+    def _initialize_cp_matrices(self):
+        """
+        Initialize capture point matrices, which are dependent on current
+        height of center of mass (self.h_com).
+        """
+        self.Pxis = self.Pps + 1./self.omega * self.Pvs
+        self.Pxiu = self.Ppu + 1./self.omega * self.Pvu    
+
 
     def _initialize_selection_matrix(self):
         """ Initialize selection vector and matrix. """
@@ -770,9 +827,9 @@ class BaseGenerator(object):
         self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
         self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
 
-        print self.dC_kp1_x_ref[...]
-        print self.dC_kp1_y_ref[...]
-        print self.dC_kp1_q_ref[...]
+        # print self.dC_kp1_x_ref[...]
+        # print self.dC_kp1_y_ref[...]
+        # print self.dC_kp1_q_ref[...]
 
 
     def set_initial_values(self,
@@ -1060,6 +1117,36 @@ class BaseGenerator(object):
         #      D_kp1x,y contains entries from support polygon
         self.Acop[...]   = D_kp1.dot(PzuV)
         self.ubBcop[...] = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
+
+        PxiuV  = self.PxiuV
+        PxiuVx = self.PxiuVx
+        PxiuVy = self.PxiuVy
+        PxisC  = self.PxisC
+        PxisCx = self.PxisCx
+        PxisCy = self.PxisCy
+
+        # build constraint transformation matrices
+        # PxiuV = ( PxiuVx )
+        #        ( PxiuVy )
+
+        # PxiuVx = ( Pxiu | -V_kp1 |   0 |      0 )
+        PxiuVx[:,      :self.N        ] =  self.Pxiu # TODO this is constant in matrix and should go into the build up matrice part
+        PxiuVx[:,self.N:self.N+self.nf] = -self.V_kp1
+
+        # PzuVy = (   0 |      0 | Pzu | -V_kp1 )
+        PxiuVy[:,-self.N-self.nf:-self.nf] =  self.Pxiu # TODO this is constant in matrix and should go into the build up matrice part
+        PxiuVy[:,       -self.nf:       ] = -self.V_kp1
+
+        # PxiuV = ( PxisCx ) = ( Pxis * c_k_x)
+        #        ( PxisCy )   ( Pxis * c_k_y)
+        PxisCx[...] = self.Pxis.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
+        PxisCy[...] = self.Pxis.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
+
+        # # build CP linear constraints
+
+        self.Adcm[...]   = D_kp1[-self.nFootEdge:,:].dot(PxiuV)
+        self.ubBdcm[...] = self.b_kp1[-self.nFootEdge:] - D_kp1[-self.nFootEdge:,:].dot(PxisC) + D_kp1[-self.nFootEdge:,:].dot(v_kp1fc)
+
 
     def buildFootEqConstraint(self):
         """

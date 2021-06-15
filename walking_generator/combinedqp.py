@@ -411,6 +411,13 @@ class NMPCGenerator(BaseGenerator):
         self.lbA_pos[a:b] = self.lbBcop
         self.ubA_pos[a:b] = self.ubBcop
 
+        # CP terminal constraint
+        a = self.nc_cop
+        b = self.nc_cop + self.nc_dcm
+        self.A_pos_x[a:b] = self.Adcm
+        self.lbA_pos[a:b] = self.lbBdcm
+        self.ubA_pos[a:b] = self.ubBdcm        
+
         #foot inequality constraints
         a = self.nc_cop
         b = self.nc_cop + self.nc_foot_position

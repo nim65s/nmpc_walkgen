@@ -64,7 +64,8 @@ class NMPCGeneratorTraj(BaseGeneratorTraj):
 
         # define constraint dimensions
         self.nc_pos = (
-              2*self.nc_cop
+            self.nc_cop
+            + self.nc_dcm
             + self.nc_foot_position
             + self.nc_fchange_eq
         )

@@ -25,7 +25,7 @@ class NMPCGenerator(BaseGenerator):
     each timestep. Calculates derivatives and updates states in each step.
     """
     def __init__(
-        self, N=16, T=0.1, T_step=0.8,
+        self, N=16, T=0.0375, T_step=0.3, #16/0.0625/0.5 fonctionne (premier pas trop gd en y) 16/0.1/0.8 fonctionne (depart du CoM au dessus du pied)
         fsm_state='D', fsm_sl=1
     ):
         """
@@ -191,6 +191,8 @@ class NMPCGenerator(BaseGenerator):
         U_k_xy = U_k[    :2*(N+nf)]
         U_k_x  = U_k_xy[:(N+nf)]
         U_k_y  = U_k_xy[(N+nf):]
+
+        # print(U_k)
 
         # orientation dofs
         U_k_q   = U_k  [-2*N: ]
@@ -410,13 +412,6 @@ class NMPCGenerator(BaseGenerator):
         self.A_pos_x[a:b] = self.Acop
         self.lbA_pos[a:b] = self.lbBcop
         self.ubA_pos[a:b] = self.ubBcop
-
-        # CP terminal constraint
-        a = self.nc_cop
-        b = self.nc_cop + self.nc_dcm
-        self.A_pos_x[a:b] = self.Adcm
-        self.lbA_pos[a:b] = self.lbBdcm
-        self.ubA_pos[a:b] = self.ubBdcm        
 
         #foot inequality constraints
         a = self.nc_cop

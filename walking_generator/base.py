@@ -163,7 +163,7 @@ class BaseGenerator(object):
             dtype=float
         )
         self.c_k_q = numpy.zeros((3,), dtype=float)
-        self.h_com = 8.786810585901939641e-01 # 0.814 (HRP2) | 8.92675352e-01 (Pyrene)
+        self.h_com = 8.92675352e-01 # 0.814 (HRP2) | 8.92675352e-01 (Pyrene)
 
         # center of mass matrices
 
@@ -266,6 +266,8 @@ class BaseGenerator(object):
         self.Pzs = numpy.zeros((N,3), dtype=float)
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
+        self.Pxis = numpy.zeros((N,3), dtype=float)
+        self.Pxiu = numpy.zeros((N,N), dtype=float)
         # convex hulls used to bound the free placement of the foot
         self.nFootPosHullEdges = 5
             # support foot : right
@@ -311,7 +313,7 @@ class BaseGenerator(object):
         self.nFootEdge    = 4
         self.footWidth    = 0.2 # 0.2172 (HRP2) | 0.2 (Pyrene)
         self.footHeight   = 0.12 # 0.1380 (HRP2) | 0.12 (Pyrene)
-        self.footDistance = 0.17 # 0.2000 (HRP2) | 0.19 (Pyrene)
+        self.footDistance = 0.19 # 0.2000 (HRP2) | 0.19 (Pyrene)
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
@@ -383,7 +385,6 @@ class BaseGenerator(object):
         self.PxiuVx = self.PxiuV[:self.N,:]
         self.PxiuVy = self.PxiuV[self.N:,:]
 
-        # TODO tidy this up, because lots of redundant matrices
         # PxisC = ( PxisCx )
         #        ( PxisCy )
         #      = ( Pxis*c_k_x + v_kp1*f_k_x )
@@ -391,8 +392,6 @@ class BaseGenerator(object):
         self.PxisC  = numpy.zeros((2*self.N,), dtype=float )
         self.PxisCx = self.PxisC[:self.N]
         self.PxisCy = self.PxisC[self.N:]
-
-
 
         # D_kp1 = (D_kp1x, Dkp1_y)
         self.D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
@@ -441,7 +440,7 @@ class BaseGenerator(object):
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
         self.supportDeque[0].ds = 1
-        self.supportDeque[8].ds = 1
+        self.supportDeque[self.N/2].ds = 1
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -611,7 +610,10 @@ class BaseGenerator(object):
         self.dscophull[1,:] =  (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
         self.dscophull[2,:] = -(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
         self.dscophull[3,:] = -(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)
-
+        # self.dscophull[0,:] =  (0.5*(fD + fW) - SMx),  (0.5*fH - SMy)
+        # self.dscophull[1,:] =  (0.5*(fD + fW) - SMx), -(0.5*fH - SMy)
+        # self.dscophull[2,:] = -(0.5*(fD + fW) - SMx), -(0.5*fH - SMy)
+        # self.dscophull[3,:] = -(0.5*(fD + fW) - SMx),  (0.5*fH - SMy) --> cette modif ne change rien
     def _update_selection_matrices(self):
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
@@ -833,9 +835,8 @@ class BaseGenerator(object):
 
 
     def set_initial_values(self,
-        com_x, com_y , com_z,
-        foot_x, foot_y, foot_q, foot='left',
-        com_q=(0,0,0)
+        com_x, com_y , com_z, foot_x, foot_y, foot_q,
+        foot='left',com_q=(0,0,0)
     ):
         """
         initial value embedding for pattern generator, i.e. each iteration of
@@ -878,6 +879,8 @@ class BaseGenerator(object):
         # update CoM states
         self.c_k_x[...] = com_x
         self.c_k_y[...] = com_y
+        # print("init:",self.c_k_x,com_x)
+        # print("init:",self.c_k_y,com_y)       
 
         if not self.h_com == com_z:
             self.h_com = com_z
@@ -904,6 +907,10 @@ class BaseGenerator(object):
         # TODO any other ideas of where to get it?
         self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
         self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
+
+        # update current CP values
+        self.xi_k_x = self.c_k_x[0] + self.omega * self.c_k_x[1]
+        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]  
 
         # rebuild all constraints
         self.buildConstraints()
@@ -936,7 +943,7 @@ class BaseGenerator(object):
         f_k_x = deepcopy(self.f_k_x)
         f_k_y = deepcopy(self.f_k_y)
         f_k_q = deepcopy(self.f_k_q)
-        foot  = deepcopy(self.currentSupport.foot)
+        foot  = deepcopy(self.currentSupport.foot)      
 
         # get data for initialization of next iteration
         c_k_x = numpy.zeros((3,), dtype=float)
@@ -972,6 +979,12 @@ class BaseGenerator(object):
         else :
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
+
+        print("...",foot)
+        print("vk : ",self.v_kp1)
+        # print("Vk : ",self.V_kp1) 
+        print("fk : ",f_k_x,f_k_y)      
+        print("Fk : ",self.F_k_x,self.F_k_y) 
 
         self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q

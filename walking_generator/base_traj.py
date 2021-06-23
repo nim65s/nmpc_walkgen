@@ -1224,7 +1224,7 @@ class BaseGeneratorTraj(object):
         # print("dcm",self.Adcm)
 
     def buildFootEqConstraint(self):
-        """[-self.nFootEdge
+        """
         create constraints that freezes foot position optimization when swing
         foot comes close to foot step in preview window. Needed for proper
         interpolation of trajectory.

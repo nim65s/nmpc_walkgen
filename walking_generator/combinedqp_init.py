@@ -3,7 +3,7 @@ import numpy
 import utility
 import matplotlib.pyplot as plt
 
-from base import BaseGenerator
+from base_init import BaseGenerator
 from visualization import PlotData
 from walking_generator.utility import color_matrix
 
@@ -17,7 +17,7 @@ except ImportError:
     err_str = 'Please install qpOASES python interface, else you will not be able to use this pattern generator.'
     raise ImportError(err_str)
 
-class NMPCGenerator(BaseGenerator):
+class NMPCGeneratorInit(BaseGenerator):
     """
     Implementation of the combined problems using NMPC techniques.
 
@@ -25,7 +25,7 @@ class NMPCGenerator(BaseGenerator):
     each timestep. Calculates derivatives and updates states in each step.
     """
     def __init__(
-        self, N=16, T=0.1, T_step=0.8, #16/0.0625/0.5 fonctionne (premier pas trop gd en y) 16/0.1/0.8 fonctionne (depart du CoM au dessus du pied)
+        self, N=16, T=0.0375, T_step=0.3,
         fsm_state='D', fsm_sl=1
     ):
         """
@@ -34,7 +34,7 @@ class NMPCGenerator(BaseGenerator):
         one for position of CoM and feet.
 
         """
-        super(NMPCGenerator, self).__init__(
+        super(NMPCGeneratorInit, self).__init__(
             N, T, T_step, fsm_state, fsm_sl
         )
         # The pattern generator has to solve the following kind of
@@ -50,6 +50,7 @@ class NMPCGenerator(BaseGenerator):
         # rename for convenience
         N  = self.N
         nf = self.nf
+        print(N,nf)
 
         # define some qpOASES specific things
         self.cpu_time = numpy.array([0.1]) # upper bound on CPU time, 0 is no upper limit
@@ -65,7 +66,7 @@ class NMPCGenerator(BaseGenerator):
         # define constraint dimensions
         self.nc_pos = (
               self.nc_cop
-            + self.nc_dcm              
+            + self.nc_dcm
             + self.nc_foot_position
             + self.nc_fchange_eq
         )
@@ -192,8 +193,6 @@ class NMPCGenerator(BaseGenerator):
         U_k_xy = U_k[    :2*(N+nf)]
         U_k_x  = U_k_xy[:(N+nf)]
         U_k_y  = U_k_xy[(N+nf):]
-
-        # print(U_k)
 
         # orientation dofs
         U_k_q   = U_k  [-2*N: ]
@@ -696,7 +695,7 @@ class NMPCGenerator(BaseGenerator):
         overload update function to define time dependent support foot selection
         matrix.
         """
-        ret = super(NMPCGenerator, self).update()
+        ret = super(NMPCGeneratorInit, self).update()
 
         # update selection matrix when something has changed
         self._update_foot_selection_matrix()

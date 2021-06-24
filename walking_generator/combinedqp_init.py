@@ -25,7 +25,7 @@ class NMPCGeneratorInit(BaseGenerator):
     each timestep. Calculates derivatives and updates states in each step.
     """
     def __init__(
-        self, N=16, T=0.0375, T_step=0.3,
+        self, N=16, T=0.15, T_step=1.2, #N=16, T=0.0375, T_step=0.3
         fsm_state='D', fsm_sl=1
     ):
         """

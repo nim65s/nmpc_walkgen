@@ -880,8 +880,8 @@ class BaseGenerator(object):
         # update CoM states
         self.c_k_x[...] = com_x
         self.c_k_y[...] = com_y
-        print("init:",self.c_k_x,com_x)
-        print("init:",self.c_k_y,com_y)       
+        # print("init:",self.c_k_x,com_x)
+        # print("init:",self.c_k_y,com_y)       
 
         if not self.h_com == com_z:
             self.h_com = com_z
@@ -945,7 +945,6 @@ class BaseGenerator(object):
         f_k_y = deepcopy(self.f_k_y)
         f_k_q = deepcopy(self.f_k_q)
         foot  = deepcopy(self.currentSupport.foot)
-        print("...",foot)
 
         # get data for initialization of next iteration
         c_k_x = numpy.zeros((3,), dtype=float)
@@ -981,6 +980,11 @@ class BaseGenerator(object):
         else :
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
+
+        print("...",foot)
+        print("vk : ",self.v_kp1) 
+        print("fk : ",f_k_x,f_k_y)      
+        print("Fk : ",self.F_k_x,self.F_k_y) 
 
         self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q

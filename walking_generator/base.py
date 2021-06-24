@@ -196,8 +196,12 @@ class BaseGenerator(object):
         # feet matrices
         # initial support foot positions and orientation
         # NOTE we assume the left foot to be the initial support foot
-        self.f_k_x = 0.00949035
-        self.f_k_y = 0.095
+        # self.f_k_x = 0.00949035
+        # self.f_k_y = 0.095
+        # self.f_k_q = 0.0
+
+        self.f_k_x = 0.0
+        self.f_k_y = 0.0
         self.f_k_q = 0.0
 
         self.F_k_x = numpy.zeros((self.nf,), dtype=float)

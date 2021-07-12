@@ -8,7 +8,7 @@ from walking_generator.combinedqp import NMPCGenerator
 from walking_generator.interpolation import Interpolation
 
 # instantiate pattern generator
-nmpc    = NMPCGenerator(fsm_state='L/R')
+nmpc    = NMPCGenerator(fsm_state='D')
 
 # Pattern Generator Preparation
 nmpc.   set_security_margin(0.09, 0.05)
@@ -19,11 +19,11 @@ save_to_file = False
 nmpc_p    = Plotter(nmpc,    show_canvas, save_to_file)
 
 # set initial values
-comx = [0.00679821, 0.0, 0.0]#[0.00679821, 0.0, 0.0]
-comy = [0.08693283,0.0, 0.0] #[0.08693283,0.0, 0.0] #0.03
+comx = [-3.16e-3, 0.0, 0.0]#[0.00679821, 0.0, 0.0]
+comy = [1.237384291203724555e-03,0.0, 0.0] #[0.08693283,0.0, 0.0] #0.03
 comz = 8.786810585901939641e-01 
-footx = 0.00949035#-0.008
-footy = 0.095
+footx = 1.86e-4#0.00949035#-0.008
+footy = 8.48e-2#0.095
 footq = 0.0
 # Fx = [0.00949035,0.00949035]
 # Fy = [0.095,-0.095]
@@ -32,7 +32,7 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolNmpc = Interpolation(0.001,nmpc)
 # initial reference velocity
-velocity_reference = [0.2, 0.0,0.0]
+velocity_reference = [0., 0.0,0.0]
 
 
 
@@ -57,8 +57,8 @@ for i in range(16*nb_step):
     #     velocity_reference = [ 0.0, 0.2, 0.0]
     # if 200 <= i :
     #     velocity_reference = [ 0.0, 0.0, 0.0]
-    # if 16 <= i < 16*(nb_step-3) :
-    #     velocity_reference = [ 0.2, 0.0, 0.0]
+    if 16 <= i < 16*(nb_step-3) :
+        velocity_reference = [ 0.2, 0.0, 0.0]
     if 16*(nb_step-3) <= i:
         velocity_reference = [ 0.0, 0.0, 0.0]
 

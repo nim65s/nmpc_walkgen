@@ -1,7 +1,7 @@
 import numpy
 from copy import deepcopy
 from helper import CoMState, ZMPState, BaseTypeFoot
-from base_traj import BaseGeneratorTraj
+from base import BaseGenerator
 import math
 
 class Interpolation(object):
@@ -13,7 +13,7 @@ class Interpolation(object):
     pattern generator. It interpolate the CoM, the ZMP and the Feet state along the
     whole trajectory with a given interpolation period (input)
     """
-    def __init__(self, Tc=0.005, BG=BaseGeneratorTraj() ):
+    def __init__(self, Tc=0.001, BG=BaseGenerator() ):
 
         # the generator is supposed to have been initialized before
         self.gen = BG
@@ -109,11 +109,11 @@ class Interpolation(object):
         zmpZ   = numpy.asarray([item.z for item in self.zmpTraj])
         rfX    = numpy.asarray([item.  x for item in self.rightFootTraj])
         rfY    = numpy.asarray([item.  y for item in self.rightFootTraj])
-        rfZ    = numpy.asarray([item.  z for item in self.rightFootTraj])
+        rfZ    = numpy.asarray([item.  z + 0.105 for item in self.rightFootTraj])
         rfQ    = numpy.asarray([item.  q for item in self.rightFootTraj])
         lfX    = numpy.asarray([item.  x for item in self.leftFootTraj])
         lfY    = numpy.asarray([item.  y for item in self.leftFootTraj])
-        lfZ    = numpy.asarray([item.  z for item in self.leftFootTraj])
+        lfZ    = numpy.asarray([item.  z + 0.105 for item in self.leftFootTraj])
         lfQ    = numpy.asarray([item.  q for item in self.leftFootTraj])
 
         rfdX    = numpy.asarray([item. dx for item in self.rightFootTraj])
@@ -272,8 +272,8 @@ class FootInterpolation(object):
     of the pattern generator. It interpolate the feet trajectory during the QP period
     """
 
-    def __init__(self, genrator=BaseGenerator(), QPsamplingPeriod=0.1, NbSamplingPreviewed=16, commandPeriod=0.005,
-        FeetDistance=0.2, StepHeight=0.05, stepTime=0.8, doubleSupportTime=0.1):
+    def __init__(self, genrator=BaseGenerator(), QPsamplingPeriod=0.2, NbSamplingPreviewed=16, commandPeriod=0.001,
+        FeetDistance=0.19, StepHeight=0.05, stepTime=1.6):
 
         self.T = QPsamplingPeriod # QP sampling period
         self.Tc = commandPeriod # Low level control period
@@ -283,8 +283,8 @@ class FootInterpolation(object):
         self.polynomeY     = Polynome5() #  in position, velocity
         self.polynomeQ     = Polynome5() #  and acceleration
         self.polynomeZ     = Polynome4() # order 5 for a defined middle point
-        self.TSS = stepTime - doubleSupportTime # Time of single support
-        self.TDS = doubleSupportTime # Time of double support
+        self.TSS = stepTime - QPsamplingPeriod # Time of single support
+        self.TDS = QPsamplingPeriod # Time of double support
         self.stepTime = stepTime
         self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
         self.gen = genrator

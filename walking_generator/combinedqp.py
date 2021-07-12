@@ -457,61 +457,66 @@ class NMPCGenerator(BaseGenerator):
         self.ubA_ori[a:b] = self.ubB_fvel_ineq
 
     def _calculate_derivatives(self):
+        print("=== CALCULATE DER ===")
         """ calculate the Jacobian of the constraints function """
 
         # COP CONSTRAINTS
         # build the constraint enforcing the center of pressure to stay inside
         # the support polygon given through the convex hull of the foot.
 
-        # define dummy values
-        # D_kp1 = (D_kp1x, Dkp1_y)
-        D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
-        D_kp1x = D_kp1[:, :self.N] # view on big matrix
-        D_kp1y = D_kp1[:,-self.N:] # view on big matrix
-        b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
+        # # define dummy values # <-- calcul deja present dans base.py
+        # # D_kp1 = (D_kp1x, Dkp1_y)
+        # D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
+        # D_kp1x = D_kp1[:, :self.N] # view on big matrix
+        # D_kp1y = D_kp1[:,-self.N:] # view on big matrix
+        # b_kp1 = numpy.zeros( (self.nFootEdge*self.N,), dtype=float )
 
-        # change entries according to support order changes in D_kp1
-        theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
-        for i in range(self.N):
-            theta = theta_vec[self.supportDeque[i].stepNumber]
+        # # change entries according to support order changes in D_kp1
+        # theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
+        # for i in range(self.N):
+        #     theta = theta_vec[self.supportDeque[i].stepNumber]
 
-            # NOTE THIS CHANGES DUE TO APPLYING THE DERIVATIVE!
-            rotMat = numpy.array([
-                # old
-                # [ cos(theta), sin(theta)],
-                # [-sin(theta), cos(theta)]
-                # new: derivative wrt to theta
-                [-numpy.sin(theta), numpy.cos(theta)],
-                [-numpy.cos(theta),-numpy.sin(theta)]
-            ])
+        #     # NOTE THIS CHANGES DUE TO APPLYING THE DERIVATIVE!
+        #     rotMat = numpy.array([
+        #         # old
+        #         # [ cos(theta), sin(theta)],
+        #         # [-sin(theta), cos(theta)]
+        #         # new: derivative wrt to theta
+        #         [-numpy.sin(theta), numpy.cos(theta)],
+        #         [-numpy.cos(theta),-numpy.sin(theta)]
+        #     ])
 
-            if self.supportDeque[i].foot == "left" :
-                A0 = self.A0lf.dot(rotMat)
-                B0 = self.ubB0lf
-                D0 = self.A0dlf.dot(rotMat)
-                d0 = self.ubB0dlf
-            else :
-                A0 = self.A0rf.dot(rotMat)
-                B0 = self.ubB0rf
-                D0 = self.A0drf.dot(rotMat)
-                d0 = self.ubB0drf
+        #     if self.supportDeque[i].foot == "left" :
+        #         A0 = self.A0lf.dot(rotMat)
+        #         B0 = self.ubB0lf
+        #         D0 = self.A0dlf.dot(rotMat)
+        #         d0 = self.ubB0dlf
+        #     else :
+        #         A0 = self.A0rf.dot(rotMat)
+        #         B0 = self.ubB0rf
+        #         D0 = self.A0drf.dot(rotMat)
+        #         d0 = self.ubB0drf
 
-            # get support foot and check if it is double support
-            for j in range(self.nf):
-                if self.V_kp1[i,j] == 1:
-                    if self.fsm_states[j] == 'D':
-                        A0 = D0
-                        B0 = d0
-                else:
-                    pass
+        #     # get support foot and check if it is double support
+        #     # print('Vkp1 : ',self.V_kp1)
+        #     for j in range(self.nf):
+        #         # print(i,j,self.V_kp1[i,j])
+        #         if self.V_kp1[i,j] == 1:
+        #             if self.fsm_states[j] == 'D':
+        #                 # print("DS !")
+        #                 A0 = D0
+        #                 B0 = d0
+        #         else:
+        #             pass
 
-            for k in range(self.nFootEdge):
-                # get d_i+1^x(f^theta)
-                D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
-                # get d_i+1^y(f^theta)
-                D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
-                # get right hand side of equation
-                b_kp1 [i*self.nFootEdge+k]    = B0[k]
+        #     for k in range(self.nFootEdge):
+        #         # get d_i+1^x(f^theta)
+        #         D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
+        #         # get d_i+1^y(f^theta)
+        #         D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
+        #         # get right hand side of equation
+        #         b_kp1 [i*self.nFootEdge+k]    = B0[k]
+        # #     print(A0[k][0])
 
         #rename for convenience
         N  = self.N
@@ -551,7 +556,7 @@ class NMPCGenerator(BaseGenerator):
         # build CoP linear constraints
         # NOTE D_kp1 is member and D_kp1 = ( D_kp1x | D_kp1y )
         #      D_kp1x,y contains entries from support polygon
-        dummy = D_kp1.dot(PzuV)
+        dummy = self.D_kp1.dot(PzuV)
         dummy = dummy.dot(self.dofs[:2*(N+nf)])
 
         # CoP constraints
@@ -627,6 +632,7 @@ class NMPCGenerator(BaseGenerator):
         self.A_pos_q[a:b,-N:] = dummy.dot(self.derv_Afoot_map).dot(self.E_FL_bar).dot(self.Ppu)
 
     def _solve_qp(self):
+        print("~~~ SOLVE ~~~")
         """
         Solve QP first run with init functionality and other runs with warmstart
         """

@@ -34,7 +34,9 @@ interpolNmpc = Interpolation(0.001,nmpc)
 # initial reference velocity
 velocity_reference = [0.2, 0.0,0.0]
 
-nb_step = 2
+
+
+nb_step = 6
 
 # Pattern Generator Event Loop
 for i in range(16*nb_step):
@@ -55,9 +57,10 @@ for i in range(16*nb_step):
     #     velocity_reference = [ 0.0, 0.2, 0.0]
     # if 200 <= i :
     #     velocity_reference = [ 0.0, 0.0, 0.0]
-
-    # if 16*(nb_step-3) <= i:
-    #     velocity_reference = [ 0.0, 0.0, 0.0]
+    # if 16 <= i < 16*(nb_step-3) :
+    #     velocity_reference = [ 0.2, 0.0, 0.0]
+    if 16*(nb_step-3) <= i:
+        velocity_reference = [ 0.0, 0.0, 0.0]
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)

@@ -135,7 +135,8 @@ class BaseGenerator(object):
         err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
         assert fsm_state in self._fsm_states, err_str
         self.fsm_state = fsm_state
-        self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype=str)
+        # self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype=str)
+        self.fsm_states = numpy.array(['L/R', 'R/L'])
         self._fsm_sl = fsm_sl
 
         # objective weights
@@ -444,7 +445,7 @@ class BaseGenerator(object):
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
         self.supportDeque[0].ds = 1
-        self.supportDeque[self.N/2].ds = 1
+        self.supportDeque[8].ds = 1
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -614,11 +615,9 @@ class BaseGenerator(object):
         self.dscophull[1,:] =  (0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
         self.dscophull[2,:] = -(0.5*fW - SMx), -(0.5*(fD + fH) - SMy)
         self.dscophull[3,:] = -(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)
-        # self.dscophull[0,:] =  (0.5*(fD + fW) - SMx),  (0.5*fH - SMy)
-        # self.dscophull[1,:] =  (0.5*(fD + fW) - SMx), -(0.5*fH - SMy)
-        # self.dscophull[2,:] = -(0.5*(fD + fW) - SMx), -(0.5*fH - SMy)
-        # self.dscophull[3,:] = -(0.5*(fD + fW) - SMx),  (0.5*fH - SMy) --> cette modif ne change rien
+
     def _update_selection_matrices(self):
+        print("___ SELECT MAT ___")
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
 
@@ -645,7 +644,9 @@ class BaseGenerator(object):
 
         # when first column of selection matrix becomes zero,
         # then shift columns by one to the front
+        print("vk : ",self.v_kp1)
         if (self.v_kp1 == 0).all():
+
             self.v_kp1[:] = self.V_kp1[:,0]
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
             self.V_kp1[:,-1] = 0
@@ -664,32 +665,39 @@ class BaseGenerator(object):
             else:
                 self.currentSupport.foot = 'right'
 
+
             # update support order with new foot state
             self._calculate_support_order()
 
-            """
+            
             # also update finite state machine
-            self.fsm_state = self.fsm_states[0].copy()
+            # self.fsm_state = self.fsm_states[0].copy()
+            self.fsm_state = self.fsm_states[-1].copy()
             self.fsm_states[:-1] = self.fsm_states[1:]
 
             # TODO How to update last entry in FSM?
             # if any reference velocity is given and the CoM is moving then
             # the next step last optimized step should be moving
+            # print(self.dC_kp1_x_ref,(self.dC_kp1_x_ref != 0.0).any())
             if (self.dC_kp1_x_ref != 0.0).any() \
             or (self.dC_kp1_y_ref != 0.0).any() \
             or (self.dC_kp1_q_ref != 0.0).any():
                 if (self.c_k_x[1:] != 0.0).any() \
                 or (self.c_k_y[1:] != 0.0).any() \
                 or (self.c_k_q[1:] != 0.0).any():
-                    if self.supportDeque[-1].foot == 'right':
+                    # if self.supportDeque[-1].foot == 'right':
+                    #     self.fsm_states[-1] = 'L/R'
+                    # else:
+                    #     self.fsm_states[-1] = 'R/L'
+                    if self.currentSupport.foot == 'right':
                         self.fsm_states[-1] = 'L/R'
                     else:
                         self.fsm_states[-1] = 'R/L'
             # else stay in double support
+
             else:
                 self.fsm_states[-1] = 'D'
-            """
-
+            
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfposhull, "right", self.A0r, self.ubB0r)
@@ -703,7 +711,7 @@ class BaseGenerator(object):
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
         self.ComputeLinearSystem(self.dscophull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dscophull, "right", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dscophull, "left", self.A0drf, self.ubB0drf)
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
         """
@@ -769,6 +777,7 @@ class BaseGenerator(object):
                             self.supportDeque[i].foot = pair
                         else :
                             self.supportDeque[i].foot = impair
+            # print(i,self.supportDeque[i].foot)
 
         if numpy.sum(self.v_kp1)==8 :
             self.supportDeque[0].ds = 1
@@ -784,6 +793,7 @@ class BaseGenerator(object):
             self.supportDeque[i].timeLimit = timeLimit
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
+        print("... SET MARGIN ...")
         """
         define security margins for constraints CoP constraints
 
@@ -842,6 +852,7 @@ class BaseGenerator(object):
         com_x, com_y , com_z, foot_x, foot_y, foot_q,
         foot='left',com_q=(0,0,0)
     ):
+        print("### SET INIT VAL ###")
         """
         initial value embedding for pattern generator, i.e. each iteration of
         pattern generator differs in:
@@ -984,12 +995,15 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
 
-        print("...",foot)
+        print("current support foot : ",foot)
         print("vk : ",self.v_kp1)
         # print("Vk : ",self.V_kp1) 
-        print("fk : ",f_k_x,f_k_y)      
-        print("Fk : ",self.F_k_x,self.F_k_y) 
-
+        print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
+        print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
+        print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
+        print("local vel ref : ",self.local_vel_ref)
+        print("com x :",self.  C_kp1_x)
+        print("com y :",self.  C_kp1_y)
         self.set_velocity_reference(self.local_vel_ref)
         return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
 
@@ -1052,6 +1066,7 @@ class BaseGenerator(object):
         self.buildRotIneqConstraint()
 
     def _update_cop_constraint_transformation(self):
+        print("--- INIT CoP ---")
         """ update foot constraint transformation matrices. """
         # every time instant in the pattern generator constraints
         # depend on the support order
@@ -1071,13 +1086,19 @@ class BaseGenerator(object):
                 d0 = self.ubB0drf
 
             # get support foot and check if it is double support
-            for j in range(self.nf):
-                if self.V_kp1[i,j] == 1:
-                    if self.fsm_states[j] == 'D':
-                        A0 = D0
-                        B0 = d0
-                else:
-                    pass
+            if self.fsm_state == 'D':
+                A0 = D0
+                B0 = d0
+            # for j in range(self.nf):
+            #     # print(i,j,self.V_kp1[i,j],self.V_kp1[i,j] == 1)
+            #     # print(self.fsm_states[j])
+            #     if self.V_kp1[i,j] == 1:
+            #         # if self.fsm_states[j] == 'D':
+            #             print(i,j)
+            #             A0 = D0
+            #             B0 = d0
+            #     else:
+            #         pass
 
             for k in range(self.nFootEdge):
                 # get d_i+1^x(f^theta)
@@ -1086,6 +1107,7 @@ class BaseGenerator(object):
                 self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
                 # get right hand side of equation
                 self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
+
 
     def buildCoPconstraint(self):
         """

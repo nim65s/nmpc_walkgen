@@ -135,8 +135,8 @@ class BaseGenerator(object):
         err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
         assert fsm_state in self._fsm_states, err_str
         self.fsm_state = fsm_state
-        # self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype=str)
-        self.fsm_states = numpy.array(['L/R', 'R/L'])
+        self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype='|S3')
+        # self.fsm_states = numpy.array(['L/R', 'R/L'])
         self._fsm_sl = fsm_sl
 
         # objective weights
@@ -318,7 +318,7 @@ class BaseGenerator(object):
         self.nFootEdge    = 4
         self.footWidth    = 0.2 # 0.2172 (HRP2) | 0.2 (Pyrene)
         self.footHeight   = 0.12 # 0.1380 (HRP2) | 0.12 (Pyrene)
-        self.footDistance = 0.19 # 0.2000 (HRP2) | 0.19 (Pyrene)
+        self.footDistance = 0.17 # 0.2000 (HRP2) | 0.19 (Pyrene)
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
@@ -644,8 +644,9 @@ class BaseGenerator(object):
 
         # when first column of selection matrix becomes zero,
         # then shift columns by one to the front
-        print("vk : ",self.v_kp1)
+        # print("vk : ",self.v_kp1)
         if (self.v_kp1 == 0).all():
+            # print("old states : ",self.fsm_states)
 
             self.v_kp1[:] = self.V_kp1[:,0]
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
@@ -669,12 +670,6 @@ class BaseGenerator(object):
             # update support order with new foot state
             self._calculate_support_order()
 
-            
-            # also update finite state machine
-            # self.fsm_state = self.fsm_states[0].copy()
-            self.fsm_state = self.fsm_states[-1].copy()
-            self.fsm_states[:-1] = self.fsm_states[1:]
-
             # TODO How to update last entry in FSM?
             # if any reference velocity is given and the CoM is moving then
             # the next step last optimized step should be moving
@@ -690,14 +685,27 @@ class BaseGenerator(object):
                     # else:
                     #     self.fsm_states[-1] = 'R/L'
                     if self.currentSupport.foot == 'right':
+                        # print("-->'L/R'")
+                        self.fsm_states[0] = 'R/L'
                         self.fsm_states[-1] = 'L/R'
                     else:
                         self.fsm_states[-1] = 'R/L'
+                        self.fsm_states[0] = 'L/R'
+                        # print("-->'R/L'")
             # else stay in double support
 
             else:
+                # print("--> 'D'")
+                self.fsm_states[0] = self.fsm_states[-1]
                 self.fsm_states[-1] = 'D'
-            
+                
+
+            # also update finite state machine
+            self.fsm_state = self.fsm_states[0].copy()
+            # self.fsm_state = self.fsm_states[-1].copy()
+            # self.fsm_states[:-1] = self.fsm_states[1:]
+
+
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
         self.ComputeLinearSystem( self.rfposhull, "right", self.A0r, self.ubB0r)
@@ -793,7 +801,7 @@ class BaseGenerator(object):
             self.supportDeque[i].timeLimit = timeLimit
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
-        print("... SET MARGIN ...")
+        # print("... SET MARGIN ...")
         """
         define security margins for constraints CoP constraints
 
@@ -852,7 +860,7 @@ class BaseGenerator(object):
         com_x, com_y , com_z, foot_x, foot_y, foot_q,
         foot='left',com_q=(0,0,0)
     ):
-        print("### SET INIT VAL ###")
+        # print("### SET INIT VAL ###")
         """
         initial value embedding for pattern generator, i.e. each iteration of
         pattern generator differs in:
@@ -995,17 +1003,17 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
 
-        print("current support foot : ",foot)
-        print("vk : ",self.v_kp1)
-        # print("Vk : ",self.V_kp1) 
-        print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
-        print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
-        print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
-        print("local vel ref : ",self.local_vel_ref)
-        print("com x :",self.  C_kp1_x)
-        print("com y :",self.  C_kp1_y)
+        # print("current support foot : ",foot)
+        # print("vk : ",self.v_kp1)
+        # # print("Vk : ",self.V_kp1) 
+        # print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
+        # print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
+        # print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
+        # print("local vel ref : ",self.local_vel_ref)
+        # # print("com x :",self.  C_kp1_x)
+        # # print("com y :",self.  C_kp1_y)
         self.set_velocity_reference(self.local_vel_ref)
-        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
+        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, self.fsm_state
 
     def _update_data(self):
         self.data.update()
@@ -1066,7 +1074,7 @@ class BaseGenerator(object):
         self.buildRotIneqConstraint()
 
     def _update_cop_constraint_transformation(self):
-        print("--- INIT CoP ---")
+        # print("--- INIT CoP ---")
         """ update foot constraint transformation matrices. """
         # every time instant in the pattern generator constraints
         # depend on the support order

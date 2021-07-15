@@ -22,6 +22,7 @@ class Interpolation(object):
         self.Tc = Tc # sampling period of the robot low level controller
         self.interval = int(self.T/self.Tc) # number of iteration in 100ms
                                             # the initial state of the next QP iteration
+        self.state = self.gen.fsm_state
 
         # initiale states used to interpolate (they should be intialized once at
         # the beginning of the qp
@@ -76,7 +77,7 @@ class Interpolation(object):
             self.rightFootTraj.extend(deepcopy(self.RFbuffer))
 
         self.lipm = LIPM(self.T,self.Tc,self.curCoM.h_com)
-        self.fi = FootInterpolation(genrator=self.gen)
+        self.fi = FootInterpolation(generator=self.gen)
 
     def interpolate(self, time):
 
@@ -272,8 +273,8 @@ class FootInterpolation(object):
     of the pattern generator. It interpolate the feet trajectory during the QP period
     """
 
-    def __init__(self, genrator=BaseGenerator(), QPsamplingPeriod=0.2, NbSamplingPreviewed=16, commandPeriod=0.001,
-        FeetDistance=0.19, StepHeight=0.05, stepTime=1.6):
+    def __init__(self, generator=BaseGenerator(), QPsamplingPeriod=0.2, NbSamplingPreviewed=16, commandPeriod=0.001,
+        FeetDistance=0.17, StepHeight=0.05, stepTime=1.6):
 
         self.T = QPsamplingPeriod # QP sampling period
         self.Tc = commandPeriod # Low level control period
@@ -287,7 +288,7 @@ class FootInterpolation(object):
         self.TDS = QPsamplingPeriod # Time of double support
         self.stepTime = stepTime
         self.intervaleSize = int(self.T/self.Tc) # nuber of interpolated sample
-        self.gen = genrator
+        self.gen = generator
         self.polynomeZ.setParameters(self.TSS,self.stepHeigth,0.0,0.0)
     '''
     Update the currentState to be valide at the next iteration
@@ -306,99 +307,112 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
-        timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
-        for i in range(self.intervaleSize):
-            LeftFootBuffer[i] = BaseTypeFoot()
-            RightFootBuffer[i] = BaseTypeFoot()
-
-        # print ("t_lim:",timelimit)
-        # print ("v:",self.gen.v_kp1)
-        # print ("V:",self.gen.V_kp1)
-        # print ("dt:",timelimit - self.stepTime)
-        # print ("step time",self.stepTime)
-        epsilon = 0.02
-        # in case of double support the policy is to stay still
-        if time + epsilon < timelimit - self.stepTime + self.T :
-            # print "double support"
+        if self.gen.fsm_state == 'D':
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(curLeft)
-                RightFootBuffer[i] = deepcopy(curRight)
-            # we define the z trajectory in the double support phase
-            # to allow the robot to take off and land
-            # during the whole single support duration
+                RightFootBuffer[i] = deepcopy(curRight)            
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
 
             return curLeft,curRight,LeftFootBuffer, RightFootBuffer
+        else:
 
-        elif time + epsilon > timelimit - self.stepTime + self.T :
-            # print "single support"
-            # Deal with the lift off time and the landing time. During those period
-            # the foot do not move along the x and y axis.
-
-            # this is counted from the last double support phase
-            localInterpolationStartTime = time - (timelimit - self.TSS)
-            # this coeffincient indicates how long you allow the foot
-            # to take off AND land (in %)
-            moduleSupportCoefficient = 0.9
-            # this time indicates how long the foot will move in x, y and theta
-            UnlockedSwingPeriod = self.TSS * moduleSupportCoefficient
-            # this time indicates the time limit where the foot should have reach
-            # lift off enough to move in x, y and theta
-            endOfLiftoff = 0.5 * (self.TSS-UnlockedSwingPeriod)
-            # This time show the time where the foot has flight in the air
-            SwingTimePassed = 0.0
-            if localInterpolationStartTime > endOfLiftoff:
-                SwingTimePassed = localInterpolationStartTime - endOfLiftoff
-            # This time is the time remaining before the landing
-            timeInterval = UnlockedSwingPeriod - SwingTimePassed
-            # this time indicates the time limit where the foot should have reach its goal
-            # and needs to land
-            startLanding = endOfLiftoff + UnlockedSwingPeriod
-
-            # Set the polynomes
-            if (currentSupport.foot=="left") :
-                supportFoot = curLeft
-                flyingFoot  = curRight
-            else :
-                supportFoot = curRight
-                flyingFoot  = curLeft
-
-            self.polynomeX.setParameters(timeInterval,F_k_x,flyingFoot.x,flyingFoot.dx,flyingFoot.ddx)
-            self.polynomeY.setParameters(timeInterval,F_k_y,flyingFoot.y,flyingFoot.dy,flyingFoot.ddy)
-            self.polynomeQ.setParameters(timeInterval,PreviewAngle,flyingFoot.q,flyingFoot.dq,flyingFoot.ddq)
+            timelimit = time + numpy.sum(self.gen.v_kp1) * self.T
             for i in range(self.intervaleSize):
-                if currentSupport.foot == "left" :
-                    flyingFootBuffer = RightFootBuffer
-                    supportFootBuffer = LeftFootBuffer
+                LeftFootBuffer[i] = BaseTypeFoot()
+                RightFootBuffer[i] = BaseTypeFoot()
+
+            # print ("t_lim:",timelimit)
+            # print ("v:",self.gen.v_kp1)
+            # print ("V:",self.gen.V_kp1)
+            # print ("dt:",timelimit - self.stepTime)
+            # print ("step time",self.stepTime)
+            epsilon = 0.02
+            # in case of double support the policy is to stay still
+            print("state : ",self.gen.fsm_states)
+            print("curren support foot : ",self.gen.currentSupport.foot)
+            print("RF : ", curRight.x,curRight.y)
+            print("LF : ", curLeft.x,curLeft.y)        
+            if time + epsilon < timelimit - self.stepTime + self.T:
+                print("------------> double support")
+                for i in range(self.intervaleSize):
+                    LeftFootBuffer[i] = deepcopy(curLeft)
+                    RightFootBuffer[i] = deepcopy(curRight)
+                # we define the z trajectory in the double support phase
+                # to allow the robot to take off and land
+                # during the whole single support duration
+                self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
+
+                return curLeft,curRight,LeftFootBuffer, RightFootBuffer
+
+            elif time + epsilon > timelimit - self.stepTime + self.T :
+                print("------------> single support")
+                # Deal with the lift off time and the landing time. During those period
+                # the foot do not move along the x and y axis.
+
+                # this is counted from the last double support phase
+                localInterpolationStartTime = time - (timelimit - self.TSS)
+                # this coeffincient indicates how long you allow the foot
+                # to take off AND land (in %)
+                moduleSupportCoefficient = 0.9
+                # this time indicates how long the foot will move in x, y and theta
+                UnlockedSwingPeriod = self.TSS * moduleSupportCoefficient
+                # this time indicates the time limit where the foot should have reach
+                # lift off enough to move in x, y and theta
+                endOfLiftoff = 0.5 * (self.TSS-UnlockedSwingPeriod)
+                # This time show the time where the foot has flight in the air
+                SwingTimePassed = 0.0
+                if localInterpolationStartTime > endOfLiftoff:
+                    SwingTimePassed = localInterpolationStartTime - endOfLiftoff
+                # This time is the time remaining before the landing
+                timeInterval = UnlockedSwingPeriod - SwingTimePassed
+                # this time indicates the time limit where the foot should have reach its goal
+                # and needs to land
+                startLanding = endOfLiftoff + UnlockedSwingPeriod
+
+                # Set the polynomes
+                if (currentSupport.foot=="left") :
+                    supportFoot = curLeft
+                    flyingFoot  = curRight
                 else :
-                    flyingFootBuffer = LeftFootBuffer
-                    supportFootBuffer = RightFootBuffer
+                    supportFoot = curRight
+                    flyingFoot  = curLeft
 
-                # the non swing foot stay still
-                supportFootBuffer[i] = deepcopy(supportFoot)
-                supportFootBuffer[i].supportFoot = 1
+                self.polynomeX.setParameters(timeInterval,F_k_x,flyingFoot.x,flyingFoot.dx,flyingFoot.ddx)
+                self.polynomeY.setParameters(timeInterval,F_k_y,flyingFoot.y,flyingFoot.dy,flyingFoot.ddy)
+                self.polynomeQ.setParameters(timeInterval,PreviewAngle,flyingFoot.q,flyingFoot.dq,flyingFoot.ddq)
+                for i in range(self.intervaleSize):
+                    if currentSupport.foot == "left" :
+                        flyingFootBuffer = RightFootBuffer
+                        supportFootBuffer = LeftFootBuffer
+                    else :
+                        flyingFootBuffer = LeftFootBuffer
+                        supportFootBuffer = RightFootBuffer
 
-                Ti = self.Tc * i # interpolation time
-                Tlocal = localInterpolationStartTime + Ti
+                    # the non swing foot stay still
+                    supportFootBuffer[i] = deepcopy(supportFoot)
+                    supportFootBuffer[i].supportFoot = 1
 
-                # if we are landing or lifting the foot, do not modify the x,y and theta
+                    Ti = self.Tc * i # interpolation time
+                    Tlocal = localInterpolationStartTime + Ti
+
+                    # if we are landing or lifting the foot, do not modify the x,y and theta
+                    if localInterpolationStartTime < endOfLiftoff:
+                        Tr = Ti - endOfLiftoff # Tr = remaining time
+                        flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Tr)
+                    else:
+                        flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Ti)
+
+                    flyingFootBuffer[i].z = self.polynomeZ.compute(Tlocal)
+                    flyingFootBuffer[i].dz = self.polynomeZ.computeDerivative(Tlocal)
+                    flyingFootBuffer[i].ddz = self.polynomeZ.computeSecDerivative(Tlocal)
+
                 if localInterpolationStartTime < endOfLiftoff:
-                    Tr = Ti - endOfLiftoff # Tr = remaining time
-                    flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Tr)
+                    # Compute the next iteration state
+                    flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize - endOfLiftoff)
                 else:
-                    flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Ti)
+                    flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize)
 
-                flyingFootBuffer[i].z = self.polynomeZ.compute(Tlocal)
-                flyingFootBuffer[i].dz = self.polynomeZ.computeDerivative(Tlocal)
-                flyingFootBuffer[i].ddz = self.polynomeZ.computeSecDerivative(Tlocal)
-
-            if localInterpolationStartTime < endOfLiftoff:
-                # Compute the next iteration state
-                flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize - endOfLiftoff)
-            else:
-                flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize)
-
-            return curLeft,curRight,LeftFootBuffer, RightFootBuffer
+                return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
 
     def computeXYQ(self,foot,t):

@@ -23,7 +23,7 @@ comx = [-3.16e-3, 0.0, 0.0]#[0.00679821, 0.0, 0.0]
 comy = [1.237384291203724555e-03,0.0, 0.0] #[0.08693283,0.0, 0.0] #0.03
 comz = 8.786810585901939641e-01 
 footx = 1.86e-4#0.00949035#-0.008
-footy = 8.48e-2#0.095
+footy = 0.085
 footq = 0.0
 # Fx = [0.00949035,0.00949035]
 # Fy = [0.095,-0.095]
@@ -34,14 +34,16 @@ interpolNmpc = Interpolation(0.001,nmpc)
 # initial reference velocity
 velocity_reference = [0., 0.0,0.0]
 
+f = open("data/nmpc_vel.dat", "w")
+f.write("")
+f.close()
 
-
-nb_step = 6
+nb_step = 10
 
 # Pattern Generator Event Loop
-for i in range(16*nb_step):
+for i in range (8*nb_step):
     print 'iteration: ', i
-    time = i*0.1
+    time_iter = i*0.1
 
     # if i == 16:
     #     nmpc    = NMPCGenerator(fsm_state='D')
@@ -57,10 +59,11 @@ for i in range(16*nb_step):
     #     velocity_reference = [ 0.0, 0.2, 0.0]
     # if 200 <= i :
     #     velocity_reference = [ 0.0, 0.0, 0.0]
-    if 16 <= i < 16*(nb_step-3) :
+    if 7 <= i < 8*(nb_step-2)-1 :
         velocity_reference = [ 0.2, 0.0, 0.0]
-    if 16*(nb_step-3) <= i:
+    if 8*(nb_step-2)-1 <= i:
         velocity_reference = [ 0.0, 0.0, 0.0]
+    print("vel : ",velocity_reference)
 
     # set reference velocities to zero
     nmpc.   set_velocity_reference(velocity_reference)
@@ -68,14 +71,39 @@ for i in range(16*nb_step):
     # solve QP
     nmpc.   solve()
     nmpc.   simulate()
-    interpolNmpc.interpolate(time)
+    interpolNmpc.interpolate(time_iter)
 
     # initial value embedding by internal states and simulation
-    comx, comy, comz, footx, footy, footq, foot, comq = \
+    comx, comy, comz, footx, footy, footq, foot, comq, state = \
     nmpc.update()
-    # print(footy)
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq,\
     foot, comq)
+
+    zmpx = comx[0]-comz/9.81*comx[2]
+    zmpy = comy[0]-comz/9.81*comy[2]  
+
+    if state == 'D':
+        state_bool = 0
+    elif state == 'L/R':
+        state_bool = 1
+    else:
+        state_bool = -1
+    if foot == 'left':
+        foot_bool = 1
+    else :
+        foot_bool = -1
+
+    f = open("data/nmpc_vel.dat", "a")
+    line = str(time.time()) + " " + str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
+        str(comy[0])+ "  " + str(comy[1])+ "  " + str(comy[2])+ "  " +\
+        str(comz)+ "  0  0  " + str(comq[0]) + "  " + str(comq[1]) + "  " +\
+        str(comq[2]) + "  " + str(footx) + "  " + str(footy)+ "  " +\
+        str(footq) +  "  " + str(zmpx) + "  " + str(zmpy) + "  " + str(foot_bool) \
+        + "  " + str(state_bool) + " \n"
+    f.write(line)
+    f.close()
+
+
     if show_canvas:
         nmpc_p.update()
 

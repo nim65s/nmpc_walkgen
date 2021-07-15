@@ -457,7 +457,7 @@ class NMPCGenerator(BaseGenerator):
         self.ubA_ori[a:b] = self.ubB_fvel_ineq
 
     def _calculate_derivatives(self):
-        print("=== CALCULATE DER ===")
+        # print("=== CALCULATE DER ===")
         """ calculate the Jacobian of the constraints function """
 
         # COP CONSTRAINTS

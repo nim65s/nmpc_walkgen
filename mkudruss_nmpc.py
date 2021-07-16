@@ -4,7 +4,7 @@ import numpy
 numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization import Plotter
 from walking_generator.classic import ClassicGenerator
-from walking_generator.combinedqp import NMPCGenerator
+from walking_generator.combinedqp_origin import NMPCGenerator
 
 # instantiate pattern generator
 gen = NMPCGenerator(fsm_state='L/R')
@@ -16,9 +16,9 @@ plot = Plotter(gen, show_canvas, save_to_file)
 
 # Pattern Generator Preparation
 # set reference velocities to zero
-gen.set_velocity_reference([0.1,0.0,-0.15])
+gen.set_velocity_reference([0.3,0.0,0.])
 
-gen.set_security_margin(0.04, 0.04)
+gen.set_security_margin(0.09, 0.05)
 
 # set initial values
 comx = [0.00949035, 0.0, 0.0]
@@ -34,7 +34,6 @@ gen._update_data()
 
 # Pattern Generator Event Loop
 for i in range(160):
-    time = i*0.005
     print 'iteration: ', i
 
     """
@@ -45,6 +44,8 @@ for i in range(160):
     if 130 <= i:
         gen.set_velocity_reference([0.2,0.0,-0.0])
     """
+    if 100 <= i:
+        gen.set_velocity_reference([0.0,0.0,-0.0])
 
     gen.dddC_k_q  [...] = 1.0
     gen.dddF_k_qL [...] = 1.0

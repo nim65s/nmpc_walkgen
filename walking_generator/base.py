@@ -1003,12 +1003,12 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
 
-        # print("current support foot : ",foot)
-        # print("vk : ",self.v_kp1)
-        # # print("Vk : ",self.V_kp1) 
-        # print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
-        # print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
-        # print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
+        print("current support foot : ",foot)
+        print("vk : ",self.v_kp1)
+        # print("Vk : ",self.V_kp1) 
+        print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
+        print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
+        print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
         # print("local vel ref : ",self.local_vel_ref)
         # # print("com x :",self.  C_kp1_x)
         # # print("com y :",self.  C_kp1_y)

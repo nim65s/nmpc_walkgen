@@ -32,16 +32,16 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolNmpc = Interpolation(0.001,nmpc)
 # initial reference velocity
-velocity_reference = [0., 0.0,0.0]
+velocity_reference = [0.3, 0.0,0.0]
 
 f = open("data/nmpc_vel.dat", "w")
 f.write("")
 f.close()
 
-nb_step = 10
+nb_step = 7
 
 # Pattern Generator Event Loop
-for i in range (8*nb_step):
+for i in range (160):#(8*nb_step):
     print 'iteration: ', i
     time_iter = i*0.1
 
@@ -59,10 +59,10 @@ for i in range (8*nb_step):
     #     velocity_reference = [ 0.0, 0.2, 0.0]
     # if 200 <= i :
     #     velocity_reference = [ 0.0, 0.0, 0.0]
-    if 7 <= i < 8*(nb_step-2)-1 :
-        velocity_reference = [ 0.2, 0.0, 0.0]
-    if 8*(nb_step-2)-1 <= i:
-        velocity_reference = [ 0.0, 0.0, 0.0]
+    # if 7 <= i < 100: #8*(nb_step-3)-1 :
+    #     velocity_reference = [0.3, 0.0, 0.0]
+    if 100 <= i: #8*(nb_step-3)-1 <= i:
+        velocity_reference = [0.0, 0.0, 0.0]
     print("vel : ",velocity_reference)
 
     # set reference velocities to zero

@@ -20,7 +20,7 @@ main(int argc, char *argv[])
     }
 
     /* Add a built-in module, before Py_Initialize */
-    if (PyImport_AppendInittab("embedded", PyInit_b) == -1) {
+    if (PyImport_AppendInittab("b", PyInit_b) == -1) {
         fprintf(stderr, "Error: could not extend in-built modules table\n");
         exit(1);
     }
@@ -33,17 +33,21 @@ main(int argc, char *argv[])
     Py_Initialize();
 
     /* Optionally import the module; alternatively,
-       import can be deferred until the embedded script
+       import can be deferred until the b script
        imports it. */
-    pmodule = PyImport_ImportModule("embedded");
+    PyRun_SimpleString(
+       "import sys\n"
+       "sys.path.append('')\n"
+    );
+    pmodule = PyImport_ImportModule("b");
     if (!pmodule) {
         PyErr_Print();
-        fprintf(stderr, "Error: could not import module 'embedded'\n");
+        fprintf(stderr, "Error: could not import module 'b'\n");
         goto exit_with_error;
     }
 
     /* Now call into your module code. */
-    if (b() < 0) {
+    if (b(9) < 0) {
         PyErr_Print();
         fprintf(stderr, "Error in Python code, exception was printed.\n");
         goto exit_with_error;

@@ -4,3 +4,4 @@ build
 b.cpp
 libs/*.cpp
 test
+*.so

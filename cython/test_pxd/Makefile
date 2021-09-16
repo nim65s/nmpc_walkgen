@@ -35,22 +35,12 @@ paths:
 test: b.o embedded_main.o
 	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
-b.o: b.cpp
+%.o: %.cpp
 	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)
 
-embedded_main.o: embedded_main.c
-	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)	
-
-# CYTHON := ../../../cython/cython.py
 b.cpp: b.pyx
-# 	@$(PYTHON) $(CYTHON) b.pyx 
-	cython -3 --cplus b.pyx
-# 	@$(PYTHON) setup.py build_ext --inplace #ajouter include Python.h dans b.h
-
-test: test
+	$(PYTHON) setup.py build_ext --inplace
 
 clean:
 	@echo Cleaning ...
-	@rm -f *~ *.o *.so core core.* test b.c *.h *.cpp
-
-
+	@rm -rf *~ *.o *.so core core.* test b.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__

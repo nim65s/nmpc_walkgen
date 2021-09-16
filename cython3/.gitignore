@@ -1,0 +1,8 @@
+build
+*.o
+*.h
+nmpc_vel_ref.cpp
+libs/*.cpp
+libs/*.so
+test
+*.so

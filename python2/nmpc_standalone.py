@@ -3,7 +3,7 @@ import time
 import numpy
 numpy.set_printoptions(threshold=numpy.nan, linewidth =numpy.nan)
 from walking_generator.visualization import Plotter
-from walking_generator.combinedqp import NMPCGenerator
+from walking_generator.combinedqp_origin import NMPCGenerator
 from walking_generator.interpolation import Interpolation
 
 # instantiate pattern generator
@@ -27,7 +27,7 @@ footq = 0.0
 
 nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
-interpolNmpc = Interpolation(0.005,nmpc)
+# interpolNmpc = Interpolation(0.005,nmpc)
 # initial reference velocity
 velocity_reference = [0.2, 0.0,0.2]
 
@@ -52,7 +52,7 @@ for i in range(220):
     # solve QP
     nmpc.   solve()
     nmpc.   simulate()
-    interpolNmpc.interpolate(time)
+    # interpolNmpc.interpolate(time)
 
     # initial value embedding by internal states and simulation
     comx, comy, comz, footx, footy, footq, foot, comq= \
@@ -61,7 +61,7 @@ for i in range(220):
     if show_canvas:
         nmpc_p.update()
 
-nmpc.   data.save_to_file('./nmpc_alone.json')
+# nmpc.   data.save_to_file('./nmpc_alone.json')
 
 show_canvas  = False
 save_to_file = True
@@ -71,8 +71,8 @@ nmpc_p    = Plotter(
     filename='./nmpc_alone',    fmt='pdf'
 )
 
-nmpc_p   .load_from_file('./nmpc_alone.json')
-nmpc_p   .update()
-nmpc_p   .create_data_plot()
+# nmpc_p   .load_from_file('./nmpc_alone.json')
+# nmpc_p   .update()
+# nmpc_p   .create_data_plot()
 
-interpolNmpc.save_to_file("./nmpc_alone.csv")
+# interpolNmpc.save_to_file("./nmpc_alone.csv")

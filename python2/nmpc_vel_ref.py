@@ -32,36 +32,37 @@ nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq, foot='left')
 
 interpolNmpc = Interpolation(0.001,nmpc)
 # initial reference velocity
-velocity_reference = [0.3, 0.0,0.0]
+velocity_reference = [0., 0.,0.0]
 
-f = open("data/nmpc_vel.dat", "w")
+f = open("../data/nmpc_vel.dat", "w")
 f.write("")
 f.close()
 
-nb_step = 7
-
+nb_step = 20
+raw_input()
 # Pattern Generator Event Loop
-for i in range (160):#(8*nb_step):
+for i in range (8*nb_step):
     print 'iteration: ', i
     time_iter = i*0.1
 
-    # if i == 16:
-    #     nmpc    = NMPCGenerator(fsm_state='D')
-    #     nmpc.   set_security_margin(0.09, 0.05)
-    #     nmpc.   set_initial_values(comx, comy, comz, footx, footy, footq,\
-    #     foot, comq, Fx, Fy, Fq) # <== ICI Ajouter ces F !!! ==>
-    # # change reference velocities
-    # if 16 <= i < 16*(nb_step-3):
-    #     velocity_reference = [ 0.2, 0.0, 0.0]
-    # if 50 <= i < 150:
-    #     velocity_reference = [0.1, 0.2,-0.4]
-    # if 150 <= i < 200:
-    #     velocity_reference = [ 0.0, 0.2, 0.0]
-    # if 200 <= i :
-    #     velocity_reference = [ 0.0, 0.0, 0.0]
-    # if 7 <= i < 100: #8*(nb_step-3)-1 :
-    #     velocity_reference = [0.3, 0.0, 0.0]
-    if 100 <= i: #8*(nb_step-3)-1 <= i:
+    # if 7 <= i < 8*4-1 :
+    #     velocity_reference = [0.2, 0.0, 0.0]
+    # if 8*4-1 <= i < 8*15-1 :
+    #     velocity_reference = [0.1, 0., 0.2]
+    # if 8*15-1 <= i < 8*22-1 :
+    #     velocity_reference = [0.2, 0.0, 0.1]
+    # if 8*22-1 <= i < 8*(nb_step-2)-1 :
+    #     velocity_reference = [0.2, 0.0, -0.1]  
+    if 7 <= i < 8*5-1 :
+        velocity_reference = [0.2, 0., 0.]
+    if 8*5-1 <= i < 8*9-1 :
+        velocity_reference = [0.2, 0., 0.1]        
+    if 8*9-1 <= i < 8*14-1 :
+        velocity_reference = [0., 0.04, 0.]
+    if 8*14-1 <= i < 8*(nb_step-2)-1 :
+        velocity_reference = [0.2, 0., 0.]
+
+    if 8*(nb_step-2)-1 <= i:
         velocity_reference = [0.0, 0.0, 0.0]
     print("vel : ",velocity_reference)
 
@@ -93,7 +94,7 @@ for i in range (160):#(8*nb_step):
     else :
         foot_bool = -1
 
-    f = open("data/nmpc_vel.dat", "a")
+    f = open("../data/nmpc_vel.dat", "a")
     line = str(time.time()) + " " + str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
         str(comy[0])+ "  " + str(comy[1])+ "  " + str(comy[2])+ "  " +\
         str(comz)+ "  0  0  " + str(comq[0]) + "  " + str(comq[1]) + "  " +\

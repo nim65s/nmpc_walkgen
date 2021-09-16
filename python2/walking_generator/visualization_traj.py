@@ -571,7 +571,7 @@ class PlotterTraj(object):
         self.bird_view_axis.set_aspect('equal')
 
         # define legend
-        self.bird_view_axis.legend(loc='lower left')#, bbox_to_anchor=(1, 0.5))
+        # self.bird_view_axis.legend(loc='lower left')#, bbox_to_anchor=(1, 0.5))
 
         # show canvas
         if self.show_canvas:

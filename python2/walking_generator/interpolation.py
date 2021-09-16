@@ -1,7 +1,7 @@
 import numpy
 from copy import deepcopy
-from helper import CoMState, ZMPState, BaseTypeFoot
-from base import BaseGenerator
+from .helper import CoMState, ZMPState, BaseTypeFoot
+from .base import BaseGenerator
 import math
 
 class Interpolation(object):
@@ -307,12 +307,15 @@ class FootInterpolation(object):
 
         * DSP : Double Support Phase
         '''
+        # print("state : ",self.gen.fsm_states," | support foot : ",self.gen.currentSupport.foot," | com x : ",self.gen.c_k_x[0])
+        # print("RF : ", curRight.x,curRight.y, " | LF : ", curLeft.x,curLeft.y)     
         if self.gen.fsm_state == 'D':
+            # print("------------> initial double support")
             for i in range(self.intervaleSize):
                 LeftFootBuffer[i] = deepcopy(curLeft)
                 RightFootBuffer[i] = deepcopy(curRight)            
             self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
-
+            # print("z :",LeftFootBuffer[0].z,RightFootBuffer[0].z)
             return curLeft,curRight,LeftFootBuffer, RightFootBuffer
         else:
 
@@ -327,13 +330,9 @@ class FootInterpolation(object):
             # print ("dt:",timelimit - self.stepTime)
             # print ("step time",self.stepTime)
             epsilon = 0.02
-            # in case of double support the policy is to stay still
-            print("state : ",self.gen.fsm_states)
-            print("curren support foot : ",self.gen.currentSupport.foot)
-            print("RF : ", curRight.x,curRight.y)
-            print("LF : ", curLeft.x,curLeft.y)        
+            # in case of double support the policy is to stay still   
             if time + epsilon < timelimit - self.stepTime + self.T:
-                print("------------> double support")
+                # print("------------> double support")
                 for i in range(self.intervaleSize):
                     LeftFootBuffer[i] = deepcopy(curLeft)
                     RightFootBuffer[i] = deepcopy(curRight)
@@ -341,11 +340,11 @@ class FootInterpolation(object):
                 # to allow the robot to take off and land
                 # during the whole single support duration
                 self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
-
+                print("z :",LeftFootBuffer[0].z,RightFootBuffer[0].z)
                 return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
             elif time + epsilon > timelimit - self.stepTime + self.T :
-                print("------------> single support")
+                # print("------------> single support")
                 # Deal with the lift off time and the landing time. During those period
                 # the foot do not move along the x and y axis.
 
@@ -411,7 +410,7 @@ class FootInterpolation(object):
                     flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize - endOfLiftoff)
                 else:
                     flyingFoot = self.computeXYQ(flyingFoot,self.Tc*self.intervaleSize)
-
+                print("z :",LeftFootBuffer[0].z,RightFootBuffer[0].z)
                 return curLeft,curRight,LeftFootBuffer, RightFootBuffer
 
 

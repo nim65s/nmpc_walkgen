@@ -1,5 +1,5 @@
 # Makefile for creating our standalone Cython program
-PYTHON := python
+PYTHON := python3
 PYVERSION := $(shell $(PYTHON) -c "import sys; print(sys.version[:3])")
 PYPREFIX := $(shell $(PYTHON) -c "import sys; print(sys.prefix)")
 
@@ -32,22 +32,25 @@ paths:
 	@echo "LIBS=$(LIBS)"
 	@echo "SYSLIBS=$(SYSLIBS)"
 
-embedded: embedded.o
+embedded: embedded.o embedded_main.o
 	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
 embedded.o: embedded.c
 	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)
 
-CYTHON := ../../../../cython/cython.py
+embedded_main.o: embedded_main.c
+	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)	
+
+CYTHON := ../../../cython/cython.py
 embedded.c: embedded.pyx
-	@$(PYTHON) $(CYTHON) --embed embedded.pyx
+	@$(PYTHON) $(CYTHON) ../../embedded.pyx #OR cython -3 embedded.pyx
 
 all: embedded
 
 clean:
-	@echo Cleaning Demos/embed
-	@rm -f *~ *.o *.so core core.* *.c embedded test.output
+	@echo Cleaning docs/example/tutorial/embedding
+	@rm -f *~ *.o *.so core core.* embedded embedded.c embedded.h
 
-test: clean all
-	LD_LIBRARY_PATH=$(LIBDIR1):$$LD_LIBRARY_PATH ./embedded > test.output
-	$(PYTHON) assert_equal.py embedded.output test.output
+# test: clean all
+# 	LD_LIBRARY_PATH=$(LIBDIR1):$$LD_LIBRARY_PATH ./embedded > test.output
+# 	$(PYTHON) assert_equal.py embedded.output test.output

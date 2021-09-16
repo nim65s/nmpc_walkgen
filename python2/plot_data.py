@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import cos,sin
 
-data = np.transpose(np.loadtxt("data/nmpc_vel.dat"))
+data = np.transpose(np.loadtxt("../data/nmpc_vel.dat"))
 
 time = data[0]
 com_x = data[1]

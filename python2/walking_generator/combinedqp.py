@@ -1,10 +1,10 @@
 import sys
 import numpy
-import utility
+from . import utility
 import matplotlib.pyplot as plt
 
-from base import BaseGenerator
-from visualization import PlotData
+from .base import BaseGenerator
+from .visualization import PlotData
 from walking_generator.utility import color_matrix
 
 # Try to get qpOASES SQP Problem class

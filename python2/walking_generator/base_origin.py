@@ -1,6 +1,6 @@
 import os, sys
 import numpy
-from math import cos, sin, sqrt
+from math import cos, sin
 from copy import deepcopy
 
 from helper import BaseTypeFoot, BaseTypeSupportFoot
@@ -11,7 +11,6 @@ class BaseGenerator(object):
     """
     Base class of walking pattern generator for humanoids, cf.
     LAAS-UHEI walking report.
-
     BaseClass provides all matrices and timestepping methods that are
     defined for the pattern generator family. In derived classes different
     problems and their solvers can be realized.
@@ -98,28 +97,21 @@ class BaseGenerator(object):
         Initialize pattern generator, i.e.
         * allocate memory for matrices
         * populate them according to walking reference document
-
         Parameters
         ----------
-
         N : int
             Number of time steps of prediction horizon
-
         T : float
             Time increment between two time steps (default: 0.1 [s])
-
         nf : int
             Number of foot steps planned in advance (default: 2 [footsteps])
-
         T_step : float
             Time for the robot to make 1 step
-
         T_window : float
             Duration of the preview window of the controller
         fsm_state: str
             Initial state of the finite state machine for startin and stopping
             maneuvers.
-
         fsm_sl: int
             Number of steps in inplace stepping until stop
         """
@@ -135,8 +127,7 @@ class BaseGenerator(object):
         err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
         assert fsm_state in self._fsm_states, err_str
         self.fsm_state = fsm_state
-        self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype='|S3')
-        # self.fsm_states = numpy.array(['L/R', 'R/L'])
+        self.fsm_states = numpy.array((self.fsm_state,)*self.nf, dtype=str)
         self._fsm_sl = fsm_sl
 
         # objective weights
@@ -147,7 +138,7 @@ class BaseGenerator(object):
         # self.d = 1e-05 # weight for jerk minimization
         self.a = 5.0   # weight for CoM velocity tracking
         self.b = 0.0   # weight for CoM average velocity tracking
-        self.c = 1e03 # weight for ZMP reference tracking
+        self.c = 1e01 # weight for ZMP reference tracking
         self.d = 1e-08 # weight for jerk minimization
 
         # center of mass initial values
@@ -156,15 +147,15 @@ class BaseGenerator(object):
         #      center of mass. z position is fixed because of LIPM approximation.
 
         self.c_k_x = numpy.array(
-            (-1.98477637e-03, 0.0, 0.0),# 0.00124774 (HRP2) | -1.98477637e-03 (Pyrene)
+            (0.00124774, 0.0, 0.0),
             dtype=float
         )
         self.c_k_y = numpy.array(
-            (7.22356707e-05, 0.0, 0.0),# 0.00157175(HRP2) | 7.22356707e-05 (Pyrene)
+            (0.00157175, 0.0, 0.0),
             dtype=float
         )
         self.c_k_q = numpy.zeros((3,), dtype=float)
-        self.h_com = 8.92675352e-01 # 0.814 (HRP2) | 8.92675352e-01 (Pyrene)
+        self.h_com = 0.814
 
         # center of mass matrices
 
@@ -193,16 +184,11 @@ class BaseGenerator(object):
         self. dC_kp1_q_ref = numpy.zeros((N,), dtype=float)
         self.local_vel_ref = numpy.zeros((3,), dtype=float)
 
-
         # feet matrices
         # initial support foot positions and orientation
         # NOTE we assume the left foot to be the initial support foot
-        # self.f_k_x = 0.00949035
-        # self.f_k_y = 0.095
-        # self.f_k_q = 0.0
-
-        self.f_k_x = 0.0
-        self.f_k_y = 0.0
+        self.f_k_x = 0.00949035
+        self.f_k_y = 0.095
         self.f_k_q = 0.0
 
         self.F_k_x = numpy.zeros((self.nf,), dtype=float)
@@ -248,15 +234,6 @@ class BaseGenerator(object):
         self.Z_kp1_x = numpy.zeros((N,), dtype=float)
         self.Z_kp1_y = numpy.zeros((N,), dtype=float)
 
-        # capture point matrices #NEW
-
-        self.omega = sqrt(self.h_com/self.g)
-        self.xi_k_x = self.c_k_x[0] + self.omega *self.c_k_x[1]
-        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]
-
-        self.Xi_kp1_x = numpy.zeros((N,), dtype=float)
-        self.Xi_kp1_y = numpy.zeros((N,), dtype=float)
-
         # transformation matrices
 
         self.Pps = numpy.zeros((N,3), dtype=float)
@@ -271,8 +248,6 @@ class BaseGenerator(object):
         self.Pzs = numpy.zeros((N,3), dtype=float)
         self.Pzu = numpy.zeros((N,N), dtype=float)
 
-        self.Pxis = numpy.zeros((N,3), dtype=float)
-        self.Pxiu = numpy.zeros((N,N), dtype=float)
         # convex hulls used to bound the free placement of the foot
         self.nFootPosHullEdges = 5
             # support foot : right
@@ -316,9 +291,9 @@ class BaseGenerator(object):
 
         # Position of the foot in the local foot frame
         self.nFootEdge    = 4
-        self.footWidth    = 0.2 # 0.2172 (HRP2) | 0.2 (Pyrene)
-        self.footHeight   = 0.12 # 0.1380 (HRP2) | 0.12 (Pyrene)
-        self.footDistance = 0.17 # 0.2000 (HRP2) | 0.19 (Pyrene)
+        self.footWidth    = 0.2172
+        self.footHeight   = 0.1380
+        self.footDistance = 0.2000
 
         # position of the vertices of the feet in the foot coordinates.
         # left foot
@@ -378,26 +353,6 @@ class BaseGenerator(object):
         self.v_kp1fc_x = self.v_kp1fc[:self.N]
         self.v_kp1fc_y = self.v_kp1fc[self.N:]
 
-
-        # transformation matrix for the CP constraints in buildCoPconstraint()
-        # constant in variables but varying in time, because of V_kp1
-        # PxiuV = ( PxiuVx )
-        #        ( PxiuVy )
-        #      = ( Pxiu | -V_kp1 |   0 |      0 )
-        #        (   0 |      0 | Pxiu | -V_kp1 )
-
-        self.PxiuV  = numpy.zeros((2*self.N, 2*(self.N + self.nf)), dtype=float )
-        self.PxiuVx = self.PxiuV[:self.N,:]
-        self.PxiuVy = self.PxiuV[self.N:,:]
-
-        # PxisC = ( PxisCx )
-        #        ( PxisCy )
-        #      = ( Pxis*c_k_x + v_kp1*f_k_x )
-        #      = ( Pxis*c_k_y + v_kp1*f_k_y )
-        self.PxisC  = numpy.zeros((2*self.N,), dtype=float )
-        self.PxisCx = self.PxisC[:self.N]
-        self.PxisCy = self.PxisC[self.N:]
-
         # D_kp1 = (D_kp1x, Dkp1_y)
         self.D_kp1  = numpy.zeros( (self.nFootEdge*self.N, 2*self.N), dtype=float )
         self.D_kp1x = self.D_kp1[:, :N] # view on big matrix
@@ -412,15 +367,6 @@ class BaseGenerator(object):
         )
         self.lbBcop = -numpy.ones((self.nc_cop), dtype=float)*1e+08
         self.ubBcop =  numpy.zeros((self.nc_cop), dtype=float)
-
-        # Terminal Constraint : capture point
-        self.nc_dcm = self.nFootEdge
-        self.Adcm = numpy.zeros(
-            (self.nc_dcm, 2*(self.N+self.nf)),
-             dtype=float
-        )
-        self.lbBdcm = -numpy.ones((self.nc_dcm), dtype=float)*1e+08
-        self.ubBdcm =  numpy.zeros((self.nc_dcm), dtype=float)
 
         # foot rotation constraints
         self.nc_fvel_eq = self.N # velocity constraints on support foot
@@ -459,7 +405,6 @@ class BaseGenerator(object):
         # state transformation matrices, constraints, etc.
         self._initialize_constant_matrices()
         self._initialize_cop_matrices()
-        self._initialize_cp_matrices()        
         self._initialize_selection_matrix()
         self._initialize_convex_hull_systems()
 
@@ -517,31 +462,20 @@ class BaseGenerator(object):
         height of center of mass (self.h_com).
         """
         # renaming for convenience
-        # T_step = self.T_step
-        # T = self.T
-        # N = self.N
-        # nf = self.nf
-        # h_com = self.h_com
-        # g = self.g
+        T_step = self.T_step
+        T = self.T
+        N = self.N
+        nf = self.nf
+        h_com = self.h_com
+        g = self.g
 
-        # for i in range(N):
-        #     j = i+1
-        #     self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
+        for i in range(N):
+            j = i+1
+            self.Pzs[i, :] = (1.,   j*T, (j**2*T**2)/2. - h_com/g)
 
-        #     for j in range(N):
-        #         if j <= i:
-        #             self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
-        self.Pzs = self.Pps - self.omega**2 * self.Pas
-        self.Pzu = self.Ppu - self.omega**2 * self.Pau
-
-    def _initialize_cp_matrices(self):
-        """
-        Initialize capture point matrices, which are dependent on current
-        height of center of mass (self.h_com).
-        """
-        self.Pxis = self.Pps + 1./self.omega * self.Pvs
-        self.Pxiu = self.Ppu + 1./self.omega * self.Pvu    
-
+            for j in range(N):
+                if j <= i:
+                    self.Pzu[i, j] = (3.*(i-j)**2 + 3.*(i-j) + 1.)*T**3/6. - T*h_com/g
 
     def _initialize_selection_matrix(self):
         """ Initialize selection vector and matrix. """
@@ -617,10 +551,8 @@ class BaseGenerator(object):
         self.dscophull[3,:] = -(0.5*fW - SMx),  (0.5*(fD + fH) - SMy)
 
     def _update_selection_matrices(self):
-        print("___ SELECT MAT ___")
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
-
         Therefore shift foot decision vector and matrix by one row up,
         i.e. the first entry in the selection vector and the first row in the
         selection matrix drops out and selection vector's dropped first value
@@ -644,10 +576,7 @@ class BaseGenerator(object):
 
         # when first column of selection matrix becomes zero,
         # then shift columns by one to the front
-        # print("vk : ",self.v_kp1)
         if (self.v_kp1 == 0).all():
-            # print("old states : ",self.fsm_states)
-
             self.v_kp1[:] = self.V_kp1[:,0]
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
             self.V_kp1[:,-1] = 0
@@ -666,45 +595,30 @@ class BaseGenerator(object):
             else:
                 self.currentSupport.foot = 'right'
 
-
             # update support order with new foot state
             self._calculate_support_order()
 
+            """
+            # also update finite state machine
+            self.fsm_state = self.fsm_states[0].copy()
+            self.fsm_states[:-1] = self.fsm_states[1:]
             # TODO How to update last entry in FSM?
             # if any reference velocity is given and the CoM is moving then
             # the next step last optimized step should be moving
-            # print(self.dC_kp1_x_ref,(self.dC_kp1_x_ref != 0.0).any())
             if (self.dC_kp1_x_ref != 0.0).any() \
             or (self.dC_kp1_y_ref != 0.0).any() \
             or (self.dC_kp1_q_ref != 0.0).any():
                 if (self.c_k_x[1:] != 0.0).any() \
                 or (self.c_k_y[1:] != 0.0).any() \
                 or (self.c_k_q[1:] != 0.0).any():
-                    # if self.supportDeque[-1].foot == 'right':
-                    #     self.fsm_states[-1] = 'L/R'
-                    # else:
-                    #     self.fsm_states[-1] = 'R/L'
-                    if self.currentSupport.foot == 'right':
-                        # print("-->'L/R'")
-                        self.fsm_states[0] = 'R/L'
+                    if self.supportDeque[-1].foot == 'right':
                         self.fsm_states[-1] = 'L/R'
                     else:
                         self.fsm_states[-1] = 'R/L'
-                        self.fsm_states[0] = 'L/R'
-                        # print("-->'R/L'")
             # else stay in double support
-
             else:
-                # print("--> 'D'")
-                self.fsm_states[0] = self.fsm_states[-1]
                 self.fsm_states[-1] = 'D'
-                
-
-            # also update finite state machine
-            self.fsm_state = self.fsm_states[0].copy()
-            # self.fsm_state = self.fsm_states[-1].copy()
-            # self.fsm_states[:-1] = self.fsm_states[1:]
-
+            """
 
     def _initialize_convex_hull_systems(self):
         # linear system corresponding to the convex hulls
@@ -719,7 +633,7 @@ class BaseGenerator(object):
             # double support
             # NOTE hull has to be shifted by half of feet distance in y direction
         self.ComputeLinearSystem(self.dscophull, "left",  self.A0dlf, self.ubB0dlf)
-        self.ComputeLinearSystem(self.dscophull, "left", self.A0drf, self.ubB0drf)
+        self.ComputeLinearSystem(self.dscophull, "right", self.A0drf, self.ubB0drf)
 
     def ComputeLinearSystem(self, hull, foot, A0, B0 ):
         """
@@ -785,7 +699,6 @@ class BaseGenerator(object):
                             self.supportDeque[i].foot = pair
                         else :
                             self.supportDeque[i].foot = impair
-            # print(i,self.supportDeque[i].foot)
 
         if numpy.sum(self.v_kp1)==8 :
             self.supportDeque[0].ds = 1
@@ -801,18 +714,13 @@ class BaseGenerator(object):
             self.supportDeque[i].timeLimit = timeLimit
 
     def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
-        # print("... SET MARGIN ...")
         """
         define security margins for constraints CoP constraints
-
         .. NOTE: Will recreate constraint matrices
-
         Parameters
         ----------
-
         margin_x: 0 < float < footWidth
             security margin to narrow center of pressure constraints in x direction
-
         margin_y: 0 < float < footWidth
             security margin to narrow center of pressure constraints in x direction
         """
@@ -832,10 +740,8 @@ class BaseGenerator(object):
         """
         Velocity reference update and computed from a local frame to a global frame using the
         current support foot frame
-
         Parameters
         ----------
-
         vel_ref: [dx,dy,dq]
             reference velocity in x, y and q
         """
@@ -851,59 +757,43 @@ class BaseGenerator(object):
         self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
         self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
 
-        # print self.dC_kp1_x_ref[...]
-        # print self.dC_kp1_y_ref[...]
-        # print self.dC_kp1_q_ref[...]
-
-
+        print self.dC_kp1_x_ref[...]
+        print self.dC_kp1_y_ref[...]
+        print self.dC_kp1_q_ref[...]
     def set_initial_values(self,
-        com_x, com_y , com_z, foot_x, foot_y, foot_q,
-        foot='left',com_q=(0,0,0)
+        com_x, com_y , com_z,
+        foot_x, foot_y, foot_q, foot='left',
+        com_q=(0,0,0)
     ):
-        # print("### SET INIT VAL ###")
         """
         initial value embedding for pattern generator, i.e. each iteration of
         pattern generator differs in:
-
         * initial com state, i.e. com_a = [c_a, dc_a, ddc_a], a in {x,y,q}
         * initials support foot setup, i.e.
-
         .. NOTE: Will recreate constraint matrices, support order and
                  transformation matrices.
-
         Parameters
         ----------
-
         com_x: [pos, vec, acc]
             current x position, velocity and acceleration of center of mass
-
         com_y: [pos, vec, acc]
             current y position, velocity and acceleration of center of mass
-
         com_z: float
             current z position of center of mass
-
         foot_x: float
             current x position of support foot
-
         foot_y: float
             current y position of support foot
-
         foot_q: float
             current orientation of support foot
-
         foot: str
             tells actual support foot state, i.e. 'right' or by default 'left'
-
         com_q: [ang, vec, acc]
             current orientation, angular velocity and acceleration of center of mass
-
         """
         # update CoM states
         self.c_k_x[...] = com_x
         self.c_k_y[...] = com_y
-        # print("init:",self.c_k_x,com_x)
-        # print("init:",self.c_k_y,com_y)       
 
         if not self.h_com == com_z:
             self.h_com = com_z
@@ -930,10 +820,6 @@ class BaseGenerator(object):
         # TODO any other ideas of where to get it?
         self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
         self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
-
-        # update current CP values
-        self.xi_k_x = self.c_k_x[0] + self.omega * self.c_k_x[1]
-        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]  
 
         # rebuild all constraints
         self.buildConstraints()
@@ -966,7 +852,7 @@ class BaseGenerator(object):
         f_k_x = deepcopy(self.f_k_x)
         f_k_y = deepcopy(self.f_k_y)
         f_k_q = deepcopy(self.f_k_q)
-        foot  = deepcopy(self.currentSupport.foot)      
+        foot  = deepcopy(self.currentSupport.foot)
 
         # get data for initialization of next iteration
         c_k_x = numpy.zeros((3,), dtype=float)
@@ -1003,17 +889,8 @@ class BaseGenerator(object):
             self.f_k_q = self.f_k_qR[0]
         self.currentSupport.q = self.f_k_q
 
-        print("current support foot : ",foot)
-        print("vk : ",self.v_kp1)
-        # print("Vk : ",self.V_kp1) 
-        print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
-        print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
-        print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
-        # print("local vel ref : ",self.local_vel_ref)
-        # # print("com x :",self.  C_kp1_x)
-        # # print("com y :",self.  C_kp1_y)
         self.set_velocity_reference(self.local_vel_ref)
-        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, self.fsm_state
+        return c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q
 
     def _update_data(self):
         self.data.update()
@@ -1064,7 +941,6 @@ class BaseGenerator(object):
     def buildConstraints(self):
         """
         builds constraint matrices for solver
-
         NOTE problems are assembled in the solver implementations
         """
         self.buildCoPconstraint()
@@ -1074,7 +950,6 @@ class BaseGenerator(object):
         self.buildRotIneqConstraint()
 
     def _update_cop_constraint_transformation(self):
-        # print("--- INIT CoP ---")
         """ update foot constraint transformation matrices. """
         # every time instant in the pattern generator constraints
         # depend on the support order
@@ -1094,19 +969,13 @@ class BaseGenerator(object):
                 d0 = self.ubB0drf
 
             # get support foot and check if it is double support
-            if self.fsm_state == 'D':
-                A0 = D0
-                B0 = d0
-            # for j in range(self.nf):
-            #     # print(i,j,self.V_kp1[i,j],self.V_kp1[i,j] == 1)
-            #     # print(self.fsm_states[j])
-            #     if self.V_kp1[i,j] == 1:
-            #         # if self.fsm_states[j] == 'D':
-            #             print(i,j)
-            #             A0 = D0
-            #             B0 = d0
-            #     else:
-            #         pass
+            for j in range(self.nf):
+                if self.V_kp1[i,j] == 1:
+                    if self.fsm_states[j] == 'D':
+                        A0 = D0
+                        B0 = d0
+                else:
+                    pass
 
             for k in range(self.nFootEdge):
                 # get d_i+1^x(f^theta)
@@ -1115,7 +984,6 @@ class BaseGenerator(object):
                 self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
                 # get right hand side of equation
                 self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
-
 
     def buildCoPconstraint(self):
         """
@@ -1165,36 +1033,6 @@ class BaseGenerator(object):
         self.Acop[...]   = D_kp1.dot(PzuV)
         self.ubBcop[...] = self.b_kp1 - D_kp1.dot(PzsC) + D_kp1.dot(v_kp1fc)
 
-        PxiuV  = self.PxiuV
-        PxiuVx = self.PxiuVx
-        PxiuVy = self.PxiuVy
-        PxisC  = self.PxisC
-        PxisCx = self.PxisCx
-        PxisCy = self.PxisCy
-
-        # build constraint transformation matrices
-        # PxiuV = ( PxiuVx )
-        #        ( PxiuVy )
-
-        # PxiuVx = ( Pxiu | -V_kp1 |   0 |      0 )
-        PxiuVx[:,      :self.N        ] =  self.Pxiu # TODO this is constant in matrix and should go into the build up matrice part
-        PxiuVx[:,self.N:self.N+self.nf] = -self.V_kp1
-
-        # PzuVy = (   0 |      0 | Pzu | -V_kp1 )
-        PxiuVy[:,-self.N-self.nf:-self.nf] =  self.Pxiu # TODO this is constant in matrix and should go into the build up matrice part
-        PxiuVy[:,       -self.nf:       ] = -self.V_kp1
-
-        # PxiuV = ( PxisCx ) = ( Pxis * c_k_x)
-        #        ( PxisCy )   ( Pxis * c_k_y)
-        PxisCx[...] = self.Pxis.dot(self.c_k_x) #+ self.v_kp1.dot(self.f_k_x)
-        PxisCy[...] = self.Pxis.dot(self.c_k_y) #+ self.v_kp1.dot(self.f_k_y)
-
-        # # build CP linear constraints
-
-        self.Adcm[...]   = D_kp1[-self.nFootEdge:,:].dot(PxiuV)
-        self.ubBdcm[...] = self.b_kp1[-self.nFootEdge:] - D_kp1[-self.nFootEdge:,:].dot(PxisC) + D_kp1[-self.nFootEdge:,:].dot(v_kp1fc)
-
-
     def buildFootEqConstraint(self):
         """
         create constraints that freezes foot position optimization when swing
@@ -1221,7 +1059,6 @@ class BaseGenerator(object):
     def buildFootIneqConstraint(self):
         """
         build linear inequality constraints for the placement of the feet
-
         NOTE: needs actual self.supportFoot to work properly
         """
         # inequality constraint on both feet A u + B <= 0

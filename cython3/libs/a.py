@@ -28,6 +28,7 @@ class A:
         self.qp_ubA =  np.ones((self.nc,))*1e+08        
         self.cpu_time = 2.9 # ms
         self.nwsr = 1000 # unlimited bounded
+        self.txt = "left"
 
     def foo(self, x):
         print(x + _helper(1.0))
@@ -35,7 +36,11 @@ class A:
 
     def bar(self):
         test = c.C()
-        return test.c(3)       
+        return test.c(3)  
+
+    def test_char(self):
+        print(self.txt == "left")
+        return 0
 
     def test_qp(self):
         qp = SQProblem(self.nv, self.nc)

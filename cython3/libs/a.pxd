@@ -27,8 +27,13 @@ cdef class A:
     cdef np.ndarray qp_ubA       
     cdef float cpu_time 
     cdef int nwsr 
+    cdef str txt
 
     cpdef np.ndarray foo(self, double x)
+
+    cpdef int bar(self)
+
+    cpdef int test_char(self)
 
     cpdef int test_qp(self)
 

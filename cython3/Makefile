@@ -49,4 +49,4 @@ test.cpp: test.pyx
 
 clean:
 	@echo Cleaning ...
-	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref nmpc_vel_ref.cpp test.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__
+	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref nmpc_vel_ref.cpp test.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__ wpg/*.cpp build wpg/*.so wpg/__pycache__ 

@@ -32,7 +32,10 @@ paths:
 	@echo "LIBS=$(LIBS)"
 	@echo "SYSLIBS=$(SYSLIBS)"
 
-test: nmpc_vel_ref.o embedded_main.o
+nmpc_vel_ref: nmpc_vel_ref.o embedded_main.o
+	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
+
+test: test.o embedded_test.o
 	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
 %.o: %.cpp
@@ -41,6 +44,9 @@ test: nmpc_vel_ref.o embedded_main.o
 nmpc_vel_ref.cpp: nmpc_vel_ref.pyx
 	$(PYTHON) setup.py build_ext --inplace
 
+test.cpp: test.pyx
+	$(PYTHON) setup_test.py build_ext --inplace
+
 clean:
 	@echo Cleaning ...
-	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__
+	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref nmpc_vel_ref.cpp test.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__

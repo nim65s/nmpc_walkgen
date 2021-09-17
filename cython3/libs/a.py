@@ -1,5 +1,6 @@
 import numpy as np
 from qpoases import PySQProblem as SQProblem
+from libs import c
 
 def myfunction(x, y=2):
     l = np.array([x,y],dtype=int)
@@ -32,6 +33,10 @@ class A:
         print(x + _helper(1.0))
         return self.l
 
+    def bar(self):
+        test = c.C()
+        return test.c(3)       
+
     def test_qp(self):
         qp = SQProblem(self.nv, self.nc)
         qp.init(
@@ -41,3 +46,4 @@ class A:
             self.nwsr, self.cpu_time
         )
         return(0)
+

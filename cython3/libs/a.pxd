@@ -1,5 +1,6 @@
 import numpy as np
 cimport numpy as np
+from libs cimport c
 
 # from libcpp.qpoases import SQProblem 
 # from qpoases import PySQProblem as SQProblem

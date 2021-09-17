@@ -19,6 +19,8 @@ cpdef public int nmpc_vel_ref() except -1:
         print("iteration : ",i)
         print(nmpc.foo(i))
 
+    nmpc.test_qp()
+
     return 0
 
 # nmpc_vel_ref()

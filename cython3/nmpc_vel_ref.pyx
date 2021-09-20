@@ -16,6 +16,9 @@ cpdef public int nmpc_vel_ref() except -1:
     cdef str state = 'D'
 
     nmpc = NMPCGenerator(fsm_state=state)
+
+    nmpc.print_fct()
+
     nmpc.set_security_margin(0.09,0.05)
 
     velocity_reference = np.array([0.,0.,0.])
@@ -37,7 +40,7 @@ cpdef public int nmpc_vel_ref() except -1:
     f.close()
 
     for i in range(8*nb_step):
-        print("iteration : ",i)
+        # print("iteration : ",i)
 
         if 7 <= i < 8*(nb_step-2)-1 :
             velocity_reference = np.array([0.2, 0., 0.])
@@ -51,7 +54,7 @@ cpdef public int nmpc_vel_ref() except -1:
 
         # comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
         comx,comq = nmpc.update()
-        print(comx,comq)
+        # print(comx,comq)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
 
         f = open("../data/nmpc_vel_cython.dat", "a")

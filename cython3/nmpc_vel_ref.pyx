@@ -7,17 +7,13 @@ from cpython cimport array
 
 cpdef public int nmpc_vel_ref() except -1:
 
-    cdef np.ndarray comx
-    # comy
-    # comz,comq,footx,footy,footq
-    cdef np.ndarray velocity_reference
+    cdef np.ndarray comx, comy, comq, velocity_reference
+    cdef float comz, footx, footy, footq
     cdef int nb_step
     cdef str foot = 'left'
     cdef str state = 'D'
 
     nmpc = NMPCGenerator(fsm_state=state)
-
-    nmpc.print_fct()
 
     nmpc.set_security_margin(0.09,0.05)
 
@@ -35,9 +31,9 @@ cpdef public int nmpc_vel_ref() except -1:
 
     nb_step = 10    
 
-    f = open("../data/nmpc_vel_cython.dat", "w")
-    f.write("")
-    f.close()
+    # f = open("../data/nmpc_vel_cython.dat", "w")
+    # f.write("")
+    # f.close()
 
     for i in range(8*nb_step):
         # print("iteration : ",i)
@@ -53,15 +49,13 @@ cpdef public int nmpc_vel_ref() except -1:
         nmpc.simulate()
 
         comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
-        # comx,comq[0] = nmpc.update()
 
-        # print(comx,comq)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
 
-        f = open("../data/nmpc_vel_cython.dat", "a")
-        line = str(time.time()) + " " + str(comx[0]) + "\n"
-        f.write(line)
-        f.close()
+        # f = open("../data/nmpc_vel_cython.dat", "a")
+        # line = str(time.time()) + " " + str(comx[0]) + "\n"
+        # f.write(line)
+        # f.close()
 
     return 0
 

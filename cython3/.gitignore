@@ -2,7 +2,11 @@ build
 *.o
 *.h
 nmpc_vel_ref.cpp
+test.cpp
 libs/*.cpp
 libs/*.so
+wpg/*.cpp
+wpg/*.so
 test
+nmpc_vel_ref
 *.so

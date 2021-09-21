@@ -363,8 +363,8 @@ class BaseGenerator(object):
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
 
-        # print(self.supportDeque[0],self.currentSupport)
-        # print(self.supportDeque[0].ds,self.currentSupport.ds)
+        print(self.supportDeque[0],self.currentSupport)
+        print(self.supportDeque[0].ds,self.currentSupport.ds)
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -551,7 +551,7 @@ class BaseGenerator(object):
             B0[i] =   sign * dc
 
     def _calculate_support_order(self):
-        print(".ds to solve")
+        print("nothing")
         # self.currentSupport.ds = deepcopy(self.supportDeque[0].ds)
 
         # # find correct initial support foot
@@ -1221,7 +1221,7 @@ class BaseGenerator(object):
         # # print("local vel ref : ",self.local_vel_ref)
         # # # print("com x :",self.  C_kp1_x)
         # # # print("com y :",self.  C_kp1_y)
-        
+
         self.set_velocity_reference(self.local_vel_ref)
         return (c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, self.fsm_state)
 

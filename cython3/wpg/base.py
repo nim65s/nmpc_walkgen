@@ -116,6 +116,8 @@ class BaseGenerator(object):
         self.F_k_y = np.zeros((self.nf,), dtype=float)
         self.F_k_q = np.zeros((self.nf,), dtype=float)
 
+        self.F_kp1_q = np.zeros((self.nf,), dtype=float)
+
         # states for the foot orientation
 
         self.   f_k_qL = np.zeros((3,), dtype=float)
@@ -124,11 +126,20 @@ class BaseGenerator(object):
         self.   F_k_qL = np.zeros((self.N,), dtype=float)
         self.   F_k_qR = np.zeros((self.N,), dtype=float)
 
+        self.   F_kp1_qL = np.zeros((self.N,), dtype=float)
+        self.   F_kp1_qR = np.zeros((self.N,), dtype=float)        
+
         self.  dF_k_qL = np.zeros((self.N,), dtype=float)
         self.  dF_k_qR = np.zeros((self.N,), dtype=float)
 
+        self.   dF_kp1_qL = np.zeros((self.N,), dtype=float)
+        self.   dF_kp1_qR = np.zeros((self.N,), dtype=float)  
+
         self. ddF_k_qL = np.zeros((self.N,), dtype=float)
         self. ddF_k_qR = np.zeros((self.N,), dtype=float)
+
+        self.   ddF_kp1_qL = np.zeros((self.N,), dtype=float)
+        self.   ddF_kp1_qR = np.zeros((self.N,), dtype=float)          
 
         self.dddF_k_qL = np.zeros((self.N,), dtype=float)
         self.dddF_k_qR = np.zeros((self.N,), dtype=float)
@@ -686,7 +697,41 @@ class BaseGenerator(object):
             # also update finite state machine
             self.fsm_state = self.fsm_states[0].copy()
 
-    def set_security_margin(self, margin_x = 0.04, margin_y=0.04):
+    def _update_cop_constraint_transformation(self):
+        print("nothing")
+        # # print("--- INIT CoP ---")
+        # """ update foot constraint transformation matrices. """
+        # # every time instant in the pattern generator constraints
+        # # depend on the support order
+        # theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
+        # for i in range(self.N):
+        #     theta = theta_vec[self.supportDeque[i].stepNumber]
+        #     rotMat = np.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
+        #     if self.supportDeque[i].foot == "left" :
+        #         A0 = self.A0lf.dot(rotMat)
+        #         B0 = self.ubB0lf
+        #         D0 = self.A0dlf.dot(rotMat)
+        #         d0 = self.ubB0dlf
+        #     else :
+        #         A0 = self.A0rf.dot(rotMat)
+        #         B0 = self.ubB0rf
+        #         D0 = self.A0drf.dot(rotMat)
+        #         d0 = self.ubB0drf
+
+        #     # get support foot and check if it is double support
+        #     if self.fsm_state == 'D':
+        #         A0 = D0
+        #         B0 = d0
+
+        #     for k in range(self.nFootEdge):
+        #         # get d_i+1^x(f^theta)
+        #         self.D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
+        #         # get d_i+1^y(f^theta)
+        #         self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
+        #         # get right hand side of equation
+        #         self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
+
+    def set_security_margin(self, margin_x, margin_y):
         # print("... SET MARGIN ...")
         """
         define security margins for constraints CoP constraints
@@ -712,6 +757,110 @@ class BaseGenerator(object):
         self._initialize_convex_hull_systems()
 
         # rebuild constraints
+        self.buildConstraints()
+
+    def set_velocity_reference(self,local_vel_ref):
+        """
+        Velocity reference update and computed from a local frame to a global frame using the
+        current support foot frame
+
+        Parameters
+        ----------
+
+        vel_ref: [dx,dy,dq]
+            reference velocity in x, y and q
+        """
+
+        # get feet orientation states from feet jerks
+        self.local_vel_ref = local_vel_ref
+        self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
+        self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
+
+        flyingFoot = self.E_FR.dot(self.F_kp1_qR) + self.E_FL.dot(self.F_kp1_qL)
+        supportFoot = self.E_FR_bar.dot(self.F_kp1_qR) + self.E_FL_bar.dot(self.F_kp1_qL)
+        q = (flyingFoot[0] + supportFoot[0])*0.5
+        self.dC_kp1_x_ref[...] = deepcopy( local_vel_ref[0] * cos(q) - local_vel_ref[1] * sin(q) )
+        self.dC_kp1_y_ref[...] = deepcopy( local_vel_ref[0] * sin(q) + local_vel_ref[1] * cos(q) )
+        self.dC_kp1_q_ref[...] = deepcopy( local_vel_ref[2] )
+
+    def set_initial_values(self, com_x, com_y, com_z, foot_x, foot_y, foot_q,\
+        foot, com_q):
+        # print("### SET INIT VAL ###")
+        """
+        initial value embedding for pattern generator, i.e. each iteration of
+        pattern generator differs in:
+
+        * initial com state, i.e. com_a = [c_a, dc_a, ddc_a], a in {x,y,q}
+        * initials support foot setup, i.e.
+
+        .. NOTE: Will recreate constraint matrices, support order and
+                 transformation matrices.
+
+        Parameters
+        ----------
+
+        com_x: [pos, vec, acc]
+            current x position, velocity and acceleration of center of mass
+
+        com_y: [pos, vec, acc]
+            current y position, velocity and acceleration of center of mass
+
+        com_z: float
+            current z position of center of mass
+
+        foot_x: float
+            current x position of support foot
+
+        foot_y: float
+            current y position of support foot
+
+        foot_q: float
+            current orientation of support foot
+
+        foot: str
+            tells actual support foot state, i.e. 'right' or by default 'left'
+
+        com_q: [ang, vec, acc]
+            current orientation, angular velocity and acceleration of center of mass
+
+        """
+        # update CoM states
+        self.c_k_x[...] = com_x
+        self.c_k_y[...] = com_y
+        # print("init:",self.c_k_x,com_x)
+        # print("init:",self.c_k_y,com_y)       
+
+        if not self.h_com == com_z:
+            self.h_com = com_z
+            self._initialize_cop_matrices()
+
+        # update support foot if necessary
+        newSupport = BaseTypeSupportFoot(x=foot_x, y=foot_y, theta=foot_q, foot=foot)
+        if self.currentSupport != newSupport \
+        or self.f_k_x != foot_x \
+        or self.f_k_y != foot_y \
+        or self.f_k_q != foot_q :
+            # take newSupport as current support
+            self.currentSupport = newSupport
+
+            # update support foot states
+            self.f_k_x = foot_x
+            self.f_k_y = foot_y
+            self.f_k_q = foot_q
+
+        # always recalculate support order
+        self._calculate_support_order()
+
+        # update current CoP values
+        # TODO any other ideas of where to get it?
+        self.z_k_x = self.c_k_x[0] - self.h_com/self.g * self.c_k_x[2]
+        self.z_k_y = self.c_k_y[0] - self.h_com/self.g * self.c_k_y[2]
+
+        # update current CP values
+        self.xi_k_x = self.c_k_x[0] + self.omega * self.c_k_x[1]
+        self.xi_k_y = self.c_k_y[0] + self.omega * self.c_k_y[1]  
+
+        # rebuild all constraints
         self.buildConstraints()
 
     def buildConstraints(self):
@@ -802,40 +951,6 @@ class BaseGenerator(object):
 
         self.Adcm[...]   = D_kp1[-self.nFootEdge:,:].dot(PxiuV)
         self.ubBdcm[...] = self.b_kp1[-self.nFootEdge:] - D_kp1[-self.nFootEdge:,:].dot(PxisC) + D_kp1[-self.nFootEdge:,:].dot(v_kp1fc)
-
-    def _update_cop_constraint_transformation(self):
-        print("nothing")
-        # # print("--- INIT CoP ---")
-        # """ update foot constraint transformation matrices. """
-        # # every time instant in the pattern generator constraints
-        # # depend on the support order
-        # theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
-        # for i in range(self.N):
-        #     theta = theta_vec[self.supportDeque[i].stepNumber]
-        #     rotMat = np.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
-        #     if self.supportDeque[i].foot == "left" :
-        #         A0 = self.A0lf.dot(rotMat)
-        #         B0 = self.ubB0lf
-        #         D0 = self.A0dlf.dot(rotMat)
-        #         d0 = self.ubB0dlf
-        #     else :
-        #         A0 = self.A0rf.dot(rotMat)
-        #         B0 = self.ubB0rf
-        #         D0 = self.A0drf.dot(rotMat)
-        #         d0 = self.ubB0drf
-
-        #     # get support foot and check if it is double support
-        #     if self.fsm_state == 'D':
-        #         A0 = D0
-        #         B0 = d0
-
-        #     for k in range(self.nFootEdge):
-        #         # get d_i+1^x(f^theta)
-        #         self.D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
-        #         # get d_i+1^y(f^theta)
-        #         self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
-        #         # get right hand side of equation
-        #         self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
 
     def buildFootEqConstraint(self):
         """
@@ -992,7 +1107,123 @@ class BaseGenerator(object):
         ubB_fvel_ineq[...] =  0.22 - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
         lbB_fvel_ineq[...] = -0.22   - self.Pvs.dot(self.f_k_qR - self.f_k_qL)
 
+    def simulate(self):
+        """
+        integrates model for given initial CoM states, jerks and feet positions
+        and orientations by applying the linear time stepping scheme
+        """
+        # get CoM states from jerks
+        self.  C_kp1_x = self.Pps.dot(self.c_k_x) + self.Ppu.dot(self.dddC_k_x)
+        self. dC_kp1_x = self.Pvs.dot(self.c_k_x) + self.Pvu.dot(self.dddC_k_x)
+        self.ddC_kp1_x = self.Pas.dot(self.c_k_x) + self.Pau.dot(self.dddC_k_x)
 
+        self.  C_kp1_y = self.Pps.dot(self.c_k_y) + self.Ppu.dot(self.dddC_k_y)
+        self. dC_kp1_y = self.Pvs.dot(self.c_k_y) + self.Pvu.dot(self.dddC_k_y)
+        self.ddC_kp1_y = self.Pas.dot(self.c_k_y) + self.Pau.dot(self.dddC_k_y)
+
+        # get feet orientation states from feet jerks
+        self.  F_kp1_qL = self.Pps.dot(self.f_k_qL) + self.Ppu.dot(self.dddF_k_qL)
+        self. dF_kp1_qL = self.Pvs.dot(self.f_k_qL) + self.Pvu.dot(self.dddF_k_qL)
+        self.ddF_kp1_qL = self.Pas.dot(self.f_k_qL) + self.Pau.dot(self.dddF_k_qL)
+
+        self.  F_kp1_qR = self.Pps.dot(self.f_k_qR) + self.Ppu.dot(self.dddF_k_qR)
+        self. dF_kp1_qR = self.Pvs.dot(self.f_k_qR) + self.Pvu.dot(self.dddF_k_qR)
+        self.ddF_kp1_qR = self.Pas.dot(self.f_k_qR) + self.Pau.dot(self.dddF_k_qR)
+
+        self.  C_kp1_q = 0.5 * ( self.  F_kp1_qL + self.  F_kp1_qR )
+        self. dC_kp1_q = 0.5 * ( self. dF_kp1_qL + self. dF_kp1_qR )
+        self.ddC_kp1_q = 0.5 * ( self.ddF_kp1_qL + self.ddF_kp1_qR )
+
+        # get support foot orientation
+        self.F_kp1_q = self.E_FR_bar.dot(self.F_kp1_qR) \
+                     + self.E_FL_bar.dot(self.F_kp1_qL)
+
+        for j in range(self.nf):
+            for i in range(self.N):
+                if self.V_kp1[i,j] != 0:
+                    self.F_k_q[j] = self.F_kp1_q[i]
+                    break
+            else:
+                self.F_k_q[j] = 0.0
+
+        # get ZMP states from jerks
+        self.Z_kp1_x = self.Pzs.dot(self.c_k_x) + self.Pzu.dot(self.dddC_k_x)
+        self.Z_kp1_y = self.Pzs.dot(self.c_k_y) + self.Pzu.dot(self.dddC_k_y)
+
+    def update(self):
+        """
+        Update all interior matrices, vectors.
+        Has to be used to prepare the QP after each iteration
+        """
+
+        # after solution simulate to get current states on horizon
+        self.simulate()
+
+        # update internal time
+        self.time += self.T
+
+        # update matrices
+        oldSupport = deepcopy(self.currentSupport)
+        self._update_selection_matrices()
+        # if self.currentSupport != oldSupport \
+        # or self.f_k_x != self.currentSupport.x \
+        # or self.f_k_y != self.currentSupport.y \
+        # or self.f_k_q != self.currentSupport.q :
+        #     raise NotImplementedError
+
+        # provide copy of updated states as return value
+        f_k_x = deepcopy(self.f_k_x)
+        f_k_y = deepcopy(self.f_k_y)
+        f_k_q = deepcopy(self.f_k_q)
+        foot  = deepcopy(self.currentSupport.foot)   
+
+        # get data for initialization of next iteration
+        c_k_x = np.zeros((3,), dtype=float)
+        c_k_x[0] = self.  C_kp1_x[0]
+        c_k_x[1] = self. dC_kp1_x[0]
+        c_k_x[2] = self.ddC_kp1_x[0]
+
+        c_k_y = np.zeros((3,), dtype=float)
+        c_k_y[0] = self.  C_kp1_y[0]
+        c_k_y[1] = self. dC_kp1_y[0]
+        c_k_y[2] = self.ddC_kp1_y[0]
+
+        c_k_q = np.zeros((3,), dtype=float)
+        c_k_q[0] = self.  C_kp1_q[0]
+        c_k_q[1] = self. dC_kp1_q[0]
+        c_k_q[2] = self.ddC_kp1_q[0]
+
+        # left foot
+        f_k_qR = np.zeros((3,), dtype=float)
+        f_k_qR[0] = self.  F_kp1_qR[0]
+        f_k_qR[1] = self. dF_kp1_qR[0]
+        f_k_qR[2] = self.ddF_kp1_qR[0]
+        self.f_k_qR[...] = f_k_qR
+
+        f_k_qL = np.zeros((3,), dtype=float)
+        f_k_qL[0] = self.  F_kp1_qL[0]
+        f_k_qL[1] = self. dF_kp1_qL[0]
+        f_k_qL[2] = self.ddF_kp1_qL[0]
+        self.f_k_qL[...] = f_k_qL
+
+        if self.currentSupport.foot == "left" :
+            self.f_k_q = self.f_k_qL[0]
+        else :
+            self.f_k_q = self.f_k_qR[0]
+        self.currentSupport.q = self.f_k_q
+
+        # print("current support foot : ",foot)
+        # print("vk : ",self.v_kp1)
+        # # print("Vk : ",self.V_kp1) 
+        # print("fk (current support foot pos x and y) : ",f_k_x,f_k_y)      
+        # print("Fk (future support foot pos x and y) : ",self.F_k_x,self.F_k_y) 
+        # print("fsm (current and future states) : ", self.fsm_states,self.fsm_state)
+        # # print("local vel ref : ",self.local_vel_ref)
+        # # # print("com x :",self.  C_kp1_x)
+        # # # print("com y :",self.  C_kp1_y)
+        
+        self.set_velocity_reference(self.local_vel_ref)
+        return (c_k_x, c_k_y, self.h_com, f_k_x, f_k_y, f_k_q, foot, c_k_q, self.fsm_state)
 
 
 

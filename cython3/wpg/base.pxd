@@ -55,7 +55,9 @@ cdef class BaseGenerator:
 
     cdef np.ndarray F_k_x
     cdef np.ndarray F_k_y
-    cdef np.ndarray F_k_q    
+    cdef np.ndarray F_k_q 
+
+    cdef np.ndarray F_kp1_q 
 
     cdef np.ndarray f_k_qL
     cdef np.ndarray f_k_qR
@@ -63,11 +65,20 @@ cdef class BaseGenerator:
     cdef np.ndarray F_k_qL
     cdef np.ndarray F_k_qR
 
+    cdef np.ndarray F_kp1_qL
+    cdef np.ndarray F_kp1_qR
+
     cdef np.ndarray dF_k_qL
     cdef np.ndarray dF_k_qR
 
+    cdef np.ndarray dF_kp1_qL
+    cdef np.ndarray dF_kp1_qR    
+
     cdef np.ndarray ddF_k_qL
     cdef np.ndarray ddF_k_qR
+
+    cdef np.ndarray ddF_kp1_qL
+    cdef np.ndarray ddF_kp1_qR     
 
     cdef np.ndarray dddF_k_qL
     cdef np.ndarray dddF_k_qR
@@ -207,6 +218,7 @@ cdef class BaseGenerator:
     cdef np.ndarray V_kp1
 
     cdef void _update_hulls(self)
+
     cdef void _initialize_constant_matrices(self)    
     cdef void _initialize_cop_matrices(self)
     cdef void _initialize_cp_matrices(self)
@@ -218,10 +230,13 @@ cdef class BaseGenerator:
     cdef void _calculate_support_order(self)
 
     cdef void _update_foot_selection_matrices(self)
-
+    cdef void _update_cop_constraint_transformation(self)
     cdef void _update_selection_matrices(self)
 
     cpdef void set_security_margin(self,float margin_x,float margin_y)
+    cpdef void set_velocity_reference(self,np.ndarray vel_ref)
+    cpdef void set_initial_values(self,np.ndarray com_x,np.ndarray com_y,float com_z,\
+    float foot_x,float foot_y,float foot_q,str foot,np.ndarray com_q)
 
     cdef void buildConstraints(self)
     cdef void buildCoPconstraint(self)   
@@ -230,4 +245,5 @@ cdef class BaseGenerator:
     cdef void buildFootRotationConstraints(self)
     cdef void buildRotIneqConstraint(self)
        
-    cdef void _update_cop_constraint_transformation(self)
+    cpdef void simulate(self)
+    cpdef tuple update(self)

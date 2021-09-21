@@ -26,7 +26,7 @@ cpdef public int nmpc_vel_ref() except -1:
     comx = np.array([-3.16e-3, 0.0, 0.0])
     comy = np.array([1.237384291203724555e-03,0.0, 0.0])
     comz = 8.786810585901939641e-01
-    comq = 0.0
+    comq = np.array([0.,0.,0.])
     footx = 1.86e-4
     footy = 0.085
     footq = 0.0 
@@ -52,8 +52,9 @@ cpdef public int nmpc_vel_ref() except -1:
         nmpc.solve()
         nmpc.simulate()
 
-        # comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
-        comx,comq = nmpc.update()
+        comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
+        # comx,comq[0] = nmpc.update()
+
         # print(comx,comq)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
 

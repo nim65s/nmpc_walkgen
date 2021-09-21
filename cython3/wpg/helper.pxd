@@ -3,8 +3,8 @@ cdef class BaseTypeSupportFoot:
     cdef float x
     cdef float y
     cdef float q
-    cdef str foot
+    cdef str _foot
     cdef int _ds
-    cdef int stepNumber
-    cdef float timeLimit
+    cdef int _stepNumber
+    cdef float _timeLimit
 

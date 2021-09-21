@@ -41,7 +41,7 @@ test: test.o embedded_test.o
 %.o: %.cpp
 	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)
 
-nmpc_vel_ref.cpp: nmpc_vel_ref.pyx
+nmpc_vel_ref.cpp: nmpc_vel_ref.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py
 	$(PYTHON) setup.py build_ext --inplace
 
 test.cpp: test.pyx

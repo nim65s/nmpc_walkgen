@@ -42,12 +42,12 @@ class BaseGenerator(object):
         self.nf = (int)(self.T_window/T_step)
         self.time = 0.0
         # # finite state machine for starting and landing maneuvers
-        self._fsm_states = ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
+        # self._fsm_states =   ('D', 'L/R', 'R/L', 'Lbar/Rbar', 'Rbar/Lbar')
 
-        err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
-        assert fsm_state in self._fsm_states, err_str
+        # err_str = 'proposed state {} not in FSM states ({})'.format(fsm_state, self._fsm_states)
+        # assert fsm_state in self._fsm_states, err_str
         self.fsm_state = fsm_state
-        self.fsm_states = np.array((self.fsm_state,)*self.nf, dtype='|S3')
+        self.fsm_states = np.array((self.fsm_state,)*self.nf, dtype=str)
 
         # objective weights
 
@@ -356,15 +356,14 @@ class BaseGenerator(object):
         self.lbB_fvel_ineq = np.zeros((self.nc_fvel_ineq,), dtype=float)
 
         # Current support state
-        self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")
-        self.currentSupport.timeLimit = 0
-        self.currentSupport.ds = 0
+        self.currentSupport = BaseTypeSupportFoot(x=self.f_k_x, y=self.f_k_y, theta=self.f_k_q, foot="left")    
+        # self.currentSupport.timeLimit = 0
+        # self.currentSupport.ds = 0
         self.supportDeque = np.empty( (N,) , dtype=object )        
         for i in range(N):
             self.supportDeque[i] = BaseTypeSupportFoot()
-
-        print(self.supportDeque[0],self.currentSupport)
-        print(self.supportDeque[0].ds,self.currentSupport.ds)
+        self.supportDeque[0].ds = 1            
+        self.supportDeque[8].ds = 1 
 
         """
         NOTE number of foot steps in prediction horizon changes between
@@ -551,71 +550,69 @@ class BaseGenerator(object):
             B0[i] =   sign * dc
 
     def _calculate_support_order(self):
-        print("nothing")
-        # self.currentSupport.ds = deepcopy(self.supportDeque[0].ds)
+        self.currentSupport.ds = deepcopy(self.supportDeque[0].ds)
 
-        # # find correct initial support foot
-        # if (self.currentSupport.foot == "left" ) :
-        #     pair = "left"
-        #     impair = "right"
-        # else :
-        #     pair = "right"
-        #     impair = "left"
+        # find correct initial support foot
+        if (self.currentSupport.foot == "left" ) :
+            pair = "left"
+            impair = "right"
+        else :
+            pair = "right"
+            impair = "left"
 
-        # # define support feet for whole horizon
-        # for i in range(self.N):
-        #     if self.v_kp1[i] == 1:
-        #         self.supportDeque[i].foot = self.currentSupport.foot
-        #         self.supportDeque[i].stepNumber = 0
-        #     else:
-        #         for j in range(self.nf):
-        #             if self.V_kp1[i][j] == 1 :
-        #                 self.supportDeque[i].stepNumber = j+1
-        #                 if (j % 2) == 1:
-        #                     self.supportDeque[i].foot = pair
-        #                 else :
-        #                     self.supportDeque[i].foot = impair
-        #     # print(i,self.supportDeque[i].foot)
+        # define support feet for whole horizon
+        for i in range(self.N):
+            if self.v_kp1[i] == 1:
+                self.supportDeque[i].foot = self.currentSupport.foot
+                self.supportDeque[i].stepNumber = 0
+            else:
+                for j in range(self.nf):
+                    if self.V_kp1[i][j] == 1 :
+                        self.supportDeque[i].stepNumber = j+1
+                        if (j % 2) == 1:
+                            self.supportDeque[i].foot = pair
+                        else :
+                            self.supportDeque[i].foot = impair
+            # print(i,self.supportDeque[i].foot)
 
-        # if np.sum(self.v_kp1)==8 :
-        #     self.supportDeque[0].ds = 1
-        # else :
-        #     self.supportDeque[0].ds = 0
-        # for i in range (1,self.N):
-        #     self.supportDeque[i].ds = self.supportDeque[i].stepNumber - self.supportDeque[i-1].stepNumber
+        if np.sum(self.v_kp1)==8 :
+            self.supportDeque[0].ds = 1
+        else :
+            self.supportDeque[0].ds = 0
+        for i in range (1,self.N):
+            self.supportDeque[i].ds = self.supportDeque[i].stepNumber - self.supportDeque[i-1].stepNumber
 
-        # timeLimit = self.supportDeque[0].timeLimit
-        # for i in range(self.N):
-        #     if self.supportDeque[i].ds == 1 :
-        #         timeLimit = timeLimit + self.T_step
-        #     self.supportDeque[i].timeLimit = timeLimit
+        timeLimit = self.supportDeque[0].timeLimit
+        for i in range(self.N):
+            if self.supportDeque[i].ds == 1 :
+                timeLimit = timeLimit + self.T_step
+            self.supportDeque[i].timeLimit = timeLimit
 
     def _update_foot_selection_matrices(self):
-        print("nothing")
-        # """ update the foot selection matrices E_F and E_F_bar """
-        # self.E_FR    [...] = 0.0
-        # self.E_FR_bar[...] = 0.0
-        # self.E_FL    [...] = 0.0
-        # self.E_FL_bar[...] = 0.0
+        """ update the foot selection matrices E_F and E_F_bar """
+        self.E_FR    [...] = 0.0
+        self.E_FR_bar[...] = 0.0
+        self.E_FL    [...] = 0.0
+        self.E_FL_bar[...] = 0.0
 
-        # i = 0
-        # for j,supp in enumerate(self.supportDeque):
-        #     if supp.foot == 'left':
-        #         self.E_FR    [i,j] = 1.0
-        #         self.E_FL    [i,j] = 0.0
+        i = 0
+        for j,supp in enumerate(self.supportDeque):
+            if supp.foot == 'left':
+                self.E_FR    [i,j] = 1.0
+                self.E_FL    [i,j] = 0.0
 
-        #         self.E_FR_bar[i,j] = 0.0
-        #         self.E_FL_bar[i,j] = 1.0
-        #     else:# supp.foot == 'right:'
-        #         self.E_FR    [i,j] = 0.0
-        #         self.E_FL    [i,j] = 1.0
+                self.E_FR_bar[i,j] = 0.0
+                self.E_FL_bar[i,j] = 1.0
+            else:# supp.foot == 'right:'
+                self.E_FR    [i,j] = 0.0
+                self.E_FL    [i,j] = 1.0
 
-        #         self.E_FR_bar[i,j] = 1.0
-        #         self.E_FL_bar[i,j] = 0.0
-        #     i += 1
+                self.E_FR_bar[i,j] = 1.0
+                self.E_FL_bar[i,j] = 0.0
+            i += 1
 
     def _update_selection_matrices(self):
-        print("___ SELECT MAT ___")
+        # print("___ SELECT MAT ___")
         """
         Update selection vector v_kp1 and selection matrix V_kp1.
 
@@ -645,7 +642,6 @@ class BaseGenerator(object):
    
         if (self.v_kp1 == 0).all():
             # print("old states : ",self.fsm_states)
-
             self.v_kp1[:] = self.V_kp1[:,0]
             self.V_kp1[:,:-1] = self.V_kp1[:,1:]
             self.V_kp1[:,-1] = 0
@@ -659,11 +655,11 @@ class BaseGenerator(object):
             self.currentSupport.y = self.f_k_y
             self.currentSupport.q = self.f_k_q
 
+
             if self.currentSupport.foot == 'right':
                 self.currentSupport.foot  = 'left'
             else:
                 self.currentSupport.foot = 'right'
-
 
             # update support order with new foot state
             self._calculate_support_order()
@@ -678,6 +674,7 @@ class BaseGenerator(object):
                 if (self.c_k_x[1:] != 0.0).any() \
                 or (self.c_k_y[1:] != 0.0).any() \
                 or (self.c_k_q[1:] != 0.0).any():
+
                     if self.currentSupport.foot == 'right':
                         # print("-->'L/R'")
                         self.fsm_states[0] = 'R/L'
@@ -687,49 +684,46 @@ class BaseGenerator(object):
                         self.fsm_states[0] = 'L/R'
                         # print("-->'R/L'")
             # else stay in double support
-
             else:
                 # print("--> 'D'")
                 self.fsm_states[0] = self.fsm_states[-1]
                 self.fsm_states[-1] = 'D'
-                
-
+               
             # also update finite state machine
-            self.fsm_state = self.fsm_states[0].copy()
+            self.fsm_state = str(self.fsm_states[0].copy())
 
     def _update_cop_constraint_transformation(self):
-        print("nothing")
-        # # print("--- INIT CoP ---")
-        # """ update foot constraint transformation matrices. """
-        # # every time instant in the pattern generator constraints
-        # # depend on the support order
-        # theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
-        # for i in range(self.N):
-        #     theta = theta_vec[self.supportDeque[i].stepNumber]
-        #     rotMat = np.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
-        #     if self.supportDeque[i].foot == "left" :
-        #         A0 = self.A0lf.dot(rotMat)
-        #         B0 = self.ubB0lf
-        #         D0 = self.A0dlf.dot(rotMat)
-        #         d0 = self.ubB0dlf
-        #     else :
-        #         A0 = self.A0rf.dot(rotMat)
-        #         B0 = self.ubB0rf
-        #         D0 = self.A0drf.dot(rotMat)
-        #         d0 = self.ubB0drf
+        # print("--- INIT CoP ---")
+        """ update foot constraint transformation matrices. """
+        # every time instant in the pattern generator constraints
+        # depend on the support order
+        theta_vec = [self.f_k_q,self.F_k_q[0],self.F_k_q[1]]
+        for i in range(self.N):
+            theta = theta_vec[self.supportDeque[i].stepNumber]
+            rotMat = np.array([[cos(theta), sin(theta)],[-sin(theta), cos(theta)]])
+            if self.supportDeque[i].foot == "left" :
+                A0 = self.A0lf.dot(rotMat)
+                B0 = self.ubB0lf
+                D0 = self.A0dlf.dot(rotMat)
+                d0 = self.ubB0dlf
+            else :
+                A0 = self.A0rf.dot(rotMat)
+                B0 = self.ubB0rf
+                D0 = self.A0drf.dot(rotMat)
+                d0 = self.ubB0drf
 
-        #     # get support foot and check if it is double support
-        #     if self.fsm_state == 'D':
-        #         A0 = D0
-        #         B0 = d0
+            # get support foot and check if it is double support
+            if self.fsm_state == 'D':
+                A0 = D0
+                B0 = d0
 
-        #     for k in range(self.nFootEdge):
-        #         # get d_i+1^x(f^theta)
-        #         self.D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
-        #         # get d_i+1^y(f^theta)
-        #         self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
-        #         # get right hand side of equation
-        #         self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
+            for k in range(self.nFootEdge):
+                # get d_i+1^x(f^theta)
+                self.D_kp1x[i*self.nFootEdge+k, i] = A0[k][0]
+                # get d_i+1^y(f^theta)
+                self.D_kp1y[i*self.nFootEdge+k, i] = A0[k][1]
+                # get right hand side of equation
+                self.b_kp1 [i*self.nFootEdge+k]    = B0[k]
 
     def set_security_margin(self, margin_x, margin_y):
         # print("... SET MARGIN ...")

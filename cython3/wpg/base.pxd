@@ -10,7 +10,7 @@ cdef class BaseGenerator:
     cdef int nf
     cdef float time
        
-    cdef tuple _fsm_states
+    # cdef tuple _fsm_states
 
     cdef str err_str
     cdef str fsm_state 

@@ -3,6 +3,7 @@ cimport numpy as np
 from wpg.helper cimport BaseTypeSupportFoot
 
 cdef class BaseGenerator:
+
     cdef int N 
     cdef float T
     cdef float T_window
@@ -10,8 +11,6 @@ cdef class BaseGenerator:
     cdef int nf
     cdef float time
        
-    # cdef tuple _fsm_states
-
     cdef str err_str
     cdef str fsm_state 
     cdef np.ndarray fsm_states 

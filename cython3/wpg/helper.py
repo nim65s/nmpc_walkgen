@@ -5,7 +5,14 @@ class BaseTypeSupportFoot(object):
         self.y = y
         self.q = theta
         self.foot = foot
-        self.ds = 0
+        self._ds = 0
         self.stepNumber = 0
         self.timeLimit = 0
 
+    def get_ds(self):
+        return self._ds
+
+    def set_ds(self, ds):
+        self._ds = ds
+
+    ds = property(get_ds, set_ds)

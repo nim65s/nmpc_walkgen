@@ -2,6 +2,7 @@ import numpy as np
 cimport numpy as np
 from libs cimport c
 
+# cimport qpoases
 # from libcpp.qpoases import SQProblem 
 # from qpoases import PySQProblem as SQProblem
 
@@ -11,7 +12,6 @@ from libs cimport c
 
 cpdef int myfunction(int x, int y=*)
 
-cdef double _helper(double a)
 
 cdef class A:
     cdef public int a, b
@@ -28,12 +28,12 @@ cdef class A:
     cdef float cpu_time 
     cdef int nwsr 
     cdef str txt
-
-    cpdef np.ndarray foo(self, double x)
+    # cdef SQProblem qp
 
     cpdef int bar(self)
 
     cpdef int test_char(self)
 
     cpdef int test_qp(self)
+
 

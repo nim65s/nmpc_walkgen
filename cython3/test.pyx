@@ -3,13 +3,17 @@ from libs cimport a
 import time
 import numpy as np
 import os, sys
+from qpoases import PySQProblem as SQProblem
 
 cpdef public int test() except -1:
+
+    cdef qp = SQProblem(2, 1)
 
     nmpc = a.A()
     f = open("../data/test.dat", "w")
     f.write("")
     f.close()
+
 
     cdef float comx[3],velocity_reference[3]
     cdef int nb_step
@@ -25,7 +29,6 @@ cpdef public int test() except -1:
 
     for i in range(8*nb_step):
         # print("iteration : ",i)
-        # print(nmpc.foo(i))
 
         f = open("../data/test.dat", "a")
         line = str(time.time()) +" \n"

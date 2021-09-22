@@ -6,11 +6,6 @@ def myfunction(x, y=2):
     l = np.array([x,y],dtype=int)
     return l[0]+l[1]
 
-
-def _helper(a):
-    return a + 1
-
-
 class A:
     def __init__(self, b=0):
         self.a = 3
@@ -30,10 +25,6 @@ class A:
         self.nwsr = 1000 # unlimited bounded
         self.txt = "left"
 
-    def foo(self, x):
-        print(x + _helper(1.0))
-        return self.l
-
     def bar(self):
         test = c.C()
         return test.c(3)  
@@ -51,4 +42,3 @@ class A:
             self.nwsr, self.cpu_time
         )
         return(0)
-

@@ -11,17 +11,17 @@ cdef class NMPCGenerator(BaseGenerator):
     cdef int nc_ori
     cdef int nc
 
-    cdef np.ndarray nwsr,cputime,qp_nwsr,qp_cputime
+    cpdef np.ndarray nwsr,cputime,qp_nwsr,qp_cputime
 
-    cdef np.ndarray dofs
+    cpdef np.ndarray dofs
 
-    cdef np.ndarray qp_H     
-    cdef np.ndarray qp_A
-    cdef np.ndarray qp_g
-    cdef np.ndarray qp_lb    
-    cdef np.ndarray qp_ub
-    cdef np.ndarray qp_lbA
-    cdef np.ndarray qp_ubA
+    cpdef np.ndarray qp_H     
+    cpdef np.ndarray qp_A
+    cpdef np.ndarray qp_g
+    cpdef np.ndarray qp_lb    
+    cpdef np.ndarray qp_ub
+    cpdef np.ndarray qp_lbA
+    cpdef np.ndarray qp_ubA
 
     cdef bint _qp_is_initialized # or bool + from libcpp cimport bool
 
@@ -51,10 +51,8 @@ cdef class NMPCGenerator(BaseGenerator):
     cdef void _calculate_common_expressions(self)
     cdef void _calculate_derivatives(self)
 
-    cdef void _preprocess_solution(self)
-    cdef void _solve_qp(self) 
-    cdef void _postprocess_solution(self)       
-    cpdef void solve(self) 
+    cpdef void preprocess_solution(self)
+    cpdef void postprocess_solution(self)       
 
     cdef void _update_foot_selection_matrix(self) 
     

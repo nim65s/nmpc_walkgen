@@ -396,7 +396,7 @@ class NMPCGenerator(BaseGenerator):
         self.A_pos_q[a:b, :N] = dummy.dot(self.derv_Afoot_map).dot(self.E_FR_bar).dot(self.Ppu)
         self.A_pos_q[a:b,-N:] = dummy.dot(self.derv_Afoot_map).dot(self.E_FL_bar).dot(self.Ppu)
 
-    def _preprocess_solution(self):
+    def preprocess_solution(self):
         """ Update matrices and get them into the QP data structures """
         # rename for convenience
         N  = self.N
@@ -546,46 +546,7 @@ class NMPCGenerator(BaseGenerator):
         lbA_q[...] = self.lbA_ori - self.A_ori.dot(U_k_q)
         ubA_q[...] = self.ubA_ori - self.A_ori.dot(U_k_q)
 
-    def _solve_qp(self):
-        print("~~~ SOLVE ~~~")
-        """
-        Solve QP first run with init functionality and other runs with warmstart
-        """
-        self.cputime = np.array([2.9]) # ms
-        self.nwsr = np.array([1000]) # unlimited bounded
-
-        options = Options()
-        options.setToMPC()
-        options.printLevel = PrintLevel.LOW
-        qp = SQProblem(self.nv, self.nc)
-        qp.setOptions(options)
-
-        if not self._qp_is_initialized:
-            qp.init(
-                self.qp_H, self.qp_g, self.qp_A,
-                self.qp_lb, self.qp_ub,
-                self.qp_lbA, self.qp_ubA,
-                self.nwsr, self.cputime
-            )
-            nwsr, cputime = self.nwsr, self.cputime
-            self._qp_is_initialized = True
-        else:
-            qp.hotstart(
-                self.qp_H, self.qp_g, self.qp_A,
-                self.qp_lb, self.qp_ub,
-                self.qp_lbA, self.qp_ubA,
-                self.nwsr, self.cputime
-            )
-            nwsr, cputime = self.nwsr, self.cputime
-
-        # orientation primal solution
-        qp.getPrimalSolution(self.dofs)
-
-        # save qp solver data
-        self.qp_nwsr    = nwsr          # working set recalculations
-        self.qp_cputime = cputime*1000. # in milliseconds (set to 2.9ms)
-
-    def _postprocess_solution(self):
+    def postprocess_solution(self):
         """ Get solution and put it back into generator data structures """
         # rename for convenience
         N  = self.N
@@ -618,12 +579,6 @@ class NMPCGenerator(BaseGenerator):
         a =2*(N + nf)
         self.dddF_k_qR[:] += alpha * self.dofs[  a:a+N]
         self.dddF_k_qL[:] += alpha * self.dofs[ -N:]
-
-    def solve(self):
-        """ Process and solve problem, s.t. pattern generator data is consistent """
-        self._preprocess_solution()
-        self._solve_qp()
-        self._postprocess_solution()
 
     def _update_foot_selection_matrix(self):
         """ get right foot selection matrix """

@@ -1,4 +1,5 @@
 from wpg.combinedqp cimport NMPCGenerator
+from wpg.interpolation cimport Interpolation
 import time
 import numpy as np
 cimport numpy as np
@@ -9,13 +10,7 @@ from qpoases import PyPrintLevel as PrintLevel
 from qpoases import PySQProblem as SQProblem
 from qpoases import PySolutionAnalysis as SolutionAnalysis
 
-
-
-
-
 cpdef public int nmpc_vel_ref() except -1:
-
-
 
     cdef np.ndarray comx, comy, comq, velocity_reference
     cdef float comz, footx, footy, footq
@@ -39,6 +34,8 @@ cpdef public int nmpc_vel_ref() except -1:
 
     nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
 
+    interp_nmpc = Interpolation(0.001,nmpc)
+
     nb_step = 10    
 
     f = open("../data/nmpc_vel_cython.dat", "w")
@@ -52,7 +49,8 @@ cpdef public int nmpc_vel_ref() except -1:
     qp.setOptions(options)
 
     for i in range(8*nb_step):
-        # print("iteration : ",i)
+        print("iteration : ",i)
+        time_iter = i*0.1
 
         if 7 <= i < 8*(nb_step-2)-1 :
             velocity_reference = np.array([0.2, 0., 0.])
@@ -95,9 +93,10 @@ cpdef public int nmpc_vel_ref() except -1:
         nmpc.postprocess_solution()
 
         nmpc.simulate()
+        interp_nmpc.interpolate(time_iter)
 
         comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
-
+        # print(comx[0],nmpc.C_kp1_x[0],nmpc.C_kp1_x[-1],interp_nmpc.curLeft.x,interp_nmpc.CoMbuffer[-1].x)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
 
         zmpx = comx[0]-comz/9.81*comx[2]
@@ -114,7 +113,7 @@ cpdef public int nmpc_vel_ref() except -1:
         else :
             foot_bool = -1
 
-        print(nmpc.fsm_states,foot,foot_bool,state_bool)
+        # print(nmpc.fsm_states,foot,foot_bool,state_bool)
 
         f = open("../data/nmpc_vel_cython.dat", "a")
         line = str(time.time()) + " " + str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
@@ -125,6 +124,8 @@ cpdef public int nmpc_vel_ref() except -1:
             + "  " + str(state_bool) + " \n"
         f.write(line)
         f.close()
+
+    interp_nmpc.save_to_file("./nmpc_interpolated_cython.csv")
 
     return 0
 

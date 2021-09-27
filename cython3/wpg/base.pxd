@@ -5,12 +5,13 @@ from wpg.helper cimport BaseTypeSupportFoot
 cdef class BaseGenerator:
 
     cdef int N 
-    cdef float T
-    cdef float T_window
-    cdef float T_step    
+    cdef double T
+    cdef double T_window
+    cdef double T_step    
     cdef int nf
-    cdef float time
+    cdef double time
        
+
     cdef str err_str
     cdef str fsm_state 
     cdef np.ndarray fsm_states 
@@ -136,13 +137,13 @@ cdef class BaseGenerator:
     cdef np.ndarray lbBfoot
     cdef np.ndarray ubBfoot
 
-    cdef float SecurityMarginX
-    cdef float SecurityMarginY
+    cdef double SecurityMarginX
+    cdef double SecurityMarginY
 
     cdef int nFootEdge
-    cdef float footWidth
-    cdef float footHeight
-    cdef float footDistance
+    cdef double footWidth
+    cdef double footHeight
+    cdef double footDistance
 
     cdef np.ndarray lfoot
     cdef np.ndarray rfoot

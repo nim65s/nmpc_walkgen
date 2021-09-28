@@ -14,7 +14,7 @@ class Interpolation(object):
 		self.T = self.gen.T # QP sampling period
 		self.Tc = Tc # sampling period of the robot low level controller
 		self.interval = int(self.T/self.Tc) # number of iteration in 100ms
-		self.state = self.gen.fsm_state # the initial state of the next QP iteration
+		# self.state = self.gen.fsm_state # the initial state of the next QP iteration
 
 		# initiale states used to interpolate (they should be intialized once at
 		# the beginning of the qp
@@ -27,6 +27,10 @@ class Interpolation(object):
 		zmp = ZMPState()
 		zmp.x = self.curCoM.x[0] - self.curCoM.z / self.gen.g * self.curCoM.x[2]
 		zmp.y = self.curCoM.y[0] - self.curCoM.z / self.gen.g * self.curCoM.y[2]
+
+		self.fi = FootInterpolation(generator = self.gen, QPsamplingPeriod = self.gen.T,
+			NbSamplingPreviewed = self.gen.N, commandPeriod = self.Tc,
+			stepTime = self.gen.T_step)
 
 		self.curLeft = BaseTypeFoot()
 		self.curRight = BaseTypeFoot()
@@ -69,10 +73,6 @@ class Interpolation(object):
 
 		self.lipm = LIPM(self.T,self.Tc,self.curCoM.z)
 
-		self.fi = FootInterpolation(generator = self.gen, QPsamplingPeriod = self.gen.T,
-			NbSamplingPreviewed = self.gen.N, commandPeriod = self.Tc,
-			stepTime = self.gen.T_step)
-
 	def interpolate(self, time):
 		self.curCoM, self.CoMbuffer, self.ZMPbuffer = self.lipm.interpolate(
 			                    self.gen.dddC_k_x[0], self.gen.dddC_k_y[0],
@@ -82,9 +82,7 @@ class Interpolation(object):
 		                        self.curLeft, self.curRight,
 		                        self.gen.F_k_x[0], self.gen.F_k_y[0], self.gen.F_k_q[0],
 		                        self.LFbuffer, self.RFbuffer)
-		print(self.curLeft.x,self.curLeft.y,self.curLeft.z)
-		print(self.LFbuffer[1].x,self.LFbuffer[1].y,self.LFbuffer[1].z)
-		print(len(self.LFbuffer),self.interval)
+
 		for i in range ( self.LFbuffer.shape[0] ) :
 			self.CoMbuffer[i].q[0] = 0.5*(self.LFbuffer[i].q + self.RFbuffer[i].q)
 			self.CoMbuffer[i].q[1] = 0.5*(self.LFbuffer[i].dq + self.RFbuffer[i].dq)
@@ -308,13 +306,11 @@ class FootInterpolation(object):
 			self.polynomeZ.setParameters(self.TSS,self.stepHeigth,curRight.z,curRight.dz)
 			# print("z :",LeftFootBuffer[0].z,RightFootBuffer[0].z)
 			return curLeft,curRight,LeftFootBuffer, RightFootBuffer
-		else:
-
+		else:	
 			timelimit = time + np.sum(self.gen.v_kp1) * self.T
 			for i in range(self.intervaleSize):
 				LeftFootBuffer[i] = BaseTypeFoot()
-				RightFootBuffer[i] = BaseTypeFoot()
-
+				RightFootBuffer[i] = BaseTypeFoot()					
 			# print ("t_lim:",timelimit)
 			# print ("v:",self.gen.v_kp1)
 			# print ("V:",self.gen.V_kp1)
@@ -383,18 +379,18 @@ class FootInterpolation(object):
 					supportFootBuffer[i].supportFoot = 1
 
 					Ti = self.Tc * i # interpolation time
-					Tlocal = localInterpolationStartTime + Ti
+					Tlocal = localInterpolationStartTime + Ti			
 
-				# if we are landing or lifting the foot, do not modify the x,y and theta
-				if localInterpolationStartTime < endOfLiftoff:
-					Tr = Ti - endOfLiftoff # Tr = remaining time
-					flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Tr)
-				else:
-					flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Ti)
+					# if we are landing or lifting the foot, do not modify the x,y and theta
+					if localInterpolationStartTime < endOfLiftoff:
+						Tr = Ti - endOfLiftoff # Tr = remaining time
+						flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Tr)
+					else:
+						flyingFootBuffer[i] = self.computeXYQ(flyingFootBuffer[i],Ti)
 
-				flyingFootBuffer[i].z = self.polynomeZ.compute(Tlocal)
-				flyingFootBuffer[i].dz = self.polynomeZ.computeDerivative(Tlocal)
-				flyingFootBuffer[i].ddz = self.polynomeZ.computeSecDerivative(Tlocal)
+					flyingFootBuffer[i].z = self.polynomeZ.compute(Tlocal)
+					flyingFootBuffer[i].dz = self.polynomeZ.computeDerivative(Tlocal)
+					flyingFootBuffer[i].ddz = self.polynomeZ.computeSecDerivative(Tlocal)
 
 				if localInterpolationStartTime < endOfLiftoff:
 					# Compute the next iteration state

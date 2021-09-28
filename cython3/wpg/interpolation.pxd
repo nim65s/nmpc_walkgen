@@ -10,7 +10,7 @@ cdef class Interpolation:
 	cdef double T
 	cdef double Tc
 	cdef int interval
-	cdef str state
+	# cdef str state
 
 	cdef CoMState curCoM
 	cdef ZMPState zmp

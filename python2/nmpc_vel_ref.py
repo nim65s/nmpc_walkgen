@@ -38,8 +38,8 @@ f = open("../data/nmpc_vel.dat", "w")
 f.write("")
 f.close()
 
-nb_step = 20
-raw_input()
+nb_step = 10
+# raw_input()
 # Pattern Generator Event Loop
 for i in range (8*nb_step):
     print 'iteration: ', i
@@ -53,14 +53,14 @@ for i in range (8*nb_step):
     #     velocity_reference = [0.2, 0.0, 0.1]
     # if 8*22-1 <= i < 8*(nb_step-2)-1 :
     #     velocity_reference = [0.2, 0.0, -0.1]  
-    if 7 <= i < 8*5-1 :
-        velocity_reference = [0.2, 0., 0.]
-    if 8*5-1 <= i < 8*9-1 :
-        velocity_reference = [0.2, 0., 0.1]        
-    if 8*9-1 <= i < 8*14-1 :
-        velocity_reference = [0., 0.04, 0.]
-    if 8*14-1 <= i < 8*(nb_step-2)-1 :
-        velocity_reference = [0.2, 0., 0.]
+    # if 7 <= i < 8*5-1 :
+    #     velocity_reference = [0.2, 0., 0.]
+    # if 8*5-1 <= i < 8*9-1 :
+    #     velocity_reference = [0.2, 0., 0.1]        
+    # if 8*9-1 <= i < 8*14-1 :
+    #     velocity_reference = [0., 0.04, 0.]
+    if 7 <= i < 8*(nb_step-2)-1 :
+        velocity_reference = [0., 0.1, 0.]
 
     if 8*(nb_step-2)-1 <= i:
         velocity_reference = [0.0, 0.0, 0.0]

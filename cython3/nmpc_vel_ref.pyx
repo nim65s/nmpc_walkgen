@@ -38,19 +38,20 @@ cpdef public int nmpc_vel_ref() except -1:
 
     nb_step = 10    
 
-    f = open("../data/nmpc_vel_cython.dat", "w")
-    f.write("")
-    f.close()
+    # f = open("../data/nmpc_vel_cython.dat", "w")
+    # f.write("")
+    # f.close()
 
     cdef qp = SQProblem(nmpc.nv,nmpc.nc)
     options = Options()
     options.setToMPC()
     options.printLevel = PrintLevel.LOW
     qp.setOptions(options)
-
+    time_list = []
     for i in range(8*nb_step):
-        print("iteration : ",i)
+        # print("iteration : ",i)
         time_iter = i*0.1
+
         # if 7 <= i < 8*4-1 :
         #     velocity_reference = np.array([0.2, 0.0, 0.0])
         # if 8*4-1 <= i < 8*15-1 :
@@ -63,7 +64,7 @@ cpdef public int nmpc_vel_ref() except -1:
             velocity_reference = np.array([0.2, 0., 0.])
         if 8*(nb_step-2)-1 <= i:
             velocity_reference = np.array([0., 0., 0.])
-
+        start_time = time.time()
         nmpc.set_velocity_reference(velocity_reference)
 
         nmpc.preprocess_solution()
@@ -105,34 +106,35 @@ cpdef public int nmpc_vel_ref() except -1:
         comx, comy, comz, footx, footy, footq, foot, comq, state = nmpc.update()
         # print(comx[0],nmpc.C_kp1_x[0],nmpc.C_kp1_x[-1],interp_nmpc.curLeft.x,interp_nmpc.CoMbuffer[-1].x)
         nmpc.set_initial_values(comx, comy, comz, footx, footy, footq, foot, comq)
+        time_list.append(time.time() - start_time)
+        # zmpx = comx[0]-comz/9.81*comx[2]
+        # zmpy = comy[0]-comz/9.81*comy[2]  
 
-        zmpx = comx[0]-comz/9.81*comx[2]
-        zmpy = comy[0]-comz/9.81*comy[2]  
+        # if state == 'D':
+        #     state_bool = 0
+        # elif state == 'L':
+        #     state_bool = 1
+        # else:
+        #     state_bool = -1
+        # if foot == 'left':
+        #     foot_bool = 1
+        # else :
+        #     foot_bool = -1
 
-        if state == 'D':
-            state_bool = 0
-        elif state == 'L':
-            state_bool = 1
-        else:
-            state_bool = -1
-        if foot == 'left':
-            foot_bool = 1
-        else :
-            foot_bool = -1
+        # # print(nmpc.fsm_states,foot,foot_bool,state_bool)
 
-        # print(nmpc.fsm_states,foot,foot_bool,state_bool)
+        # f = open("../data/nmpc_vel_cython.dat", "a")
+        # line = str(time.time()) + " " + str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
+        #     str(comy[0])+ "  " + str(comy[1])+ "  " + str(comy[2])+ "  " +\
+        #     str(comz)+ "  0  0  " + str(comq[0]) + "  " + str(comq[1]) + "  " +\
+        #     str(comq[2]) + "  " + str(footx) + "  " + str(footy)+ "  " +\
+        #     str(footq) +  "  " + str(zmpx) + "  " + str(zmpy) + "  " + str(foot_bool) \
+        #     + "  " + str(state_bool) + " \n"
+        # f.write(line)
+        # f.close()
 
-        f = open("../data/nmpc_vel_cython.dat", "a")
-        line = str(time.time()) + " " + str(comx[0])+ "  " + str(comx[1])+ "  " + str(comx[2])+ "  " +\
-            str(comy[0])+ "  " + str(comy[1])+ "  " + str(comy[2])+ "  " +\
-            str(comz)+ "  0  0  " + str(comq[0]) + "  " + str(comq[1]) + "  " +\
-            str(comq[2]) + "  " + str(footx) + "  " + str(footy)+ "  " +\
-            str(footq) +  "  " + str(zmpx) + "  " + str(zmpy) + "  " + str(foot_bool) \
-            + "  " + str(state_bool) + " \n"
-        f.write(line)
-        f.close()
-
-    interp_nmpc.save_to_file("./nmpc_interpolated_cython.csv")
+    # interp_nmpc.save_to_file("./nmpc_interpolated_cython.csv")
+    print(np.sum(time_list),np.mean(time_list))
 
     return 0
 

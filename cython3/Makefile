@@ -38,6 +38,9 @@ nmpc_vel_ref: nmpc_vel_ref.o embedded_main.o
 test: test.o embedded_test.o
 	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
+nmpc_vel_ref_online: nmpc_vel_ref_online.o embedded_main_online.o
+	$(LINKCC) -O3 -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
+
 %.o: %.cpp
 	$(CC) -O3 -c $^ -I$(INCDIR) -I$(PLATINCDIR)
 
@@ -47,6 +50,9 @@ nmpc_vel_ref.cpp: nmpc_vel_ref.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py w
 test.cpp: test.pyx
 	$(PYTHON) setup_test.py build_ext --inplace
 
+nmpc_vel_ref_online.cpp: nmpc_vel_ref_online.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py wpg/interpolation.py
+	$(PYTHON) setup_online.py build_ext --inplace
+
 clean:
 	@echo Cleaning ...
-	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref nmpc_vel_ref.cpp test.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__ wpg/*.cpp build wpg/*.so wpg/__pycache__ 
+	@rm -rf *~ *.o *.so core core.* test nmpc_vel_ref nmpc_vel_ref.cpp nmpc_vel_ref_online nmpc_vel_ref_online.cpp test.cpp *.h libs/*.cpp build libs/*.so libs/__pycache__ wpg/*.cpp build wpg/*.so wpg/__pycache__ 

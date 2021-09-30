@@ -46,8 +46,10 @@ main(int argc, char *argv[])
         goto exit_with_error;
     }
 
+/*    test(100,20);*/
+
     /* Now call into your module code. */
-    if (test(9) < 0) {
+    if (test(9,1) < 0) {
         PyErr_Print();
         fprintf(stderr, "Error in Python code, exception was printed.\n");
         goto exit_with_error;

@@ -5,7 +5,9 @@ import numpy as np
 import os, sys
 from qpoases import PySQProblem as SQProblem
 
-cpdef public int test() except -1:
+cpdef public int test(int x) except -1:
+
+    print("x =",x)
 
     cdef qp = SQProblem(2, 1)
 

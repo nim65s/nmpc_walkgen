@@ -33,15 +33,15 @@ paths:
 	@echo "SYSLIBS=$(SYSLIBS)"
 
 nmpc_vel_ref: nmpc_vel_ref.o embedded_main.o
-	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
+	$(LINKCC) -O3 -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
 test: test.o embedded_test.o
 	$(LINKCC) -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
 %.o: %.cpp
-	$(CC) -c $^ -I$(INCDIR) -I$(PLATINCDIR)
+	$(CC) -O3 -c $^ -I$(INCDIR) -I$(PLATINCDIR)
 
-nmpc_vel_ref.cpp: nmpc_vel_ref.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py
+nmpc_vel_ref.cpp: nmpc_vel_ref.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py wpg/interpolation.py
 	$(PYTHON) setup.py build_ext --inplace
 
 test.cpp: test.pyx

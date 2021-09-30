@@ -51,7 +51,14 @@ cpdef public int nmpc_vel_ref() except -1:
     for i in range(8*nb_step):
         print("iteration : ",i)
         time_iter = i*0.1
-
+        # if 7 <= i < 8*4-1 :
+        #     velocity_reference = np.array([0.2, 0.0, 0.0])
+        # if 8*4-1 <= i < 8*15-1 :
+        #     velocity_reference = np.array([0.1, 0., 0.2])
+        # if 8*15-1 <= i < 8*22-1 :
+        #     velocity_reference = np.array([0.2, 0.0, 0.1])
+        # if 8*22-1 <= i < 8*(nb_step-2)-1 :
+        #     velocity_reference = np.array([0.2, 0.0, -0.1])
         if 7 <= i < 8*(nb_step-2)-1 :
             velocity_reference = np.array([0.2, 0., 0.])
         if 8*(nb_step-2)-1 <= i:

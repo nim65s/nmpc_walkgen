@@ -4,7 +4,7 @@ from libs cimport c
 
 # cimport qpoases
 # from libcpp.qpoases import SQProblem 
-from qpoases import PySQProblem as SQProblem
+# from qpoases import PySQProblem as SQProblem
 # from qpoases cimport PySQProblem as SQProblem
 
 
@@ -26,7 +26,7 @@ cdef class A:
     cdef float cpu_time 
     cdef int nwsr 
     # cdef str txt
-    cdef SQProblem qp
+    cdef qp
 
     # cpdef int bar(self)
 

@@ -11,9 +11,11 @@ cdef class NMPCGenerator(BaseGenerator):
     cdef int nc_ori
     cdef int nc
 
-    cpdef np.ndarray nwsr,cputime,qp_nwsr,qp_cputime
+    cdef np.ndarray nwsr,cputime,qp_nwsr,qp_cputime
+    cdef options
 
-    cpdef np.ndarray dofs
+    cdef np.ndarray dofs
+    cdef qp
 
     cpdef np.ndarray qp_H     
     cpdef np.ndarray qp_A
@@ -51,8 +53,10 @@ cdef class NMPCGenerator(BaseGenerator):
     cdef void _calculate_common_expressions(self)
     cdef void _calculate_derivatives(self)
 
-    cpdef void preprocess_solution(self)
-    cpdef void postprocess_solution(self)       
+    cpdef void solve(self)
+    cdef void _preprocess_solution(self)
+    cdef void _solve_qp(self)
+    cdef void _postprocess_solution(self)       
 
     cdef void _update_foot_selection_matrix(self) 
     

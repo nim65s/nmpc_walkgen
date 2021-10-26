@@ -1,5 +1,4 @@
 import numpy as np
-from libs import qpsolver
 from libs import c
 from qpoases import PySQProblem as SQProblem
 

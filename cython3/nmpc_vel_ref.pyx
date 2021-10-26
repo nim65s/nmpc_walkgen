@@ -4,11 +4,6 @@ import time
 import numpy as np
 cimport numpy as np
 import os, sys
-# from cpython cimport array
-from qpoases import PyOptions as Options
-from qpoases import PyPrintLevel as PrintLevel
-from qpoases import PySQProblem as SQProblem
-from qpoases import PySolutionAnalysis as SolutionAnalysis
 
 cpdef public int nmpc_vel_ref() except -1:
 
@@ -41,12 +36,6 @@ cpdef public int nmpc_vel_ref() except -1:
     f = open("../data/nmpc_vel_cython.dat", "w")
     f.write("")
     f.close()
-
-    cdef qp = SQProblem(nmpc.nv,nmpc.nc)
-    options = Options()
-    options.setToMPC()
-    options.printLevel = PrintLevel.LOW
-    qp.setOptions(options)
 
     time_list = []
     for i in range(8*nb_step):

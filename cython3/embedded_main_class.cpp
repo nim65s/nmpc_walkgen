@@ -44,8 +44,6 @@ main(int argc, char *argv[])
        "sys.path.append('')\n"
     );
 
-
-
     float comx = -3.16e-3;
     float dcomx = 0.;
     float ddcomx = 0.;
@@ -60,12 +58,12 @@ main(int argc, char *argv[])
     float footx = 1.86e-4;
     float footy = 0.085;
     float footq = 0.;
-    //std::string foot = "left";
+    std::string foot = "left";
 
     float vx = 0.;
     float vy = 0.;
     float vq = 0.; 
-    //std::string state = "DSP";   
+    std::string state = "D";   
 
     int nb_step = 10;
 
@@ -75,10 +73,8 @@ main(int argc, char *argv[])
     t = clock();
 
     Nmpc *nmpc = buildNmpc(comx, dcomx, ddcomx, comy, dcomy, ddcomy, comz, 
-        footx, footy, footq, comq, dcomq, ddcomq, vx,  vy, vq);
-/*    double r;
-    r = solveNmpc(nmpc,d);
-    printf("%f\n",r);*/
+        footx, footy, footq, comq, dcomq, ddcomq, vx,  vy, vq,foot.c_str(),
+        state.c_str());
 
     for (int i = 0; i < 8*nb_step; i++)
     {
@@ -100,7 +96,9 @@ main(int argc, char *argv[])
     t = clock() - t;
     printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);
 
-    interpolationNmpc(nmpc);
+
+    std::string path = "./nmpc_interpolated_cython_class.csv";
+    interpolationNmpc(nmpc,path.c_str());
 
     /* Clean up after using CPython. */
     PyMem_RawFree(program);

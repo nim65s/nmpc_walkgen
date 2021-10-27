@@ -4,8 +4,6 @@ import time
 import numpy as np
 cimport numpy as np
 import os, sys
-# from libcpp.vector cimport vector
-# from libcpp.string cimport string
 
 
 cdef public class Nmpc[object Nmpc, type NmpcType]:
@@ -61,13 +59,13 @@ cdef public class Nmpc[object Nmpc, type NmpcType]:
 cdef api Nmpc buildNmpc(float comx,float dcomx,float ddcomx,float comy,\
         float dcomy,float ddcomy,float comz,float footx,float footy,\
         float footq,float comq,float dcomq,float ddcomq,\
-        float vx, float vy,float vq):
+        float vx, float vy,float vq,const char* ft,const char* st):
     com_x = np.array([comx,dcomx,ddcomx])
     com_y = np.array([comy,dcomy,ddcomy])    
     com_q = np.array([comq,dcomq,ddcomq])
-    vel_ref = np.array([vx,vy,vq])     
-    foot = 'left'
-    state = 'D' 
+    vel_ref = np.array([vx,vy,vq])   
+    foot = ft.decode('UTF-8')
+    state = st.decode('UTF-8')
     return Nmpc(com_x, com_y, comz, footx, footy, footq, foot, com_q, state, vel_ref)
 
 cdef api void set_velocity_referenceNmpc(Nmpc nmpc,float vx,float vy,float vq):
@@ -80,32 +78,5 @@ cdef api void read_velocity_referenceNmpc(Nmpc nmpc):
 cdef api void solveNmpc(Nmpc nmpc,int i):
     nmpc.solve(i)
 
-cdef api void interpolationNmpc(Nmpc nmpc):
-    nmpc.export_interp("./nmpc_interpolated_cython_class.csv")
-
-
-
-# cdef public class Nmpc[object Nmpc, type NmpcType]:
-#     cdef np.ndarray a
-#     cdef nmpc
-#     cdef interp_nmpc
-
-#     def __cinit__(self,np.ndarray a):
-#         self.a = a
-#         self.nmpc = NMPCGenerator(fsm_state='D')
-#         self.nmpc.set_security_margin(0.09,0.05)
-#         self.interp_nmpc = Interpolation(0.001,self.nmpc)
-
-#     cdef double solve(self,double i):
-#         return i+self.a[0]
-
-
-# cdef api Nmpc buildNmpc(float a,float b):
-#     l = np.array([a,b])
-#     print(a,b,l)
-#     return(Nmpc(l))
-
-# cdef api double solveNmpc(Nmpc n,double d):
-#     print("there")
-#     print(n.a,n.solve(d))
-#     return(n.solve(d))
+cdef api void interpolationNmpc(Nmpc nmpc,const char* path):
+    nmpc.export_interp(path.decode('UTF-8'))

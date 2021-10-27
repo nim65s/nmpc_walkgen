@@ -15,7 +15,6 @@ LINKFORSHARED := $(shell $(PYTHON) -c "import distutils.sysconfig; print(distuti
 LIBS := $(shell $(PYTHON) -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('LIBS'))")
 SYSLIBS :=  $(shell $(PYTHON) -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SYSLIBS'))")
 
-
 .PHONY: paths all clean test
 
 paths:
@@ -43,11 +42,11 @@ nmpc_vel_ref_online: nmpc_vel_ref_online.o embedded_main_online.o
 	$(LINKCC) -O3 -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
 
 nmpc_vel_ref_class: nmpc_vel_ref_class.o embedded_main_class.o
-	$(LINKCC) -O3 -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED)
+	$(LINKCC) -O3 -o $@ $^ -L$(LIBDIR1) -L$(LIBDIR2) -l$(PYLIB) $(LIBS) $(SYSLIBS) $(LINKFORSHARED) -lstdc++
 
 
 %.o: %.cpp
-	$(CC) -O3 -c $^ -I$(INCDIR) -I$(PLATINCDIR)
+	$(CC) -O3 -c $^ -I$(INCDIR) -I$(PLATINCDIR) -lstdc++
 
 
 nmpc_vel_ref.cpp: nmpc_vel_ref.pyx wpg/combinedqp.py wpg/base.py wpg/helper.py wpg/interpolation.py

@@ -5,7 +5,7 @@ import numpy as np
 cimport numpy as np
 import os, sys
 from libcpp.vector cimport vector
-
+from libcpp.string cimport string
 # cdef public class Nmpc[object Nmpc, type NmpcType]:
 #     cdef np.ndarray comx, comy, comq, vel_ref
 #     cdef float comz, footx, footy, footq
@@ -37,51 +37,57 @@ from libcpp.vector cimport vector
 
 #         self.interp_nmpc = Interpolation(0.001,self.nmpc)
 
-#     cdef void set_vel_ref(self,np.ndarray vel_ref):
-#         self.velocity_reference = vel_ref 
+    # cdef void set_vel_ref(self,np.ndarray vel_ref):
+    #     self.velocity_reference = vel_ref 
 
-#     cdef void solve(self,double time_iter):
-#         self.nmpc.set_velocity_reference(self.velocity_reference)
-#         self.nmpc.solve()
-#         self.nmpc.simulate()
-#         self.interp_nmpc.interpolate(time_iter)
+    # cdef void solve(self,double time_iter):
+    #     self.nmpc.set_velocity_reference(self.velocity_reference)
+    #     self.nmpc.solve()
+    #     self.nmpc.simulate()
+    #     self.interp_nmpc.interpolate(time_iter)
 
-#         self.comx, self.comy, self.comz, self.footx, self.footy, self.footq,\
-#             self.foot, self.comq, self.state = self.nmpc.update()
-#         self.nmpc.set_initial_values(self.comx, self.comy, self.comz, self.footx,\
-#             self.footy, self.footq, self.foot, self.comq)
+    #     self.comx, self.comy, self.comz, self.footx, self.footy, self.footq,\
+    #         self.foot, self.comq, self.state = self.nmpc.update()
+    #     self.nmpc.set_initial_values(self.comx, self.comy, self.comz, self.footx,\
+    #         self.footy, self.footq, self.foot, self.comq)
 
-#     cdef void export_interp(self,str path):
-#         self.interp_nmpc.save_to_file(path)
+    # cdef void export_interp(self,str path):
+    #     self.interp_nmpc.save_to_file(path)
 
-# cdef api Nmpc buildNmpc(np.ndarray comx,np.ndarray comy,float comz,float footx,\
-#             float footy,float footq,str foot,np.ndarray comq,str state,\
-#             np.ndarray vel_ref):
-#     return Nmpc(np.ndarray comx,np.ndarray comy,float comz,float footx,\
-#             float footy,float footq,str foot,np.ndarray comq,str state,\
-#             np.ndarray vel_ref)
+# cdef api Nmpc buildNmpc(float comx,float dcomx,float ddcomx,float comy,\
+#         float dcomy,float ddcomy,float comz,float footx,float footy,\
+#         float footq,str foot,float comq,float dcomq,float ddcomq,str state,\
+#         float vx, float vy,float vq):
+#     comx = np.array([comx,dcomx,ddcomx])
+#     comy = np.array([comy,dcomy,ddcomy])    
+#     comq = np.array([comq,dcomq,ddcomq])
+#     vel_ref = np.array([vx,vy,vq])     
+#     return Nmpc(comx, comy, comz, footx, footy, footq, foot, comq, state, vel_ref)
+
+
 
 cdef public class Nmpc[object Nmpc, type NmpcType]:
-    cdef double a
+    cdef string a
     cdef nmpc
     cdef interp_nmpc
 
-    def __cinit__(self,vector[double] a):
-        self.a = a[0]
+    def __cinit__(self,string a):
+        self.a = a
         self.nmpc = NMPCGenerator(fsm_state='D')
         self.nmpc.set_security_margin(0.09,0.05)
         self.interp_nmpc = Interpolation(0.001,self.nmpc)
 
     cdef double solve(self,double i):
-        return i+self.a
+        return i
 
 
-cdef api Nmpc buildNmpc(vector[double] a):
+cdef api Nmpc buildNmpc(string a):
     print("here")
     return(Nmpc(a))
 
 cdef api double solveNmpc(Nmpc n,double d):
     print("there")
+    print(n.a,n.solve(d))
     return(n.solve(d))
 
 # cpdef public int nmpc_vel_ref() except -1:

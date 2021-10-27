@@ -4,8 +4,8 @@
 #include "nmpc_vel_ref_class_api.h"
 #include <chrono>
 #include <ctime>
-#include <vector>
-
+#include <cstdio>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,15 +50,39 @@ main(int argc, char *argv[])
         goto exit_with_error;
     }*/
 
-    clock_t t;
-    t = clock();
+/*    clock_t t;
+    t = clock();*/
 
-    double nb_step = 10;
-    double a [3] = {0.1,0.2,0.3};
+/*    float comx = -3.16e-3;
+    float dcomx = 0.;
+    float ddcomx = 0.;
+    float comy = 1.237384291203724555e-03;
+    float dcomy = 0.;
+    float ddcomy = 0.;
+    float comz = 8.786810585901939641e-01;
+    float comq = 0.;
+    float dcomq = 0.;
+    float ddcomq = 0.;
+
+    float footx = 1.86e-4;
+    float footy = 0.085;
+    float footq = 0.;
+    std::string foot = "left";
+
+    float vx = 0.;
+    float vy = 0.;
+    float vq = 0.; */
+    std::string state = "DSP";   
+
+/*    double nb_step = 10;
+    double a [3] = {0.1,0.2,0.3};*/
     double d = 0.1;
 
     import_nmpc_vel_ref_class();
-    Nmpc *nmpc = buildNmpc(a);
+    Nmpc nmpc = buildNmpc(state);
+
+/*    Nmpc *nmpc = buildNmpc(comx, dcomx, ddcomx, comy, dcomy, ddcomy, comz, 
+        footx, footy, footq, foot, comq, dcomq, ddcomq, state, vx,  vy, vq);*/
     double r;
     r = solveNmpc(nmpc,d);
     printf("%f\n",r);
@@ -70,8 +94,8 @@ main(int argc, char *argv[])
         goto exit_with_error;
     }
 */
-    t = clock() - t;
-    printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);
+/*    t = clock() - t;
+    printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);*/
 
     /* ... */
 

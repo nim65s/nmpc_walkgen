@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
     import_fooClass();
     Foo *foo = buildFoo(10.0,5.0);
     double a;
-    a = foobar(foo,5.0);
-    printf("%f\n",a);
+    foobar(foo,5.0);
+    printf("%f,%f\n",foo->a,foo->b);
 /*    if (!pmodule) {
         PyErr_Print();
         fprintf(stderr, "Error: could not import module 'fooClass'\n");

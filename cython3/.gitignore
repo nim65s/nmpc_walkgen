@@ -3,6 +3,7 @@ build
 *.h
 nmpc_vel_ref.cpp
 nmpc_vel_ref_online.cpp
+nmpc_vel_ref_class.cpp
 test.cpp
 libs/*.cpp
 libs/*.so
@@ -11,4 +12,5 @@ wpg/*.so
 test
 nmpc_vel_ref
 nmpc_vel_ref_online
+nmpc_vel_ref_class
 *.so

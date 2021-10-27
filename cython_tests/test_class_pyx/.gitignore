@@ -1,0 +1,6 @@
+build
+*.o
+*.h
+fooClass.cpp
+test
+*.so

@@ -43,17 +43,10 @@ main(int argc, char *argv[])
        "import sys\n"
        "sys.path.append('')\n"
     );
-/*    pmodule = PyImport_ImportModule("nmpc_vel_ref_class");
-    if (!pmodule) {
-        PyErr_Print();
-        fprintf(stderr, "Error: could not import module 'nmpc_vel_ref_class'\n");
-        goto exit_with_error;
-    }*/
 
-/*    clock_t t;
-    t = clock();*/
 
-/*    float comx = -3.16e-3;
+
+    float comx = -3.16e-3;
     float dcomx = 0.;
     float ddcomx = 0.;
     float comy = 1.237384291203724555e-03;
@@ -67,37 +60,47 @@ main(int argc, char *argv[])
     float footx = 1.86e-4;
     float footy = 0.085;
     float footq = 0.;
-    std::string foot = "left";
+    //std::string foot = "left";
 
     float vx = 0.;
     float vy = 0.;
-    float vq = 0.; */
-    std::string state = "DSP";   
+    float vq = 0.; 
+    //std::string state = "DSP";   
 
-/*    double nb_step = 10;
-    double a [3] = {0.1,0.2,0.3};*/
-    double d = 0.1;
+    int nb_step = 10;
 
     import_nmpc_vel_ref_class();
-    Nmpc nmpc = buildNmpc(state);
 
-/*    Nmpc *nmpc = buildNmpc(comx, dcomx, ddcomx, comy, dcomy, ddcomy, comz, 
-        footx, footy, footq, foot, comq, dcomq, ddcomq, state, vx,  vy, vq);*/
-    double r;
+    clock_t t;
+    t = clock();
+
+    Nmpc *nmpc = buildNmpc(comx, dcomx, ddcomx, comy, dcomy, ddcomy, comz, 
+        footx, footy, footq, comq, dcomq, ddcomq, vx,  vy, vq);
+/*    double r;
     r = solveNmpc(nmpc,d);
-    printf("%f\n",r);
+    printf("%f\n",r);*/
 
-    /* Now call into your module code. */
-/*    if (nmpc_vel_ref_class(9) < 0) {
-        PyErr_Print();
-        fprintf(stderr, "Error in Python code, exception was printed.\n");
-        goto exit_with_error;
+    for (int i = 0; i < 8*nb_step; i++)
+    {
+        printf("iteration : %d\n",i);        
+        if(i == 7)
+        {
+            set_velocity_referenceNmpc(nmpc,0.2,vy,vq);
+            read_velocity_referenceNmpc(nmpc);
+        }
+        if(i == 8*nb_step-1) 
+        {
+            set_velocity_referenceNmpc(nmpc,vx,vy,vq);
+            read_velocity_referenceNmpc(nmpc);
+        }
+
+        solveNmpc(nmpc,i);        
     }
-*/
-/*    t = clock() - t;
-    printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);*/
 
-    /* ... */
+    t = clock() - t;
+    printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);
+
+    interpolationNmpc(nmpc);
 
     /* Clean up after using CPython. */
     PyMem_RawFree(program);

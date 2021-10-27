@@ -10,10 +10,10 @@ cdef public class Foo[object Foo, type fooType]:
         self.b = b  
 
     cdef double bar(self, double c):
-        return sin(self.a*c)  
+        self.a = sin(self.a*c)  
 
 cdef api Foo buildFoo(double a, double b):
     return Foo(a,b)
 
-cdef api double foobar(Foo foo, double d):
-    return foo.bar(d)
+cdef api void foobar(Foo foo, double d):
+    foo.bar(d)

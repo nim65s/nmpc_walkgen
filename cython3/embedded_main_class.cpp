@@ -78,7 +78,7 @@ main(int argc, char *argv[])
 
     for (int i = 0; i < 8*nb_step; i++)
     {
-        printf("iteration : %d\n",i);        
+        //printf("iteration : %d\n",i);        
         if(i == 7)
         {
             set_velocity_referenceNmpc(nmpc,0.2,vy,vq);
@@ -94,8 +94,8 @@ main(int argc, char *argv[])
     }
 
     t = clock() - t;
-    printf ("It took me %f seconds.\n",((float)t)/CLOCKS_PER_SEC);
-
+    printf ("Whole process : %f seconds.\n",((float)t)/CLOCKS_PER_SEC);
+    printf("One iteration : %f seconds.\n",((float)t)/CLOCKS_PER_SEC/(8*nb_step));
 
     std::string path = "./nmpc_interpolated_cython_class.csv";
     interpolationNmpc(nmpc,path.c_str());

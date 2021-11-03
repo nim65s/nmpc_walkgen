@@ -1,0 +1,3 @@
+[submodule "cython3/cmake"]
+	path = cython3/cmake
+	url = https://github.com/jrl-umi3218/jrl-cmakemodules.git

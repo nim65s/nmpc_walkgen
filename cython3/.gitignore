@@ -14,3 +14,4 @@ nmpc_vel_ref
 nmpc_vel_ref_online
 nmpc_vel_ref_class
 *.so
+build/

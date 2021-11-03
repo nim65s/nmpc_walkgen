@@ -30,9 +30,9 @@ from qpoases import PySQProblem as SQProblem
 #     l = np.array(string.split(","), dtype='float')
 #     return l
 
-# cpdef public vector[int] test(int x):
+
 cpdef public int test(int x):
-    # print("x =",x)
+    print("x =",x)
 
     # cdef qp = SQProblem(2, 1)
 
@@ -48,7 +48,7 @@ cpdef public int test(int x):
 
     # velocity_reference = [0., 0.,0.0]
     # comx = [-3.16e-3, 0.0, 0.0]
-    # nb_step = 10
+    nb_step = 5
     # print(comx,velocity_reference,nb_step)
 
     # print(nmpc.test_char())
@@ -58,10 +58,10 @@ cpdef public int test(int x):
     # # print(w+2)
     # i = 0
     # timeout = 1e-3
-    # l = np.zeros((1,3))
+    l = np.zeros((1,3))
     # while True:
-    # for i in range(8*nb_step):
-    #     print("iteration : ",i,l,type(l))
+    for i in range(8*nb_step):
+        print("iteration : ",i,l,type(l))
 
     #     # l = nonBlockingRawInput(l,timeout)
 

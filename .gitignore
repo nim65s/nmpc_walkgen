@@ -24,3 +24,6 @@ tests/data/v_f.dat
 tests/data/walkSideward2m_s.dat
 tmp/
 
+data/
+__pycache__/
+build/
